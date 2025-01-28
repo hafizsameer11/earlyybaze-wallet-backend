@@ -32,6 +32,10 @@ class UserRepository
     {
         return User::where('user_code', $userCode)->first();
     }
+    public function findByEmail($email): ?User
+    {
+        return User::where('email', $email)->first();
+    }
     // end of class UserRepository
 
 }
