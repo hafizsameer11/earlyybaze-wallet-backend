@@ -19,7 +19,7 @@ class UserService
     {
         $this->userRepository = $userRepository;
     }
-    public function registerUser(array $data)
+    public function registerUser(array $data):?User
     {
         try {
             $data['password'] = Hash::make($data['password']);
