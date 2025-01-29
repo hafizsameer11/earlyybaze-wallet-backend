@@ -25,6 +25,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Register a user
     Route::post('/otp-verification', [AuthController::class, 'otpVerification']); // Verify OTP
     Route::post('/login', [AuthController::class, 'login']); // Login
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp']); // Resend OTP
 });
 Route::prefix('master-wallet')->group(function () {
     Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
@@ -32,3 +33,7 @@ Route::prefix('master-wallet')->group(function () {
 });
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
+Route::prefix('user')->group(function () {
+    ///routes related to user setting and other
+
+});

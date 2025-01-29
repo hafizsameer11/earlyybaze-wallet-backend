@@ -8,6 +8,8 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\OtpVerificationRequst;
 use App\Http\Requests\RegisterRequest;
 use App\Services\UserService;
+use Illuminate\Http\Request;
+
 class AuthController extends Controller
 {
     protected $userService;
@@ -45,6 +47,15 @@ class AuthController extends Controller
                 'token' => $token
             ];
             return ResponseHelper::success($data, 'User registered successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
+    public function resendOtp(Request $request)
+    {
+        try {
+            $user = $this->userService->resendOtp($request->email);
+            return ResponseHelper::success($user, 'OTP resent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }

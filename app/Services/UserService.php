@@ -7,6 +7,7 @@ use App\Mail\OtpMail;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -80,6 +81,46 @@ class UserService
         } catch (Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
             throw new Exception('Login failed.');
+        }
+    }
+    public function setPin(string $email, string $pin): ?User
+    {
+        try {
+            $user = $this->userRepository->findByEmail($email);
+            return $this->userRepository->setPin($user, $pin);
+
+        } catch (Exception $e) {
+            Log::error('Set pin error: ' . $e->getMessage());
+            throw new Exception('Set pin failed.');
+
+        }
+    }
+    public function verifyPin(string $pin)
+    {
+        try {
+            $user = Auth::user();
+            $user= $this->userRepository->getById($user->id);
+            $status = $this->userRepository->verifyPin($user, $pin);
+            if (!$status) {
+                throw new Exception('Invalid pin.');
+            }
+            return $user;
+        } catch (Exception $e) {
+            Log::error('Verify pin error: ' . $e->getMessage());
+            throw new Exception('Verify pin failed.');
+        }
+    }
+    public function resendOtp(string $email): ?User
+    {
+        try {
+            $user = $this->userRepository->findByEmail($email);
+            $user->otp = rand(100000, 999999);
+            $user->save();
+            Mail::to($user->email)->send(new OtpMail($user->otp));
+            return $user;
+        } catch (Exception $e) {
+            Log::error('Resend OTP error: ' . $e->getMessage());
+            throw new Exception('Resend OTP failed.');
         }
     }
 }

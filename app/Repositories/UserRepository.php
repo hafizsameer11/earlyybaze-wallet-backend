@@ -36,6 +36,14 @@ class UserRepository
     {
         return User::where('email', $email)->first();
     }
-    // end of class UserRepository
-
+    public function setPin(User $user, string $pin): User
+    {
+        $user->pin = $pin;
+        $user->save();
+        return $user;
+    }
+    public function verifyPin(User $user, string $pin): bool
+    {
+        return $user->pin === $pin;
+    }
 }
