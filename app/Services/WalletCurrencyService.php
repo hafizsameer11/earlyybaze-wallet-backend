@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\WalletCurrencyRepository;
+use Exception;
 
 class WalletCurrencyService
 {
@@ -25,7 +26,12 @@ class WalletCurrencyService
 
     public function create(array $data)
     {
-        return $this->WalletCurrencyRepository->create($data);
+        try {
+            $walletCurrency = $this->WalletCurrencyRepository->create($data);
+            return $walletCurrency;
+        } catch (Exception $e) {
+            throw new Exception('Currency Creation Failed');
+        }
     }
 
     public function update($id, array $data)

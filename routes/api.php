@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
+use App\Http\Controllers\WalletCurrencyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -29,3 +30,5 @@ Route::prefix('master-wallet')->group(function () {
     Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
     Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets
 });
+
+Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);

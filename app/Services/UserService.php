@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\CreateVirtualAccount;
 use App\Mail\OtpMail;
 use App\Models\User;
 use App\Repositories\UserRepository;
@@ -54,6 +55,7 @@ class UserService
             $user->otp = null;
             $user->otp_verified = true;
             $user->save();
+            dispatch(new CreateVirtualAccount($user));
             return $user;
         } catch (Exception $e) {
             Log::error('OTP verification error: ' . $e->getMessage());
@@ -61,7 +63,7 @@ class UserService
         }
     }
 
-    public function login(array $data)
+    public function login(array $data): ?User
     {
         try {
             $user = $this->userRepository->findByEmail($data['email']);
