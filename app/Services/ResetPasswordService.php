@@ -19,7 +19,7 @@ class ResetPasswordService
         $this->userRepository = $userRepository;
     }
 
-    public function forgetPassword(string $email)
+    public function forgetPassword(string $email): bool
     {
         try {
             $user = $this->userRepository->findByEmail($email);

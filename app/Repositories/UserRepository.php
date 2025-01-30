@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\NairaWallet;
 use App\Models\User;
 
 class UserRepository
@@ -9,6 +10,13 @@ class UserRepository
     public function create(array $data): User
     {
         return User::create($data);
+    }
+    public function createNairaWallet(User $user)
+    {
+        return NairaWallet::create([
+            'user_id' => $user->id,
+            'balance' => 0
+        ]);
     }
     public function update(User $user, array $data): User
     {

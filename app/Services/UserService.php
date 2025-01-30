@@ -19,7 +19,7 @@ class UserService
     {
         $this->userRepository = $userRepository;
     }
-    public function registerUser(array $data):?User
+    public function registerUser(array $data): ?User
     {
         try {
             $data['password'] = Hash::make($data['password']);
@@ -27,12 +27,12 @@ class UserService
             $data['user_code'] = $this->generateUserCode();
             $user = $this->userRepository->create($data);
             Mail::to($user->email)->send(new OtpMail($user->otp));
+            $this->userRepository->createNairaWallet($user);
             return $user;
         } catch (Exception $e) {
             Log::error('User registration error: ' . $e->getMessage());
             throw new Exception('User registration failed.');
         }
-        // return $user;
     }
     private function generateUserCode(): string
     {
@@ -99,7 +99,7 @@ class UserService
     {
         try {
             $user = Auth::user();
-            $user= $this->userRepository->getById($user->id);
+            $user = $this->userRepository->getById($user->id);
             $status = $this->userRepository->verifyPin($user, $pin);
             if (!$status) {
                 throw new Exception('Invalid pin.');
