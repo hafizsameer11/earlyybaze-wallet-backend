@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\CreateVirtualAccount;
 use App\Mail\OtpMail;
 use App\Models\User;
+use App\Repositories\UserAccountRepository;
 use App\Repositories\UserRepository;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -15,9 +16,11 @@ use Illuminate\Support\Facades\Mail;
 class UserService
 {
     protected $userRepository;
-    public function __construct(UserRepository $userRepository)
+    protected $userAccountRepository;
+    public function __construct(UserRepository $userRepository, UserAccountRepository $userAccountRepository)
     {
         $this->userRepository = $userRepository;
+        $this->userAccountRepository = $userAccountRepository;
     }
     public function registerUser(array $data): ?User
     {
@@ -28,6 +31,11 @@ class UserService
             $user = $this->userRepository->create($data);
             Mail::to($user->email)->send(new OtpMail($user->otp));
             $this->userRepository->createNairaWallet($user);
+            $accountNumber = $this->generateAccountNumber();
+            $this->userAccountRepository->create([
+                'user_id' => $user->id,
+                'account_number' => $accountNumber
+            ]);
             return $user;
         } catch (Exception $e) {
             Log::error('User registration error: ' . $e->getMessage());
@@ -122,5 +130,10 @@ class UserService
             Log::error('Resend OTP error: ' . $e->getMessage());
             throw new Exception('Resend OTP failed.');
         }
+    }
+    private function generateAccountNumber(): string
+    {
+        $randomNumber = 'EarlyBaze-' . rand(1000000000, 9999999999);
+        return $randomNumber;
     }
 }

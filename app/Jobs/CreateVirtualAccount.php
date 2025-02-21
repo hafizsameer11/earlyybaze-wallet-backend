@@ -91,7 +91,6 @@ class CreateVirtualAccount implements ShouldQueue
 
                 Log::info("Virtual account created and stored for user {$this->user->id}: ", $accountData);
 
-                // Dispatch the job to assign a deposit address
                 dispatch(new AssignDepositAddress($virtualAccount));
             }
         } catch (\Exception $e) {

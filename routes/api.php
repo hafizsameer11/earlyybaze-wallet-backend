@@ -39,7 +39,6 @@ Route::prefix('master-wallet')->group(function () {
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
 Route::prefix('user')->group(function () {
-    ///routes related to user setting and other
     Route::post('/set-pin', [UserController::class, 'setPin']);
     Route::post('/verify-pin', [UserController::class, 'verifyPin']);
 });
