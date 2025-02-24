@@ -23,8 +23,8 @@ class WalletCurrencyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'blockchain' => 'required|string',
-            'currency' => 'required|string',
+            'blockchain' => 'nullable|string',
+            'currency' => 'nullable|string',
             'price' => 'nullable',
             'naira_price' => 'nullable',
             'symbol' => 'nullable',

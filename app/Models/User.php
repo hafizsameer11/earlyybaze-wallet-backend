@@ -26,7 +26,8 @@ class User extends Authenticatable
         'phone',
         'otp',
         'invite_code',
-        'user_code'
+        'user_code',
+        'profile_picture'
     ];
 
     /**

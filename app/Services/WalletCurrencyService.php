@@ -36,7 +36,12 @@ class WalletCurrencyService
 
     public function update($id, array $data)
     {
-        return $this->WalletCurrencyRepository->update($id, $data);
+
+        try {
+            return $this->WalletCurrencyRepository->update($id, $data);
+        } catch (Exception $e) {
+            throw new Exception('Currency Update Failed');
+        }
     }
 
     public function delete($id)

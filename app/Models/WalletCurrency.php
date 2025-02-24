@@ -15,4 +15,8 @@ class WalletCurrency extends Model
         'price',
         'symbol',
     ];
+    public function virtualAccounts()
+    {
+        return $this->hasMany(VirtualAccount::class);
+    }
 }

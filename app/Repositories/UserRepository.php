@@ -9,6 +9,11 @@ class UserRepository
 {
     public function create(array $data): User
     {
+        //check if profit_pic
+        if (isset($data['profile_picture']) && $data['profile_picture']) {
+            $path = $data['profile_picture']->store('profile_picture', 'public');
+            $data['profile_picture'] = $path;
+        }
         return User::create($data);
     }
     public function createNairaWallet(User $user)

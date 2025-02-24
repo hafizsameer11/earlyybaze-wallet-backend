@@ -27,4 +27,8 @@ class VirtualAccount extends Model
     {
         return $this->hasMany(DepositAddress::class);
     }
+    public function currency()
+    {
+        return $this->belongsTo(WalletCurrency::class, 'currency_id', 'id');
+    }
 }

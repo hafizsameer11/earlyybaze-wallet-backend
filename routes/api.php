@@ -40,6 +40,8 @@ Route::get('/unath', function () {
 })->name('login');
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
+Route::post('/update-wallet-currency/{id}', [WalletCurrencyController::class, 'update']);
+Route::get('/wallet-currencies', [WalletCurrencyController::class, 'index']);
 Route::prefix('master-wallet')->group(function () {
     Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
     Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets

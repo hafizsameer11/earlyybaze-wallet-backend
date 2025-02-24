@@ -22,6 +22,15 @@ class WalletCurrencyController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
+    public function update($id, WalletCurrencyRequest $request)
+    {
+        try {
+            $walletCurrency = $this->walletCurrencyService->update($id, $request->validated());
+            return ResponseHelper::success($walletCurrency, 'Wallet Currency updated successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
     public function index()
     {
         $walletCurrencies = $this->walletCurrencyService->all();
