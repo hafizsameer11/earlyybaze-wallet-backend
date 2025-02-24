@@ -54,13 +54,6 @@ Route::prefix('master-wallet')->group(function () {
 });
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
-Route::prefix('user')->group(function () {
-
-    //bank account routes
-
-
-});
-
 //authenticated route
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
 Route::middleware('auth:sanctum')->group(function () {

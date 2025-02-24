@@ -29,7 +29,7 @@ class UserService
     {
         try {
             $user = Auth::user();
-            $customer_id=VirtualAccount::where('user_id',$user->id)->first()->customer_id;
+            $customer_id = VirtualAccount::where('user_id', $user->id)->first()->customer_id;
             // return $user->id;
             return $this->tatumService->getUserAccounts($customer_id);
         } catch (Exception $e) {
@@ -122,6 +122,7 @@ class UserService
     {
         try {
             $user = Auth::user();
+            Log::info('User: ' . $user);
             $user = $this->userRepository->getById($user->id);
             $status = $this->userRepository->verifyPin($user, $pin);
             if (!$status) {
