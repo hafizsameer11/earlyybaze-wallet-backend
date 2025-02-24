@@ -52,4 +52,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(ResetPassword::class);
     }
+    public function virtualAccounts()
+    {
+        return $this->hasMany(VirtualAccount::class);
+    }
 }

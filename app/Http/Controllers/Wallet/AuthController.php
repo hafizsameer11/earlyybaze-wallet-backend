@@ -45,17 +45,18 @@ class AuthController extends Controller
     {
         try {
             $user = $this->userService->login($request->validated());
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $userd = $user['user'];
+
 
             Log::info('User Logged In:', [
-                'user' => $user->id,
-                'token' => $token,
+                'user' => $user,
                 'request_headers' => request()->headers->all()
             ]);
 
             $data = [
-                'user' => $user,
-                'token' => $token
+                'user' => $user['user'],
+                'assets' => $user['virtual_accounts'],
+                'token' => $user['token']
             ];
 
             return ResponseHelper::success($data, 'User logged in successfully', 200);

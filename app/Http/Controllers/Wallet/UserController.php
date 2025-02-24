@@ -56,4 +56,6 @@ class UserController extends Controller
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
-    }}
+    }
+
+}

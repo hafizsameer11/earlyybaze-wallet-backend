@@ -87,10 +87,11 @@ class UserService
         }
     }
 
-    public function login(array $data): ?User
+    public function login(array $data): ?array
     {
         try {
             $user = $this->userRepository->findByEmail($data['email']);
+
             if (!$user) {
                 throw new Exception('User not found.');
             }
@@ -100,14 +101,32 @@ class UserService
             if (!Hash::check($data['password'], $user->password)) {
                 throw new Exception('Invalid password.');
             }
+            $token = $user->createToken('auth_token')->plainTextToken;
+            // Load only required fields
+            $userData = $user->only(['id', 'email']);
 
+            // Load virtual accounts and select required fields
+            $virtualAccounts = $user->virtualAccounts()->select(['id', 'currency', 'blockchain', 'currency_id','available_balance','account_balance'])->get();
 
-            return $user;
+            // Load wallet currency with required fields
+            $virtualAccounts->each(function ($account) {
+                $account->walletCurrency = $account->walletCurrency()
+                    ->select(['id', 'price', 'symbol', 'naira_price'])
+                    ->first();
+            });
+
+            // Return filtered data as an array
+            return [
+                'user' => $userData,
+                'virtual_accounts' => $virtualAccounts,
+                'token' => $token
+            ];
         } catch (Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
-            throw new Exception('Login failed.');
+            throw new Exception('Login failed '.$e->getMessage());
         }
     }
+
     public function setPin(string $email, string $pin): ?User
     {
         try {
