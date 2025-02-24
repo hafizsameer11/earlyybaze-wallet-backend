@@ -35,6 +35,17 @@ Route::get('/optimize-app', function () {
     return "Application optimized and caches cleared successfully!";
 });
 
+Route::get('/unath', function () {
+    return response()->json(['message' => 'Unauthenticated'], 401);
+})->name('login');
+
+Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
+Route::prefix('master-wallet')->group(function () {
+    Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
+    Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets
+});
+
+//Customer route
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Register a user
@@ -48,23 +59,17 @@ Route::prefix('auth')->group(function () {
 
 
 });
-Route::prefix('master-wallet')->group(function () {
-    Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
-    Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets
-});
-
-Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
-//authenticated route
-Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
+//Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
     Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);
     Route::delete('/delete-bank-account/{id}', [BankAccountController::class, 'delete']);
     Route::post('/create-bank-account', [BankAccountController::class, 'store']);
 
-    //user account api testing
     Route::get('/user-accounts', [UserController::class, 'getUserAccountsFromApi']);
-
     Route::post('/user/set-pin', [UserController::class, 'setPin']);
     Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
+    Route::get('/user/balance', [UserController::class, 'getUserBalance']);
 });
+//non auth routes
+Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

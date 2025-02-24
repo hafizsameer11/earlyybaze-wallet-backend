@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Repositories\UserAccountRepository;
+use Exception;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class UserAccountService
 {
@@ -36,5 +39,15 @@ class UserAccountService
     public function delete($id)
     {
         return $this->UserAccountRepository->delete($id);
+    }
+
+    public function getBalance(){
+        try{
+            $user=Auth::user();
+            return $this->UserAccountRepository->getUserBalance($user->id);
+        }catch(Exception $e){
+            Log::error('Get balance error: ' . $e->getMessage());
+            throw new Exception('Get balance failed.');
+        }
     }
 }

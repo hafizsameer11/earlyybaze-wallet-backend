@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Wallet;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PinRequest;
+use App\Services\UserAccountService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
@@ -12,10 +13,13 @@ use Illuminate\Http\Request;
 class UserController extends Controller
 {
     protected $userService;
-    public function __construct(UserService $userService)
+    protected $userAccountService;
+    public function __construct(UserService $userService, UserAccountService $userAccountService)
     {
         $this->userService = $userService;
+        $this->userAccountService = $userAccountService;
     }
+
     public function setpin(PinRequest $request)
     {
         try {
@@ -43,4 +47,13 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-}
+
+    public function getUserBalance()
+    {
+        try {
+            $user = $this->userAccountService->getBalance();
+            return ResponseHelper::success($user, 'User balance fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }}

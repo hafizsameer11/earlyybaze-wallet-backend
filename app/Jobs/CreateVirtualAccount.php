@@ -71,7 +71,6 @@ class CreateVirtualAccount implements ShouldQueue
 
                 $accountData = $response->json();
 
-                // Store the virtual account in the database
                 $virtualAccount = VirtualAccount::create([
                     'user_id' => $this->user->id,
                     'blockchain' => $walletCurrency->blockchain,
@@ -85,6 +84,7 @@ class CreateVirtualAccount implements ShouldQueue
                     'available_balance' => $accountData['balance']['availableBalance'],
                     'xpub' => $accountData['xpub'],
                     'accounting_currency' => $accountData['accountingCurrency'],
+                    'currency_id' => $walletCurrency->id,
                 ]);
 
                 Log::info("Virtual account created and stored for user {$this->user->id}: ", $accountData);

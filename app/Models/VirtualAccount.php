@@ -20,7 +20,8 @@ class VirtualAccount extends Model
         'account_balance',
         'available_balance',
         'xpub',
-        'accounting_currency'
+        'accounting_currency',
+        'currency_id'
     ];
     public function depositAddresses()
     {

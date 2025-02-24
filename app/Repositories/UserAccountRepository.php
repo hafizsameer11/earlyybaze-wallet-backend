@@ -6,14 +6,16 @@ use App\Models\UserAccount;
 
 class UserAccountRepository
 {
-    public function all()
-    {
-
-    }
+    public function all() {}
 
     public function find($id)
     {
         // Add logic to find data by ID
+    }
+    public function getUserBalance($id)
+    {
+        $userAccount= UserAccount::where('user_id', $id)->first();
+        return $userAccount;
     }
 
     public function create(array $data)
