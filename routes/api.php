@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/set-pin', [UserController::class, 'setPin']);
     Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
     Route::get('/user/balance', [UserController::class, 'getUserBalance']);
+    Route::get('/user/assets', [UserController::class, 'getUserAssets']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

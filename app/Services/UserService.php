@@ -106,7 +106,7 @@ class UserService
             $userData = $user->only(['id', 'email']);
 
             // Load virtual accounts and select required fields
-            $virtualAccounts = $user->virtualAccounts()->select(['id', 'currency', 'blockchain', 'currency_id','available_balance','account_balance'])->get();
+            $virtualAccounts = $user->virtualAccounts()->select(['id', 'currency', 'blockchain', 'currency_id', 'available_balance', 'account_balance'])->get();
 
             // Load wallet currency with required fields
             $virtualAccounts->each(function ($account) {
@@ -123,7 +123,7 @@ class UserService
             ];
         } catch (Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
-            throw new Exception('Login failed '.$e->getMessage());
+            throw new Exception('Login failed ' . $e->getMessage());
         }
     }
 
@@ -170,5 +170,17 @@ class UserService
     {
         $randomNumber = 'EarlyBaze-' . rand(1000000000, 9999999999);
         return $randomNumber;
+    }
+    public function getUserAssets()
+    {
+        try {
+            $user = Auth::user();
+            $virtualAccounts = $this->userRepository->getuserAssets($user->id);
+           
+            return $virtualAccounts;
+        } catch (Exception $e) {
+            Log::error('Get user assets error: ' . $e->getMessage());
+            throw new Exception('Get user assets failed. ' . $e->getMessage());
+        }
     }
 }

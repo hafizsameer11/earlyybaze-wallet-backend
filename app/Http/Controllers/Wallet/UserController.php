@@ -57,5 +57,13 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-
+    public function getUserAssets()
+    {
+        try {
+            $user = $this->userService->getUserAssets();
+            return ResponseHelper::success($user, 'User assets fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

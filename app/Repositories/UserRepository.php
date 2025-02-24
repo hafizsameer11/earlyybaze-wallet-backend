@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\NairaWallet;
 use App\Models\User;
+use App\Models\VirtualAccount;
 
 class UserRepository
 {
@@ -58,5 +59,28 @@ class UserRepository
     public function verifyPin(User $user, string $pin): bool
     {
         return $user->pin === $pin;
+    }
+
+    public function getuserAssets($userId)
+    {
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();
+
+        $virtualAccounts = $virtualAccounts->map(function ($account) {
+            return [
+                'id' => $account->id,
+                'currency' => $account->currency,
+                'blockchain' => $account->blockchain,
+                'currency_id' => $account->currency_id,
+                'available_balance' => $account->available_balance,
+                'account_balance' => $account->account_balance,
+                'wallet_currency' => [
+                    'id' => $account->walletCurrency->id,
+                    'price' => $account->walletCurrency->price,
+                    'symbol' => $account->walletCurrency->symbol,
+                    'naira_price' => $account->walletCurrency->naira_price
+                ]
+            ];
+        });
+        return $virtualAccounts;
     }
 }

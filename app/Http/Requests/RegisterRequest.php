@@ -27,7 +27,6 @@ class RegisterRequest extends FormRequest
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required',
-            'confirm_password' => 'required|same:password',
             'phone' => 'required|unique:users,phone',
             'invite_code' => 'nullable',
             'profile_picture' => 'nullable'
@@ -39,7 +38,6 @@ class RegisterRequest extends FormRequest
         return [
             'email.unique' => 'This email is already registered.',
             'phone.unique' => 'This phone number is already in use.',
-            'confirm_password.same' => 'Passwords do not match.'
         ];
     }
     protected function failedValidation(Validator $validator)
