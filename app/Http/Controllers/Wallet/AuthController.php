@@ -11,6 +11,7 @@ use App\Http\Requests\ResetPasswordRequest;
 use App\Services\ResetPasswordService;
 use App\Services\UserService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -36,7 +37,6 @@ class AuthController extends Controller
         try {
             $user = $this->userService->verifyOtp($request->validated());
             return ResponseHelper::success($user, 'OTP verified successfully', 200);
-
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
@@ -46,15 +46,25 @@ class AuthController extends Controller
         try {
             $user = $this->userService->login($request->validated());
             $token = $user->createToken('auth_token')->plainTextToken;
+
+            Log::info('User Logged In:', [
+                'user' => $user->id,
+                'token' => $token,
+                'request_headers' => request()->headers->all()
+            ]);
+
             $data = [
                 'user' => $user,
                 'token' => $token
             ];
-            return ResponseHelper::success($data, 'User registered successfully', 200);
+
+            return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
+            Log::error('Login Error:', ['error' => $e->getMessage()]);
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     public function resendOtp(Request $request)
     {
         try {
@@ -92,8 +102,4 @@ class AuthController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
-
-
-
-
 }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class TatumService
 {
@@ -23,19 +24,41 @@ class TatumService
      * @return array
      */
 
+    public function getUserAccounts($userId)
+    {
+        $externalId = $userId; // Ensure this matches the externalId used when creating VAs
+
+        // Fetch all Virtual Accounts for the user with pagination
+        $response = Http::withHeaders([
+            'x-api-key' => $this->apiKey
+        ])->get("{$this->baseUrl}/ledger/account/customer/$externalId", [
+            'pageSize' => 50 // Fetch up to 50 accounts per request
+        ]);
+
+        if ($response->failed()) {
+            Log::error('Failed to fetch user accounts: ' . $response->body());
+            throw new \Exception('Failed to fetch user accounts');
+        }
+
+        return $response->json();
+    }
+
     public function createWallet(string $blockchain): array
     {
         $endpoint = match ($blockchain) {
             'bitcoin' => '/bitcoin/wallet',                     // Bitcoin
+            'bsc' => '/bsc/wallet',                     // Bitcoin
+            'avalanche' => '/avalanche/wallet',                     // Bitcoin
+            'fantom' => '/fantom/wallet',                     // Bitcoin
             'ethereum' => '/ethereum/wallet',                   // Ethereum
             'xrp' => '/xrp/account',                            // XRP (Ripple)
             'xlm' => '/xlm/account',                            // Stellar
             'litecoin' => '/litecoin/wallet',                   // Litecoin
             'bitcoin-cash' => '/bcash/wallet',                  // Bitcoin Cash
             'binance-smart-chain' => '/v3/bsc/wallet',             // Binance Smart Chain
-            'solana' => '/v3/solana/wallet',                       // Solana
-            'tron' => '/v3/tron/wallet',                           // Tron
-            'polygon' => '/v3/polygon/wallet',                     // Polygon (MATIC)
+            'solana' => '/solana/wallet',                       // Solana
+            'tron' => '/tron/wallet',                           // Tron
+            'polygon' => '/polygon/wallet',                     // Polygon (MATIC)
             'dogecoin' => '/v3/dogecoin/wallet',                   // Dogecoin
             'celo' => '/v3/celo/wallet',                           // Celo
             'algorand' => '/v3/algorand/wallet',                   // Algorand
@@ -56,9 +79,9 @@ class TatumService
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey,
         ])->post("{$this->baseUrl}/ledger/account", [
-                    'currency' => $currency,
-                    'customerId' => $customerId,
-                ]);
+            'currency' => $currency,
+            'customerId' => $customerId,
+        ]);
 
         return $response->json();
     }
@@ -92,11 +115,11 @@ class TatumService
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey,
         ])->post("{$this->baseUrl}/ledger/transaction", [
-                    'senderAccountId' => $fromAccount,
-                    'recipientAccountId' => $toAccount,
-                    'amount' => $amount,
-                    'currency' => $currency,
-                ]);
+            'senderAccountId' => $fromAccount,
+            'recipientAccountId' => $toAccount,
+            'amount' => $amount,
+            'currency' => $currency,
+        ]);
 
         return $response->json();
     }

@@ -24,13 +24,21 @@ class UserController extends Controller
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
-
     }
     public function verifyPin(Request $request)
     {
         try {
             $user = $this->userService->verifyPin($request->pin);
             return ResponseHelper::success($user, 'Pin verified successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getUserAccountsFromApi()
+    {
+        try {
+            $user = $this->userService->getUserAccounts();
+            return ResponseHelper::success($user, 'User accounts fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
+use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use Illuminate\Http\Request;
@@ -17,11 +18,6 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Register a user
     Route::post('/otp-verification', [AuthController::class, 'otpVerification']); // Verify OTP
@@ -41,4 +37,19 @@ Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create
 Route::prefix('user')->group(function () {
     Route::post('/set-pin', [UserController::class, 'setPin']);
     Route::post('/verify-pin', [UserController::class, 'verifyPin']);
+    //bank account routes
+
+
+});
+
+//authenticated route
+Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
+    Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);
+    Route::delete('/delete-bank-account/{id}', [BankAccountController::class, 'delete']);
+    Route::post('/create-bank-account', [BankAccountController::class, 'store']);
+
+    //user account api testing
+    Route::get('/user-accounts', [UserController::class, 'getUserAccountsFromApi']);
 });

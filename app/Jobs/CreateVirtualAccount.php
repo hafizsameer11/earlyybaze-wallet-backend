@@ -51,8 +51,6 @@ class CreateVirtualAccount implements ShouldQueue
                     Log::error("No master wallet found for blockchain: " . $walletCurrency->blockchain);
                     continue;
                 }
-
-                // Prepare API request to create a virtual account
                 $response = Http::withHeaders([
                     'x-api-key' => $this->apiKey,
                 ])->post($this->apiUrl . '/ledger/account', [

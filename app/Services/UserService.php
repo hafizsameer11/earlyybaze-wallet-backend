@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\CreateVirtualAccount;
 use App\Mail\OtpMail;
 use App\Models\User;
+use App\Models\VirtualAccount;
 use App\Repositories\UserAccountRepository;
 use App\Repositories\UserRepository;
 use Exception;
@@ -17,10 +18,24 @@ class UserService
 {
     protected $userRepository;
     protected $userAccountRepository;
-    public function __construct(UserRepository $userRepository, UserAccountRepository $userAccountRepository)
+    protected  $tatumService;
+    public function __construct(UserRepository $userRepository, UserAccountRepository $userAccountRepository, TatumService $tatumService)
     {
         $this->userRepository = $userRepository;
         $this->userAccountRepository = $userAccountRepository;
+        $this->tatumService = $tatumService;
+    }
+    public function getUserAccounts()
+    {
+        try {
+            $user = Auth::user();
+            $customer_id=VirtualAccount::where('user_id',$user->id)->first()->customer_id;
+            // return $user->id;
+            return $this->tatumService->getUserAccounts($customer_id);
+        } catch (Exception $e) {
+            Log::error('Get user accounts error: ' . $e->getMessage());
+            throw new Exception('Get user accounts failed.');
+        }
     }
     public function registerUser(array $data): ?User
     {
@@ -85,6 +100,8 @@ class UserService
             if (!Hash::check($data['password'], $user->password)) {
                 throw new Exception('Invalid password.');
             }
+
+
             return $user;
         } catch (Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
@@ -96,11 +113,9 @@ class UserService
         try {
             $user = $this->userRepository->findByEmail($email);
             return $this->userRepository->setPin($user, $pin);
-
         } catch (Exception $e) {
             Log::error('Set pin error: ' . $e->getMessage());
             throw new Exception('Set pin failed.');
-
         }
     }
     public function verifyPin(string $pin)
