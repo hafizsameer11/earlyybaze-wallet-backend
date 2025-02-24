@@ -45,6 +45,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']); // Forget password
     Route::post('/verify-forget-password-otp', [AuthController::class, 'verifyForgetPasswordOtp']); // Verify forget password OTP
     Route::post('/reset-password', [AuthController::class, 'resetPassword']); // Reset password
+
+
 });
 Route::prefix('master-wallet')->group(function () {
     Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
@@ -53,8 +55,7 @@ Route::prefix('master-wallet')->group(function () {
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
 Route::prefix('user')->group(function () {
-    Route::post('/set-pin', [UserController::class, 'setPin']);
-    Route::post('/verify-pin', [UserController::class, 'verifyPin']);
+
     //bank account routes
 
 
@@ -70,4 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //user account api testing
     Route::get('/user-accounts', [UserController::class, 'getUserAccountsFromApi']);
+
+    Route::post('/user/set-pin', [UserController::class, 'setPin']);
+    Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 });
