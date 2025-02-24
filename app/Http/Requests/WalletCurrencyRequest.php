@@ -25,6 +25,9 @@ class WalletCurrencyRequest extends FormRequest
         return [
             'blockchain' => 'required|string',
             'currency' => 'required|string',
+            'price' => 'nullable',
+            'naira_price' => 'nullable',
+            'symbol' => 'nullable',
         ];
     }
     public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)

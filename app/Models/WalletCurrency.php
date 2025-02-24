@@ -10,6 +10,9 @@ class WalletCurrency extends Model
     use HasFactory;
     protected $fillable = [
         'blockchain',
-        'currency'
+        'currency',
+        'naira_price',
+        'price',
+        'symbol',
     ];
 }
