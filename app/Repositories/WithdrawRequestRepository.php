@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\UserAccount;
 use App\Models\WithdrawRequest;
 
 class WithdrawRequestRepository
@@ -18,7 +19,12 @@ class WithdrawRequestRepository
 
     public function create(array $data)
     {
-        return WithdrawRequest::create($data);
+        $withdaaw = WithdrawRequest::create($data);
+        //cut the user balance
+        $userAccount = UserAccount::where('user_id', $data['user_id'])->first();
+        $userAccount->naira_balance = $userAccount->naira_balance - $data['total'];
+        $userAccount->save();
+        return $withdaaw;
     }
 
     public function update($id, array $data)
