@@ -65,7 +65,11 @@ class WalletCurrencyRepository
         $networks = WalletCurrency::where('currency', $currency->currency)->get();
         // return $networks;
         $networks = $networks->map(function ($network) {
-            return $network->blockchain;
+            return [
+                'id' => $network->id,
+                'network' => $network->blockchain,
+                'symbol' => $network->symbol,
+            ];
         });
         return $networks;
     }
