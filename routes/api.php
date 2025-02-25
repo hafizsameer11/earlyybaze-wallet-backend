@@ -6,6 +6,7 @@ use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
+use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -68,7 +69,8 @@ Route::prefix('auth')->group(function () {
 });
 //Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-
+    //testing route for adding balance
+    Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
     //Fee Module
     Route::prefix('fee')->group(function () {
         Route::post('/create', [FeeController::class, 'create']); // Create a fee
@@ -76,7 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-by-type/{type}', [FeeController::class, 'getByType']); // Get fee by type
 
     });
-
+    //withdrawal routes
+    Route::post('/withdraw/create', [WithdrawController::class, 'create']);
 
     Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
     Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);
