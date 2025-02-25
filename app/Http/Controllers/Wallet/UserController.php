@@ -102,7 +102,8 @@ class UserController extends Controller
             $user = Auth::user();
             $userAccount = UserAccount::where('user_id', $user->id)->first();
             $userAccount->naira_balance += $request->naira_balance;
-            return ResponseHelper::success($user, 'Testing balance added successfully', 200);
+            $userAccount->save();
+            return ResponseHelper::success($userAccount, 'Testing balance added successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
