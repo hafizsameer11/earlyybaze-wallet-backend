@@ -56,4 +56,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(VirtualAccount::class);
     }
+    public function nairaWallet()
+    {
+        return $this->hasOne(NairaWallet::class);
+    }
+    public function withdrawRequests()
+    {
+        return $this->hasMany(WithdrawRequest::class);
+    }
+    public function userAccount()
+    {
+        return $this->hasOne(UserAccount::class);
+    }
 }
