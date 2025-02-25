@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FeeController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
@@ -67,6 +68,16 @@ Route::prefix('auth')->group(function () {
 });
 //Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
+
+    //Fee Module
+    Route::prefix('fee')->group(function () {
+        Route::post('/create', [FeeController::class, 'create']); // Create a fee
+        Route::post('/update/{id}', [FeeController::class, 'update']); // Update a fee
+        Route::get('/get-by-type/{type}', [FeeController::class, 'getByType']); // Get fee by type
+
+    });
+
+
     Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
     Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);
     Route::delete('/delete-bank-account/{id}', [BankAccountController::class, 'delete']);
