@@ -36,4 +36,8 @@ class WithdrawRequestRepository
     {
         // Add logic to delete data
     }
+    public function getwithdrawRequestStatus($id)
+    {
+        return WithdrawRequest::where('id', $id)->first();
+    }
 }

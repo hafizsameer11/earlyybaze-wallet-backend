@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     //withdrawal routes
     Route::post('/withdraw/create', [WithdrawController::class, 'create']);
+    Route::get('/withdraw-request-status/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
 
     Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
     Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);

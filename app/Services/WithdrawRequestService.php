@@ -60,4 +60,12 @@ class WithdrawRequestService
     {
         return $this->WithdrawRequestRepository->delete($id);
     }
+    public function getwithdrawRequestStatus($id)
+    {
+        try {
+            return $this->WithdrawRequestRepository->getwithdrawRequestStatus($id);
+        } catch (Exception $e) {
+            throw new Exception('Get Withdraw Request Status Failed' . $e->getMessage());
+        }
+    }
 }
