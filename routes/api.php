@@ -34,6 +34,10 @@ Route::get('/optimize-app', function () {
 
     return "Application optimized and caches cleared successfully!";
 });
+Route::get('/migrate', function () {
+    Artisan::call('migrate');
+    return "Migration successful";
+});
 
 Route::get('/unath', function () {
     return response()->json(['message' => 'Unauthenticated'], 401);
