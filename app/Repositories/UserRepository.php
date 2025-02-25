@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\NairaWallet;
 use App\Models\User;
 use App\Models\VirtualAccount;
+use Exception;
 
 class UserRepository
 {
@@ -82,5 +83,37 @@ class UserRepository
             ];
         });
         return $virtualAccounts;
+    }
+    public function walletCurrenyforUser($userId)
+    {
+        //get the wallet currency for the user from the virtual account having balance
+        $walletCurrency = VirtualAccount::where('user_id', $userId)->where('available_balance', '>', 0)->with('walletCurrency')->get();
+        $walletCurrency = $walletCurrency->map(function ($account) {
+            return [
+                'balance' => $account->available_balance,
+                'currency' => $account->walletCurrency
+            ];
+        });
+        return $walletCurrency;
+    }
+    public function getDepostiAddress($userId, $currency, $network)
+    {
+        $virtualAccount = VirtualAccount::where('user_id', $userId)->where('currency', $currency)->where('blockchain', $network)->with('depositAddresses')->orderBy('created_at', 'desc')->first();
+        if (!$virtualAccount) {
+            throw new Exception('No virtual account found');
+        }
+        return $virtualAccount->depositAddresses()->orderBy('created_at', 'desc')->first();
+    }
+
+    public function allwalletcurrenciesforuser($userId)
+    {
+        $walletCurrency = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();
+        $walletCurrency = $walletCurrency->map(function ($account) {
+            return [
+                'balance' => $account->available_balance,
+                'currency' => $account->walletCurrency
+            ];
+        });
+        return $walletCurrency;
     }
 }

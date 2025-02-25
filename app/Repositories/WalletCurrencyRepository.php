@@ -59,4 +59,14 @@ class WalletCurrencyRepository
     {
         return WalletCurrency::where('blockchain', $blockchain)->first();
     }
+    public function getBlockChainsforCurrency($currency_id)
+    {
+        $currency = WalletCurrency::where('id', $currency_id)->first();
+        $networks = WalletCurrency::where('currency', $currency->currency)->get();
+        // return $networks;
+        $networks = $networks->map(function ($network) {
+            return $network->blockchain;
+        });
+        return $networks;
+    }
 }

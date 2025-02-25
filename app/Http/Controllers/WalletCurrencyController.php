@@ -36,4 +36,14 @@ class WalletCurrencyController extends Controller
         $walletCurrencies = $this->walletCurrencyService->all();
         return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
     }
+
+    public function getNetworks($currency_id)
+    {
+        try {
+            $networks = $this->walletCurrencyService->getNetworks($currency_id);
+            return ResponseHelper::success($networks, 'Networks fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
 }

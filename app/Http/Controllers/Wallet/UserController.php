@@ -66,4 +66,31 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function walletCurrenciesforUser()
+    {
+        try {
+            $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
+            return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
+    public function getDepositAddress($currency, $network)
+    {
+        try {
+            $depositAddress = $this->userService->getDepostiAddress($currency, $network);
+            return ResponseHelper::success($depositAddress, 'Deposit Address retrieved successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
+    public function allwalletCurrenciesforUser()
+    {
+        try {
+            $walletCurrencies = $this->userService->allwalletcurrenciesforuser();
+            return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
 }

@@ -102,20 +102,13 @@ class UserService
                 throw new Exception('Invalid password.');
             }
             $token = $user->createToken('auth_token')->plainTextToken;
-            // Load only required fields
             $userData = $user->only(['id', 'email']);
-
-            // Load virtual accounts and select required fields
             $virtualAccounts = $user->virtualAccounts()->select(['id', 'currency', 'blockchain', 'currency_id', 'available_balance', 'account_balance'])->get();
-
-            // Load wallet currency with required fields
             $virtualAccounts->each(function ($account) {
                 $account->walletCurrency = $account->walletCurrency()
                     ->select(['id', 'price', 'symbol', 'naira_price'])
                     ->first();
             });
-
-            // Return filtered data as an array
             return [
                 'user' => $userData,
                 'virtual_accounts' => $virtualAccounts,
@@ -176,11 +169,44 @@ class UserService
         try {
             $user = Auth::user();
             $virtualAccounts = $this->userRepository->getuserAssets($user->id);
-           
+
             return $virtualAccounts;
         } catch (Exception $e) {
             Log::error('Get user assets error: ' . $e->getMessage());
             throw new Exception('Get user assets failed. ' . $e->getMessage());
+        }
+    }
+    public function getwalletcurrenciesforuser()
+    {
+        try {
+            $user = Auth::user();
+            $walletCurrencies = $this->userRepository->walletCurrenyforUser($user->id);
+            return $walletCurrencies;
+        } catch (Exception $e) {
+            Log::error('Get wallet currencies error: ' . $e->getMessage());
+            throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
+        }
+    }
+    public function getDepostiAddress($currency, $network)
+    {
+        try {
+            $user = Auth::user();
+            $depositAddress = $this->userRepository->getDepostiAddress($user->id, $currency, $network);
+            return $depositAddress;
+        } catch (Exception $e) {
+            Log::error('Get deposit address error: ' . $e->getMessage());
+            throw new Exception('Get deposit address failed. ' . $e->getMessage());
+        }
+    }
+    public function allwalletcurrenciesforuser()
+    {
+        try {
+            $user = Auth::user();
+            $walletCurrencies = $this->userRepository->allwalletcurrenciesforuser($user->id);
+            return $walletCurrencies;
+        } catch (Exception $e) {
+            Log::error('Get wallet currencies error: ' . $e->getMessage());
+            throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
         }
     }
 }

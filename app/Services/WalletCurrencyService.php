@@ -48,4 +48,13 @@ class WalletCurrencyService
     {
         return $this->WalletCurrencyRepository->delete($id);
     }
+    public function getNetworks($currency_id)
+    {
+        try {
+
+            return $this->WalletCurrencyRepository->getBlockChainsforCurrency($currency_id);
+        } catch (Exception $e) {
+            throw new Exception('Get Networks Failed' . $e->getMessage());
+        }
+    }
 }
