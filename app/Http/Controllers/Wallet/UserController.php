@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Wallet;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PinRequest;
+use App\Models\UserAccount;
 use App\Services\UserAccountService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -91,6 +93,18 @@ class UserController extends Controller
             return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage());
+        }
+    }
+
+    public function addTestingBalance(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $userAccount = UserAccount::where('user_id', $user->id)->first();
+            $userAccount->naira_balance += $request->naira_balance;
+            return ResponseHelper::success($user, 'Testing balance added successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
         }
     }
 }
