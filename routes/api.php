@@ -36,7 +36,7 @@ Route::get('/optimize-app', function () {
 });
 Route::get('/migrate', function () {
     Artisan::call('migrate');
-    return "Migration successful";
+    return response()->json(['message' => 'Migration successful'], 200);
 });
 
 Route::get('/unath', function () {
