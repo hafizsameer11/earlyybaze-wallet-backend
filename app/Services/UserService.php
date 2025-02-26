@@ -177,7 +177,7 @@ class UserService
             return $user;
         } catch (Exception $e) {
             Log::error('Change password error: ' . $e->getMessage());
-            throw new Exception('Change password failed.');
+            throw new Exception('Change password failed. ' . $e->getMessage());
         }
     }
     private function generateAccountNumber(): string
