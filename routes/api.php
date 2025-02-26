@@ -67,7 +67,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']); // Login
     Route::post('/resend-otp', [AuthController::class, 'resendOtp']); // Resend OTP you can call verify OTP again
 
-    Route::post('/forget-password', [AuthController::class, 'forgetPassword']); // Forget password
+    Route::post('/forget-password', [AuthController::class, 'forgotPassword']); // Forget password
     Route::post('/verify-forget-password-otp', [AuthController::class, 'verifyForgetPasswordOtp']); // Verify forget password OTP
     Route::post('/reset-password', [AuthController::class, 'resetPassword']); // Reset password
 
