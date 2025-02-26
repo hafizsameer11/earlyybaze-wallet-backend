@@ -26,7 +26,7 @@ class WithdrawRequestService
         return $this->WithdrawRequestRepository->find($id);
     }
 
-    public function create(array $data)
+    public function create(array $data): \App\Models\WithdrawRequest
     {
         try {
             $user = Auth::user();

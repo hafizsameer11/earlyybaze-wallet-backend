@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FeeController;
+use App\Http\Controllers\KycController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
@@ -102,6 +103,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/details', [UserController::class, 'getUserDetails']);
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     Route::post('/user/update-profile', [UserController::class, 'UpdateUserProfile']);
+
+    Route::prefix('/kyc')->group(function () {
+        Route::post('/create', [KycController::class, 'create']);
+        Route::get('/get', [KycController::class, 'getKycForUser']);
+    });
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
