@@ -19,20 +19,19 @@ class ResetPasswordService
         $this->userRepository = $userRepository;
     }
 
-    public function forgetPassword(string $email): bool
+    public function forgetPassword(string $email)
     {
         try {
             $user = $this->userRepository->findByEmail($email);
-            if(!$user){
+            if (!$user) {
                 throw new Exception('User not found');
             }
             $resetPassword = $this->ResetPasswordRepository->forgetPassword($user);
             Mail::to($user->email)->send(new OtpMail($resetPassword->otp));
-            return true;
+            return $resetPassword;
         } catch (Exception $e) {
             throw new Exception('Forget password failed');
         }
-
     }
     public function verifyForgetPassswordOtp(string $email, string $otp)
     {
