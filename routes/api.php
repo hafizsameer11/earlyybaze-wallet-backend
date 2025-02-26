@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/deposit-address/{currency}/{network}', [UserController::class, 'getDepositAddress']); //get deposit address for a currency
     //profile edit and user details routes
     Route::get('/user/details', [UserController::class, 'getUserDetails']);
+    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

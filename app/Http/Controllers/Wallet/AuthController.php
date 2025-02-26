@@ -103,4 +103,13 @@ class AuthController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
+    public function changePassword(Request $request)
+    {
+        try {
+            $user = $this->userService->changePassword($request->old_password, $request->new_password);
+            return ResponseHelper::success($user, 'Password changed successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
 }

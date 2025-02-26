@@ -6,6 +6,8 @@ use App\Models\NairaWallet;
 use App\Models\User;
 use App\Models\VirtualAccount;
 use Exception;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class UserRepository
 {
@@ -61,7 +63,17 @@ class UserRepository
     {
         return $user->pin === $pin;
     }
+    public function changePassword(string $oldPassword, string $newPassword,$userId): ?User
+    {
+        $user = User::find($userId);
 
+        if (!Hash::check($oldPassword, $user->password)) {
+           throw new Exception('Invalid old password');
+        }
+        $user->password = Hash::make($newPassword);
+        $user->save();
+        return $user;
+    }
     public function getuserAssets($userId)
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();

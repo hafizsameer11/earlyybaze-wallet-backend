@@ -169,6 +169,17 @@ class UserService
             throw new Exception('Resend OTP failed.');
         }
     }
+    public function changePassword(string $oldPassword, string $newPassword): ?User
+    {
+        try {
+            $Authuser = Auth::user();
+            $user = $this->userRepository->changePassword($oldPassword, $newPassword, $Authuser->id);
+            return $user;
+        } catch (Exception $e) {
+            Log::error('Change password error: ' . $e->getMessage());
+            throw new Exception('Change password failed.');
+        }
+    }
     private function generateAccountNumber(): string
     {
         $randomNumber = 'EarlyBaze-' . rand(1000000000, 9999999999);
@@ -219,5 +230,4 @@ class UserService
             throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
         }
     }
-
 }
