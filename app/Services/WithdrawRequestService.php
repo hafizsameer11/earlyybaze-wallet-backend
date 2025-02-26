@@ -68,4 +68,14 @@ class WithdrawRequestService
             throw new Exception('Get Withdraw Request Status Failed' . $e->getMessage());
         }
     }
+    public function getWithdrawRequestforAuthenticatedUser()
+    {
+        try {
+            $user = Auth::user();
+
+            return $this->WithdrawRequestRepository->getWithDrawRequestByUserId($user->id);
+        } catch (Exception $e) {
+            throw new Exception('Get Withdraw Request By User Id Failed' . $e->getMessage());
+        }
+    }
 }

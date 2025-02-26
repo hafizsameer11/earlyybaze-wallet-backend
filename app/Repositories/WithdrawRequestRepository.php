@@ -40,4 +40,8 @@ class WithdrawRequestRepository
     {
         return WithdrawRequest::where('id', $id)->first();
     }
+    public function getWithDrawRequestByUserId($userId)
+    {
+        return WithdrawRequest::where('user_id', $userId)->orderBy('created_at', 'desc')->get();
+    }
 }

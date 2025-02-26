@@ -81,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     //withdrawal routes
     Route::post('/withdraw/create', [WithdrawController::class, 'create']);
     Route::get('/withdraw-request-status/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
+    Route::get('/withdraw-requests', [WithdrawController::class, 'getWithdrawRequestforAuthenticatedUser']);
 
     Route::get('/get-bank-account', [BankAccountController::class, 'getForUser']);
     Route::put('/update-bank-account/{id}', [BankAccountController::class, 'update']);
@@ -100,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     //profile edit and user details routes
     Route::get('/user/details', [UserController::class, 'getUserDetails']);
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/user/update-profile', [UserController::class, 'UpdateUserProfile']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

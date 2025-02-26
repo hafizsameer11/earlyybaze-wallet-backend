@@ -128,4 +128,14 @@ class UserRepository
         });
         return $walletCurrency;
     }
+    public function updateUserProfile(array $data): User{
+        $Authuser = Auth::user();
+        $user= User::find($Authuser->id);
+        if (isset($data['profile_picture']) && $data['profile_picture']) {
+            $path = $data['profile_picture']->store('profile_picture', 'public');
+            $data['profile_picture'] = $path;
+        }
+        $user->update($data);
+        return $user;
+    }
 }

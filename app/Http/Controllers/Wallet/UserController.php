@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Wallet;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PinRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Models\UserAccount;
 use App\Services\UserAccountService;
 use App\Services\UserService;
@@ -26,6 +27,15 @@ class UserController extends Controller
         try {
             $user = $this->userService->getUserDetails();
             return ResponseHelper::success($user, 'User details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function UpdateUserProfile(UpdateProfileRequest $request)
+    {
+        try {
+            $user = $this->userService->updateUserProfile($request->all());
+            return ResponseHelper::success($user, 'User profile updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

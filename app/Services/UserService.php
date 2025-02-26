@@ -230,4 +230,14 @@ class UserService
             throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
         }
     }
+    public function updateUserProfile(array $data): ?User
+    {
+        try {
+            $user = Auth::user();
+            return $this->userRepository->updateUserProfile($user->id, $data);
+        } catch (Exception $e) {
+            Log::error('Update user profile error: ' . $e->getMessage());
+            throw new Exception('Update user profile failed. ' . $e->getMessage());
+        }
+    }
 }

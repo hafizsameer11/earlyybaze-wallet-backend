@@ -33,4 +33,13 @@ class WithdrawController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getWithDrawRequestforAuthenticatedUser()
+    {
+        try {
+            $withdraw = $this->withdrawService->getWithDrawRequestforAuthenticatedUser();
+            return ResponseHelper::success($withdraw, 'Withdraw fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

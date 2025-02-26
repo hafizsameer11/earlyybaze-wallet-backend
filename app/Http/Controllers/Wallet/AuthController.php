@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Wallet;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\OtpVerificationRequst;
 use App\Http\Requests\RegisterRequest;
@@ -103,7 +104,7 @@ class AuthController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
-    public function changePassword(Request $request)
+    public function changePassword(ChangePasswordRequest $request)
     {
         try {
             $user = $this->userService->changePassword($request->old_password, $request->new_password);
