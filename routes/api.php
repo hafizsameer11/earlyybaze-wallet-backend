@@ -5,6 +5,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
+use App\Http\Controllers\Wallet\SupportController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WithdrawController;
@@ -107,6 +108,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('/kyc')->group(function () {
         Route::post('/create', [KycController::class, 'create']);
         Route::get('/get', [KycController::class, 'getKycForUser']);
+    });
+    Route::prefix('support')->group(function () {
+        Route::post('/create-ticket', [SupportController::class, 'crateTicket']);
+        Route::get('/get-tickets', [SupportController::class, 'getTicketsForAuthUser']);
     });
 });
 //non auth routes
