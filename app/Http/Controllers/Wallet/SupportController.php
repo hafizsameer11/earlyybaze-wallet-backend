@@ -37,4 +37,13 @@ class SupportController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getTicket($id)
+    {
+        try {
+            $ticket = $this->SupportTicketService->find($id);
+            return ResponseHelper::success($ticket, 'Ticket retrieved successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }
