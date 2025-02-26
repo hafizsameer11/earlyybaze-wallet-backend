@@ -140,12 +140,11 @@ class UserService
             throw new Exception('Set pin failed.');
         }
     }
-    public function verifyPin(string $pin)
+    public function verifyPin(string $pin, string $email): ?User
     {
         try {
-            $user = Auth::user();
-            Log::info('User: ' . $user);
-            $user = $this->userRepository->getById($user->id);
+
+            $user = $this->userRepository->findByEmail($email);
             $status = $this->userRepository->verifyPin($user, $pin);
             if (!$status) {
                 throw new Exception('Invalid pin.');

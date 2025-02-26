@@ -53,7 +53,7 @@ class UserController extends Controller
     public function verifyPin(Request $request)
     {
         try {
-            $user = $this->userService->verifyPin($request->pin);
+            $user = $this->userService->verifyPin($request->pin, $request->email);
             return ResponseHelper::success($user, 'Pin verified successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
