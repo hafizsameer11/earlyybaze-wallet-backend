@@ -25,6 +25,10 @@ class SupportTicketRepository
     {
         $user = Auth::user();
         $data['user_id'] = $user->id;
+        $ticket=SupportTicket::where('user_id',$user->id)->where('status','open')->where('subject',$data['subject'])->first();
+        if($ticket){
+            throw new \Exception('You already have an open ticket');
+        }
         // Add logic to create data
         return SupportTicket::create($data);
     }
