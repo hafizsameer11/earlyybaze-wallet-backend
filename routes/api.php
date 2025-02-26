@@ -97,7 +97,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/all-wallet-currencies', [UserController::class, 'allwalletCurrenciesforUser']); //wallet currencies for user that have balance and associated virtual account
     Route::get('/user/networks/{currency_id}', [WalletCurrencyController::class, 'getNetworks']); //get networks for a currency
     Route::get('/user/deposit-address/{currency}/{network}', [UserController::class, 'getDepositAddress']); //get deposit address for a currency
-
+    //profile edit and user details routes
+    Route::get('/user/details', [UserController::class, 'getUserDetails']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

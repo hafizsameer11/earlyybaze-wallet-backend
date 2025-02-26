@@ -25,6 +25,16 @@ class UserService
         $this->userAccountRepository = $userAccountRepository;
         $this->tatumService = $tatumService;
     }
+    public function getUserDetails(): ?User
+    {
+        try {
+            $user = Auth::user();
+            return $this->userRepository->getById($user->id);
+        } catch (Exception $e) {
+            Log::error('Get user details error: ' . $e->getMessage());
+            throw new Exception('Get user details failed.');
+        }
+    }
     public function getUserAccounts()
     {
         try {
@@ -209,4 +219,5 @@ class UserService
             throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
         }
     }
+
 }

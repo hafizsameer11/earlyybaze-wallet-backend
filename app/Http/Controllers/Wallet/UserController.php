@@ -21,6 +21,15 @@ class UserController extends Controller
         $this->userService = $userService;
         $this->userAccountService = $userAccountService;
     }
+    public function getUserDetails()
+    {
+        try {
+            $user = $this->userService->getUserDetails();
+            return ResponseHelper::success($user, 'User details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 
     public function setpin(PinRequest $request)
     {
