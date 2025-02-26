@@ -73,6 +73,8 @@ Route::prefix('auth')->group(function () {
 
 
 });
+Route::post('/user/set-pin', [UserController::class, 'setPin']);
+
 //Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     //testing route for adding balance
@@ -95,7 +97,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/create-bank-account', [BankAccountController::class, 'store']);
 
     Route::get('/user-accounts', [UserController::class, 'getUserAccountsFromApi']);
-    Route::post('/user/set-pin', [UserController::class, 'setPin']);
     Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
     Route::get('/user/balance', [UserController::class, 'getUserBalance']);
     Route::get('/user/assets', [UserController::class, 'getUserAssets']);

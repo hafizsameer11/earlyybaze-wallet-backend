@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('support_replies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained('support_tickets')->onDelete('cascade');
-
             $table->text('message')->nullable();
             $table->string('attachment')->nullable();
             $table->enum('sender_type', ['user', 'support']);

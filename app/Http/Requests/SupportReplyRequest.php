@@ -23,7 +23,7 @@ class SupportReplyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'message' => 'required|string',
+            'message' => 'nullable|string',
             'ticket_id' => 'required|exists:support_tickets,id',
             'attachment' => 'nullable'
         ];
