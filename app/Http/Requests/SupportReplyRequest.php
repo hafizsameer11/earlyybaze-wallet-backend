@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class SupportReplyRequest extends FormRequest
 {
@@ -22,7 +23,19 @@ class SupportReplyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'message' => 'required|string',
+            'ticket_id' => 'required|exists:support_tickets,id',
+            'attachment' => 'nullable'
         ];
+    }
+    public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'status' => 'error',
+                'data' => $validator->errors(),
+                'message' => $validator->errors()->first()
+            ], 422)
+        );
     }
 }
