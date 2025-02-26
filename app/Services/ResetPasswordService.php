@@ -23,7 +23,9 @@ class ResetPasswordService
     {
         try {
             $user = $this->userRepository->findByEmail($email);
-
+            if(!$user){
+                throw new Exception('User not found');
+            }
             $resetPassword = $this->ResetPasswordRepository->forgetPassword($user);
             Mail::to($user->email)->send(new OtpMail($resetPassword->otp));
             return true;
