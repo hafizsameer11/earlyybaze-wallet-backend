@@ -23,9 +23,21 @@ class SupportReplyService
         return $this->SupportReplyRepository->find($id);
     }
 
-    public function create(array $data)
+    public function createByUser(array $data)
     {
-        return $this->SupportReplyRepository->create($data);
+        try {
+            return $this->SupportReplyRepository->createByUser($data);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
+    public function getAllByTicket($ticketId)
+    {
+       try {
+            return $this->SupportReplyRepository->getAllByTicket($ticketId);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function update($id, array $data)

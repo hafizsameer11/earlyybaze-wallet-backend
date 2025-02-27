@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\SupportReply;
 use App\Models\SupportTicket;
 
 class SupportReplyRepository
@@ -16,20 +17,29 @@ class SupportReplyRepository
         // Add logic to find data by ID
     }
 
-    public function create(array $data)
+    public function createByUser(array $data)
     {
         $ticket = SupportTicket::find($data['ticket_id']);
+
         if (!$ticket) {
             throw new \Exception('Ticket not found');
         }
-        //handle attachament
+        $ticket->update(['answered' => 'answered']);
+
         if (isset($data['attachment']) && $data['attachment']) {
             $path = $data['attachment']->store('attachment', 'public');
             $data['attachment'] = $path;
         }
-        
-        // Add logic to create data
-        // return $ticket->replies()->create($data);
+        $data['sender_type'] = 'user';
+        return SupportReply::create($data);
+    }
+    public function getAllByTicket($ticketId)
+    {
+        $supportticket = SupportTicket::where('id', $ticketId)->with('replies')->first();
+        if (!$supportticket) {
+            throw new \Exception('Ticket not found');
+        }
+        return $supportticket;
     }
 
     public function update($id, array $data)

@@ -8,6 +8,7 @@ use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
+use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -75,7 +76,7 @@ Route::prefix('auth')->group(function () {
 });
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
-
+Route::post('/webhook', [WebhookController::class, 'webhook']);
 //Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     //testing route for adding balance
