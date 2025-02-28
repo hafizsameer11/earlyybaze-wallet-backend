@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\DepositAddress;
 use App\Models\TransactionSend;
 use App\Models\User;
 use App\Models\VirtualAccount;
@@ -57,7 +58,7 @@ class TransactionSendRepository
             if (!$receiverAccount) {
                 return ['success' => false, 'error' => 'Receiver account not found'];
             }
-
+            $receiverDepositAddress=DepositAddress::where('virtual_account_id',$receiverAccount->id)->first();
             // Get Sender's Virtual Account
             $senderAccount = VirtualAccount::where('user_id', $sender->id)
                 ->where('currency', $currency)
@@ -105,7 +106,7 @@ class TransactionSendRepository
                 'sender_virtual_account_id' => $senderAccountId,
                 'receiver_virtual_account_id' => $receiverAccountId,
                 'sender_address' => null,
-                'receiver_address' => null,
+                'receiver_address' => $receiverDepositAddress,
                 'amount' => $amount,
                 'currency' => $currency,
                 'tx_id' => $txId,
