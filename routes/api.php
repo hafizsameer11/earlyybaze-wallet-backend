@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\MasterWalletController;
@@ -119,6 +120,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-ticket', [SupportController::class, 'crateTicket']);
         Route::get('/get-tickets', [SupportController::class, 'getTicketsForAuthUser']);
         Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
+    });
+
+    Route::prefix('exchange-rate')->group(function () {
+        Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
+        Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
+        Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
     });
 });
 //non auth routes

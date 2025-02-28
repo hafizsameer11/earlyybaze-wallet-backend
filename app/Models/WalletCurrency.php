@@ -19,4 +19,8 @@ class WalletCurrency extends Model
     {
         return $this->hasMany(VirtualAccount::class);
     }
+    public function exchangeRates()
+    {
+        return $this->hasMany(ExchangeRate::class);
+    }
 }
