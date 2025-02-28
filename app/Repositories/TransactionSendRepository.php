@@ -36,6 +36,9 @@ class TransactionSendRepository
         $email = $data['email'];
         $amount = $data['amount'];
         $receiver = User::where('email', $email)->first();
+        if(!$receiver){
+            throw new \Exception('Receiver not found');
+        }
         $sender = Auth::user();
         $receiverAccount = VirtualAccount::where('user_id', $receiver->id)->where('currency', $currency)->where('blockchain', $network)->first();
         if (!$receiverAccount) {
