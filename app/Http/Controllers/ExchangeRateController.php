@@ -18,37 +18,36 @@ class ExchangeRateController extends Controller
     {
         try {
             $exchangeRates = $this->exchangeRateService->all();
-            // return response()->json($exchangeRates, 200);
-            ResponseHelper::success($exchangeRates, 'Exchange rates fetched successfully', 200);
+            return ResponseHelper::success($exchangeRates, 'Exchange rates fetched successfully', 200);
         } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage(), 500);
+            return  ResponseHelper::error($e->getMessage(), 500);
         }
     }
     public function store(ExchangeRequest $request)
     {
         try {
             $exchangeRate = $this->exchangeRateService->create($request->all());
-            ResponseHelper::success($exchangeRate, 'Exchange rate created successfully', 201);
+            return    ResponseHelper::success($exchangeRate, 'Exchange rate created successfully', 201);
         } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage(), 500);
+            return   ResponseHelper::error($e->getMessage(), 500);
         }
     }
     public function getByCurrency($currency)
     {
         try {
             $exchangeRate = $this->exchangeRateService->getByCurrency($currency);
-            ResponseHelper::success($exchangeRate, 'Exchange rate fetched successfully', 200);
+            return    ResponseHelper::success($exchangeRate, 'Exchange rate fetched successfully', 200);
         } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage(), 500);
+            return  ResponseHelper::error($e->getMessage(), 500);
         }
     }
     public function update(ExchangeRequest $request, $id)
     {
         try {
             $exchangeRate = $this->exchangeRateService->update($request->all(), $id);
-            ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
+            return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
         } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage(), 500);
+            return ResponseHelper::error($e->getMessage(), 500);
         }
     }
 }
