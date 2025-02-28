@@ -7,6 +7,7 @@ use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
+use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WebhookController;
@@ -127,6 +128,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
     });
+
+    Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
