@@ -24,7 +24,7 @@ class ChangePasswordRequest extends FormRequest
     {
         return [
             'old_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:8',
         ];
     }
     public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
