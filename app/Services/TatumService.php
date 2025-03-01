@@ -138,7 +138,7 @@ class TatumService
 
         if ($response->failed()) {
             Log::error("Failed to estimate gas fee: " . $response->body());
-            throw new \Exception('Failed to estimate gas fee.');
+            throw new \Exception('Failed to estimate gas fee.' . $response->body());
         }
 
         return $response->json();
