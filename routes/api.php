@@ -121,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-ticket', [SupportController::class, 'crateTicket']);
         Route::get('/get-tickets', [SupportController::class, 'getTicketsForAuthUser']);
         Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
+        Route::post('/send-reply', [SupportController::class, 'createReplyByUser']);
     });
 
     Route::prefix('exchange-rate')->group(function () {

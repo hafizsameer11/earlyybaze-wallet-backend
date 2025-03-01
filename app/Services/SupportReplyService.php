@@ -23,10 +23,10 @@ class SupportReplyService
         return $this->SupportReplyRepository->find($id);
     }
 
-    public function createByUser(array $data)
+    public function createByUser(array $data, $userId)
     {
         try {
-            return $this->SupportReplyRepository->createByUser($data);
+            return $this->SupportReplyRepository->createByUser($data,$userId);
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }

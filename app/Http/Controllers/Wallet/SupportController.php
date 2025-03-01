@@ -51,10 +51,11 @@ class SupportController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function createReplyByUser(SupportReplyRequest $request, $id)
+    public function createReplyByUser(SupportReplyRequest $request)
     {
         try {
-            $ticket = $this->SupportReplyService->createByUser($id, $request->all());
+            $user = Auth::user();
+            $ticket = $this->SupportReplyService->createByUser($request->all(), $user->id);
             return ResponseHelper::success($ticket, 'Reply created successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

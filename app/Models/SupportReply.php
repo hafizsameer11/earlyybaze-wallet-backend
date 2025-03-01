@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class SupportReply extends Model
 {
     use HasFactory;
-    protected $fillable = ['ticket_id', 'user_id', 'message', 'sender_type'];
+    protected $fillable = ['ticket_id', 'message', 'sender_type','attachment'];
 
     public function ticket()
     {

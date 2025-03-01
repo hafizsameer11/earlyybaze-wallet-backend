@@ -17,10 +17,10 @@ class SupportReplyRepository
         // Add logic to find data by ID
     }
 
-    public function createByUser(array $data)
+    public function createByUser(array $data, $userId)
     {
         $ticket = SupportTicket::find($data['ticket_id']);
-
+      
         if (!$ticket) {
             throw new \Exception('Ticket not found');
         }
