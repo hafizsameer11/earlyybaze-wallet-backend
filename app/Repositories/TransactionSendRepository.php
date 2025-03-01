@@ -122,7 +122,7 @@ class TransactionSendRepository
         try {
             // Extract transaction details
             $currency = strtoupper($data['currency']); // Example: ETH, USDT
-            $network = strtoupper($data['chain']); // Blockchain: ETH, BSC, TRON, etc.
+            $network = strtoupper($data['network']); // Blockchain: ETH, BSC, TRON, etc.
             $amount = $data['amount'];
             $receiverAddress = $data['address'];
 
