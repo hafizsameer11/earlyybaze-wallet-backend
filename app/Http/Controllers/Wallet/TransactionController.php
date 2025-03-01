@@ -52,7 +52,7 @@ class TransactionController extends Controller
     {
         try {
             $user = Auth::user();
-            $transaction = $this->transactionService->sendOnChainTransaction($user->id);
+            $transaction = $this->transactionService->sendOnChainTransaction($request->all());
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
