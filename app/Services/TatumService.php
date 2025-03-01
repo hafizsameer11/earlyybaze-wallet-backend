@@ -127,7 +127,7 @@ class TatumService
     {
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey
-        ])->post("{$this->baseUrl}/{$chain}/estimate/gas", [
+        ])->post("{$this->baseUrl}/{$chain}/gas", [
             "chain" => strtoupper($chain),
             "from" => $fromAddress,
             "to" => $toAddress,
