@@ -127,7 +127,7 @@ class TatumService
     {
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey
-        ])->post("{$this->baseUrl}/v3/blockchain/estimate/gas", [
+        ])->post("{$this->baseUrl}/blockchain/estimate/gas", [
             "chain" => strtoupper($chain),
             "from" => $fromAddress,
             "to" => $toAddress,
@@ -151,7 +151,7 @@ class TatumService
     {
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey
-        ])->post("{$this->baseUrl}/v3/blockchain/transaction", $transactionData);
+        ])->post("{$this->baseUrl}/blockchain/transaction", $transactionData);
 
         Log::info("On-Chain Transaction Response: " . json_encode($response->json()));
 
