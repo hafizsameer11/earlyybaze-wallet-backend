@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Wallet;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InternalTransferRequest;
+use App\Http\Requests\OnChainTransaction;
 use App\Models\TransactionSend;
 use App\Services\TransactionSendService;
 use Illuminate\Http\Request;
@@ -47,7 +48,7 @@ class TransactionController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function sendOnChain()
+    public function sendOnChain(OnChainTransaction $request)
     {
         try {
             $user = Auth::user();
