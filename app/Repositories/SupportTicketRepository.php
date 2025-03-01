@@ -14,7 +14,8 @@ class SupportTicketRepository
 
     public function find($id)
     {
-        $ticket = SupportTicket::find($id);
+        $ticket = SupportTicket::where('id', $id)->with('replies')->first();
+        // $ticket->replies;
         if (!$ticket) {
             throw new \Exception('Ticket not found');
         }
