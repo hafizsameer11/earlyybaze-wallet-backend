@@ -178,7 +178,7 @@ class TransactionSendRepository
                 $status = 'pending';
                 $txId = $response['txId'];
             } elseif (isset($response['errorCode'])) {
-                return ['success' => false, 'error' => 'Transaction failed: ' . $response['message']];
+               throw new \Exception('Failed to send on-chain transaction: ' . $response['message']);
             }
 
             // Store transaction details
@@ -204,7 +204,7 @@ class TransactionSendRepository
             return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
         } catch (\Exception $e) {
             Log::error('On-Chain Transfer Error: ' . $e->getMessage());
-            return ['success' => false, 'error' => $e->getMessage()];
+          throw new \Exception($e->getMessage());
         }
     }
     public function update($id, array $data)
