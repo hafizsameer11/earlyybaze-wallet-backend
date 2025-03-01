@@ -123,4 +123,43 @@ class TatumService
 
         return $response->json();
     }
+    public function estimateGasFee($chain, $fromAddress, $toAddress, $amount)
+    {
+        $response = Http::withHeaders([
+            'x-api-key' => $this->apiKey
+        ])->post("{$this->baseUrl}/v3/blockchain/estimate/gas", [
+            "chain" => strtoupper($chain),
+            "from" => $fromAddress,
+            "to" => $toAddress,
+            "amount" => (string) $amount
+        ]);
+
+        Log::info("Gas Fee Estimation Response: " . json_encode($response->json()));
+
+        if ($response->failed()) {
+            Log::error("Failed to estimate gas fee: " . $response->body());
+            throw new \Exception('Failed to estimate gas fee.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Send an On-Chain Transaction.
+     */
+    public function sendBlockchainTransaction(array $transactionData)
+    {
+        $response = Http::withHeaders([
+            'x-api-key' => $this->apiKey
+        ])->post("{$this->baseUrl}/v3/blockchain/transaction", $transactionData);
+
+        Log::info("On-Chain Transaction Response: " . json_encode($response->json()));
+
+        if ($response->failed()) {
+            Log::error("On-Chain transaction failed: " . $response->body());
+            throw new \Exception('On-Chain transaction failed.');
+        }
+
+        return $response->json();
+    }
 }

@@ -17,6 +17,11 @@ class TransactionSendRepository
     {
         $this->tatumService = $tatumService;
     }
+    public function getTransactionforUser($user_id, $userType)
+    {
+
+        return TransactionSend::where($userType, $user_id)->get();
+    }
     public function all()
     {
         // Add logic to fetch all data
@@ -24,7 +29,11 @@ class TransactionSendRepository
 
     public function find($id)
     {
-        // Add logic to find data by ID
+        $transaction = TransactionSend::find($id);
+        if (!$transaction) {
+            throw new \Exception('Transaction not found');
+        }
+        return $transaction;
     }
 
     public function create(array $data)
@@ -45,11 +54,7 @@ class TransactionSendRepository
             if (!$receiver) {
                 return ['success' => false, 'error' => 'Receiver not found'];
             }
-
-            // Find Sender
             $sender = Auth::user();
-
-            // Get Receiver's Virtual Account
             $receiverAccount = VirtualAccount::where('user_id', $receiver->id)
                 ->where('currency', $currency)
                 ->where('blockchain', $network)
@@ -58,40 +63,27 @@ class TransactionSendRepository
             if (!$receiverAccount) {
                 return ['success' => false, 'error' => 'Receiver account not found'];
             }
-            $receiverDepositAddress=DepositAddress::where('virtual_account_id',$receiverAccount->id)->first();
-            // Get Sender's Virtual Account
+            $receiverDepositAddress = DepositAddress::where('virtual_account_id', $receiverAccount->id)->first();
             $senderAccount = VirtualAccount::where('user_id', $sender->id)
                 ->where('currency', $currency)
                 ->where('blockchain', $network)
                 ->first();
-
             if (!$senderAccount) {
                 return ['success' => false, 'error' => 'Sender account not found'];
             }
-
-            // Store IDs
             $receiverAccountId = $receiverAccount->account_id;
             $senderAccountId = $senderAccount->account_id;
-
-            // Send Transfer Request to Tatum
             $response = $this->tatumService->transferFunds($senderAccountId, $receiverAccountId, $amount, $currency);
             Log::info('Internal transfer response: ' . json_encode($response));
-
-            // Determine Transaction Status
             $status = 'failed';
             $txId = null;
             $errorMessage = null;
-
             if (isset($response['reference'])) {
                 $status = 'completed'; // Success case
                 $txId = $response['reference'];
-
-                // Update Sender's Balance
                 $senderAccount->available_balance -= $amount;
                 $senderAccount->account_balance -= $amount;
                 $senderAccount->save();
-
-                // Update Receiver's Balance
                 $receiverAccount->available_balance += $amount;
                 $receiverAccount->account_balance += $amount;
                 $receiverAccount->save();
@@ -106,6 +98,8 @@ class TransactionSendRepository
                 'sender_virtual_account_id' => $senderAccountId,
                 'receiver_virtual_account_id' => $receiverAccountId,
                 'sender_address' => null,
+                'user_id' => $sender->id ?? null,
+                'receiver_id' => $receiver->id ?? null,
                 'receiver_address' => $receiverDepositAddress,
                 'amount' => $amount,
                 'currency' => $currency,
@@ -123,7 +117,96 @@ class TransactionSendRepository
             throw new \Exception($e->getMessage());
         }
     }
+    public function sendOnChainTransaction(array $data)
+    {
+        try {
+            // Extract transaction details
+            $currency = strtoupper($data['currency']); // Example: ETH, USDT
+            $network = strtoupper($data['chain']); // Blockchain: ETH, BSC, TRON, etc.
+            $amount = $data['amount'];
+            $receiverAddress = $data['address'];
 
+            // Get sender's virtual account
+            $sender = Auth::user();
+            $senderAccount = VirtualAccount::where('user_id', $sender->id)
+                ->where('currency', $currency)
+                ->where('blockchain', $network)
+                ->first();
+
+            if (!$senderAccount) {
+                return ['success' => false, 'error' => 'Sender account not found'];
+            }
+
+            // Get sender's deposit address
+            $senderDepositAddress = DepositAddress::where('virtual_account_id', $senderAccount->id)->first();
+            if (!$senderDepositAddress) {
+                return ['success' => false, 'error' => 'Sender deposit address not found'];
+            }
+            $senderAddress = $senderDepositAddress->address;
+
+            // Estimate Gas Fee
+            $gasFeeResponse = $this->tatumService->estimateGasFee($network, $senderAddress, $receiverAddress, $amount);
+            if (!isset($gasFeeResponse['gasLimit']) || !isset($gasFeeResponse['gasPrice'])) {
+                return ['success' => false, 'error' => 'Failed to estimate gas fee'];
+            }
+
+            $gasLimit = $gasFeeResponse['gasLimit'];
+            $gasPrice = $gasFeeResponse['gasPrice'];
+            $gasFee = $gasLimit * $gasPrice; // Total gas cost
+
+            // Ensure sender has enough balance for transaction + gas fee
+            $totalCost = $amount + $gasFee;
+            if ($senderAccount->available_balance < $totalCost) {
+                return ['success' => false, 'error' => 'Insufficient balance to cover amount + gas fee'];
+            }
+
+            // Execute On-Chain Transaction
+            $response = $this->tatumService->sendBlockchainTransaction([
+                "chain" => $network,
+                "from" => $senderAddress,
+                "to" => $receiverAddress,
+                "amount" => (string) $amount,
+                "gasLimit" => $gasLimit,
+                "gasPrice" => $gasPrice
+            ]);
+
+            Log::info('On-Chain Transfer Response: ' . json_encode($response));
+
+            $status = 'failed';
+            $txId = null;
+            if (isset($response['txId'])) {
+                $status = 'pending';
+                $txId = $response['txId'];
+            } elseif (isset($response['errorCode'])) {
+                return ['success' => false, 'error' => 'Transaction failed: ' . $response['message']];
+            }
+
+            // Store transaction details
+            TransactionSend::create([
+                'transaction_type' => 'on_chain',
+                'sender_virtual_account_id' => $senderAccount->account_id,
+                'receiver_virtual_account_id' => null,
+                'sender_address' => $senderAddress,
+                'receiver_address' => $receiverAddress,
+                'amount' => $amount,
+                'currency' => $currency,
+                'tx_id' => $txId,
+                'gas_fee' => $gasFee,
+                'status' => $status,
+                'blockchain' => $network,
+            ]);
+
+            // Deduct balance
+            $senderAccount->available_balance -= $totalCost;
+            $senderAccount->account_balance -= $totalCost;
+            $senderAccount->save();
+
+            return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
+        } catch (\Exception $e) {
+            Log::error('On-Chain Transfer Error: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
     public function update($id, array $data)
     {
         // Add logic to update data

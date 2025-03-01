@@ -36,4 +36,5 @@ class MasterWalletService
     {
         return $this->walletRepository->getAll();
     }
+    
 }

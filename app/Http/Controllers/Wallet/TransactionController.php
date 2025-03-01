@@ -8,6 +8,7 @@ use App\Http\Requests\InternalTransferRequest;
 use App\Models\TransactionSend;
 use App\Services\TransactionSendService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TransactionController extends Controller
 {
@@ -19,9 +20,39 @@ class TransactionController extends Controller
     }
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
-        try{
+        try {
             $transaction = $this->transactionService->sendInternalTransaction($request->all());
-         return   ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
+            return   ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getSendTransactionforUser()
+    {
+        try {
+            $user = Auth::user();
+            $transactions = $this->transactionService->getTransactionforUser($user->id, 'user_id');
+            return ResponseHelper::success($transactions, 'Transactions fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getReceiveTransactionforUser()
+    {
+        try {
+            $user = Auth::user();
+            $transactions = $this->transactionService->getTransactionforUser($user->id, 'receiver_id');
+            return ResponseHelper::success($transactions, 'Transactions fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function sendOnChain()
+    {
+        try {
+            $user = Auth::user();
+            $transaction = $this->transactionService->sendOnChainTransaction($user->id);
+            return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

@@ -45,4 +45,20 @@ class TransactionSendService
             throw new \Exception($e->getMessage());
         }
     }
+    public function getTransactionforUser($user_id, $userType)
+    {
+        try {
+            return $this->TransactionSendRepository->getTransactionforUser($user_id, $userType);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
+    public function sendOnChainTransaction(array $data)
+    {
+        try {
+            return $this->TransactionSendRepository->sendOnChainTransaction($data);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

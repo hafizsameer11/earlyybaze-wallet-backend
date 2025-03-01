@@ -14,8 +14,12 @@ return new class extends Migration
         Schema::create('transaction_sends', function (Blueprint $table) {
             $table->id();
             $table->string('transaction_type'); // 'internal' or 'on_chain'
-            $table->string('sender_virtual_account_id')->nullable(); // Virtual Account ID (for internal transactions)
-            $table->string('receiver_virtual_account_id')->nullable(); // Virtual Account ID (for internal transactions)
+            $table->string('sender_virtual_account_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users');
+            $table->unsignedBigInteger('receiver_id')->nullable();
+            $table->foreign('receiver_id')->references('id')->on('users');
+            $table->string('receiver_virtual_account_id')->nullable();
             $table->string('sender_address')->nullable();
             $table->string('receiver_address');
             $table->decimal('amount', 20, 8);

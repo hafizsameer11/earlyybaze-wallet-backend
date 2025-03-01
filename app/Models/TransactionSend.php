@@ -21,6 +21,16 @@ class TransactionSend extends Model
         'block_hash',
         'gas_fee',
         'status',
-        'blockchain'
+        'blockchain',
+        'user_id',
+        'receiver_id'
     ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function receiver()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
