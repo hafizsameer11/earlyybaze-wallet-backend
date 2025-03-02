@@ -8,4 +8,23 @@ use Illuminate\Database\Eloquent\Model;
 class SwapTransaction extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'user_id',
+        'transaction_id',
+        'currency',
+        'fee',
+        'amount_usd',
+        'amount_naira',
+        'status',
+        'exchange_rate',
+        'fee_naira',
+    ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class);
+    }
 }
