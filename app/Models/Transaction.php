@@ -16,6 +16,7 @@ class Transaction extends Model
         'transaction_type',
         'transaction_id',
         'reference',
+        'type',
         'network',
         'amount_usd',
     ];
