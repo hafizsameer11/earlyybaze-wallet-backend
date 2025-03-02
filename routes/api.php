@@ -132,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
+    Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
 });
 //non auth routes
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

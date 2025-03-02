@@ -6,16 +6,20 @@ use App\Models\DepositAddress;
 use App\Models\TransactionSend;
 use App\Models\User;
 use App\Models\VirtualAccount;
+use App\Services\ExchangeRateService;
 use App\Services\TatumService;
+use App\Services\transactionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class TransactionSendRepository
 {
-    protected $tatumService;
-    public function __construct(TatumService $tatumService)
+    protected $tatumService, $transactionService, $exchangeRateService;
+    public function __construct(TatumService $tatumService, transactionService $transactionService, ExchangeRateService $exchangeRateService)
     {
         $this->tatumService = $tatumService;
+        $this->transactionService = $transactionService;
+        $this->exchangeRateService = $exchangeRateService;
     }
     public function getTransactionforUser($user_id, $userType)
     {
@@ -91,8 +95,22 @@ class TransactionSendRepository
                 $status = 'failed';
                 $errorMessage = "Insufficient balance: " . $response['message'];
             }
-
-            // Store Transaction Details
+            $exchangerate = $this->exchangeRateService->getByCurrency($currency);
+            //exchange rate can throw error if not found so handle it
+            $amount_usd = null;
+            if ($exchangerate) {
+                $amount_usd = $amount * $exchangerate->rate;
+            }
+            $transcation = $this->transactionService->create([
+                'type' => 'send',
+                'amount' => $amount,
+                'currency' => $currency,
+                'status' => $status,
+                'network' => $network,
+                'reference' => $txId,
+                'user_id' => $sender->id,
+                'amount_usd' => $amount_usd
+            ]);
             TransactionSend::create([
                 'transaction_type' => 'internal',
                 'sender_virtual_account_id' => $senderAccountId,
@@ -109,6 +127,37 @@ class TransactionSendRepository
                 'gas_fee' => null,
                 'status' => $status,
                 'blockchain' => $network,
+                'transaction_id' => $transcation->id
+            ]);
+            //create transactionsend and transaction for receiver too
+
+            $transcation = $this->transactionService->create([
+                'type' => 'receive',
+                'amount' => $amount,
+                'currency' => $currency,
+                'status' => $status,
+                'network' => $network,
+                'reference' => $txId,
+                'user_id' => $receiver->id,
+                'amount_usd' => $amount_usd
+            ]);
+            TransactionSend::create([
+                'transaction_type' => 'internal',
+                'sender_virtual_account_id' => $senderAccountId,
+                'receiver_virtual_account_id' => $receiverAccountId,
+                'sender_address' => null,
+                'user_id' => $sender->id ?? null,
+                'receiver_id' => $receiver->id ?? null,
+                'receiver_address' => $receiverDepositAddress,
+                'amount' => $amount,
+                'currency' => $currency,
+                'tx_id' => $txId,
+                'block_height' => null,
+                'block_hash' => null,
+                'gas_fee' => null,
+                'status' => $status,
+                'blockchain' => $network,
+                'transaction_id' => $transcation->id
             ]);
 
             // Return Data for Controller
@@ -178,8 +227,9 @@ class TransactionSendRepository
                 $status = 'pending';
                 $txId = $response['txId'];
             } elseif (isset($response['errorCode'])) {
-               throw new \Exception('Failed to send on-chain transaction: ' . $response['message']);
+                throw new \Exception('Failed to send on-chain transaction: ' . $response['message']);
             }
+            // $transaction=
 
             // Store transaction details
             TransactionSend::create([
@@ -204,7 +254,7 @@ class TransactionSendRepository
             return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
         } catch (\Exception $e) {
             Log::error('On-Chain Transfer Error: ' . $e->getMessage());
-          throw new \Exception($e->getMessage());
+            throw new \Exception($e->getMessage());
         }
     }
     public function update($id, array $data)

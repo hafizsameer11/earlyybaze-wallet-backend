@@ -23,7 +23,8 @@ class TransactionSend extends Model
         'status',
         'blockchain',
         'user_id',
-        'receiver_id'
+        'receiver_id',
+        'transaction_id'
     ];
     public function user()
     {
@@ -32,5 +33,9 @@ class TransactionSend extends Model
     public function receiver()
     {
         return $this->belongsTo(User::class);
+    }
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class);
     }
 }
