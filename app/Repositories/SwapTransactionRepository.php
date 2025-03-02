@@ -41,7 +41,7 @@ class SwapTransactionRepository
 
             // Convert amounts to USD and NGN (Naira)
             $amount_usd = bcmul($amount, $exchangeRate->rate_usd, 8);
-            $amount_naira = bcmul($amount_usd, $exchangeRate->rate_naira, 8);
+            $amount_naira = bcmul($amount, $exchangeRate->rate_naira, 8);
             $fee_naira = bcmul($fee, $exchangeRate->rate_naira, 8);
 
             // Add calculated values to data
