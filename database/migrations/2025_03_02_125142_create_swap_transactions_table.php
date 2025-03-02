@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('status')->nullable();
             $table->double('fee_naira')->nullable();
             $table->string('exchange_rate')->nullable();
-            $table->string('reference')->nullable();
+            // php $table->string('reference')->nullable();
             $table->timestamps();
         });
     }
