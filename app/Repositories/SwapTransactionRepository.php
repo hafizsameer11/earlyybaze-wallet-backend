@@ -133,6 +133,6 @@ class SwapTransactionRepository
     }
     public function singleSwapTransaction($id)
     {
-        return SwapTransaction::findOrFail($id);
+        return SwapTransaction::where('transaction_id', $id)->first();
     }
 }
