@@ -85,4 +85,13 @@ class TransactionController extends Controller
             return ResponseHelper::error($e->getMessage(),500);
         }
     }
+    public function singleSwapTransaction($id){
+        try{
+            $user=Auth::user();
+            $transaction=$this->swapTransactionService->singleSwapTransaction($id);
+            return ResponseHelper::success($transaction,'Transaction fetched successfully',200);
+        }catch(\Exception $e){
+            return ResponseHelper::error($e->getMessage(),500);
+        }
+    }
 }

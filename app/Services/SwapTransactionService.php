@@ -20,4 +20,11 @@ class SwapTransactionService
             throw new \Exception($e->getMessage());
         }
     }
+    public function singleSwapTransaction($id){
+        try {
+            return $this->SwapTransactionRepository->singleSwapTransaction($id);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

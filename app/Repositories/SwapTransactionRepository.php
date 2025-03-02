@@ -131,4 +131,12 @@ class SwapTransactionRepository
             throw new Exception($e->getMessage());
         }
     }
+    public function singleSwapTransaction($id)
+    {
+        try {
+            return SwapTransaction::find($id);
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+    }
 }
