@@ -38,7 +38,7 @@ class WithdrawRequestRepository
     }
     public function getwithdrawRequestStatus($id)
     {
-        return WithdrawRequest::where('id', $id)->first();
+        return WithdrawRequest::where('id', $id)->with('bankAccount')->first();
     }
     public function getWithDrawRequestByUserId($userId)
     {
