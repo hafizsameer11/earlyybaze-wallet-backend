@@ -99,7 +99,7 @@ class TransactionSendRepository
             //exchange rate can throw error if not found so handle it
             $amount_usd = null;
             if ($exchangerate) {
-                $amount_usd = $amount * $exchangerate->rate;
+                $amount_usd = $amount * $exchangerate->rate_usd;
             }
             $transcation = $this->transactionService->create([
                 'type' => 'send',
