@@ -92,7 +92,7 @@ class SwapTransactionRepository
             Log::info('Swap Internal Transfer Response: ' . json_encode($response));
             $status = 'failed';
             $txId = null;
-            $userAccount= UserAccount::where('user_id', $user->id)->first();
+            $userAccount = UserAccount::where('user_id', $user->id)->first();
             if (isset($response['reference'])) {
                 $status = 'completed';
                 $txId = $response['reference'];
@@ -100,7 +100,7 @@ class SwapTransactionRepository
                 $userVirtualAccount->save();
                 $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $finalAmount, 8);
                 $adminVirtualAccount->save();
-                $userAccount->naira_balance = bcadd($userAccount->naira_balance, $finalAmount, 8);
+                $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amount_naira, 8);
                 $userAccount->save();
             } elseif (isset($response['errorCode']) && $response['errorCode'] === "balance.insufficient") {
                 throw new Exception("Insufficient balance: " . $response['message']);
