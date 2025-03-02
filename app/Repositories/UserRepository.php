@@ -65,12 +65,12 @@ class UserRepository
     {
         return $user->pin === $pin;
     }
-    public function changePassword(string $oldPassword, string $newPassword,$userId): ?User
+    public function changePassword(string $oldPassword, string $newPassword, $userId): ?User
     {
         $user = User::find($userId);
 
         if (!Hash::check($oldPassword, $user->password)) {
-           throw new Exception('Invalid old password');
+            throw new Exception('Invalid old password');
         }
         $user->password = Hash::make($newPassword);
         $user->save();
@@ -130,9 +130,10 @@ class UserRepository
         });
         return $walletCurrency;
     }
-    public function updateUserProfile(string $userId,array $data): User{
+    public function updateUserProfile(string $userId, array $data): User
+    {
 
-        $user= User::find($userId);
+        $user = User::find($userId);
         if (isset($data['profile_picture']) && $data['profile_picture']) {
             $path = $data['profile_picture']->store('profile_picture', 'public');
             $data['profile_picture'] = $path;

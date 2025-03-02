@@ -31,6 +31,11 @@ class ExchangeRateRepository
     }
     public function create(array $data)
     {
+        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
+        //calculate the exchange rate in naira
+        $data['rate_usd'] = 1 / $data['rate'];
+        $usd_rate = $data['rate_usd'];
+        $data['rate_naira'] = $nairaExchangeRate->rate * $usd_rate;
         return ExchangeRate::create($data);
     }
 

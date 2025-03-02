@@ -12,7 +12,9 @@ class ExchangeRate extends Model
         'currency_id',
         'rate',
         'currency',
-        'status'
+        'status',
+        'rate_naira',
+        'rate_usd',
     ];
     public function currency()
     {
