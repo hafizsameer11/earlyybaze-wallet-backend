@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\ExchangeRate;
+use App\Models\Fee;
 use App\Models\SwapTransaction;
 use App\Models\User;
 use App\Models\UserAccount;
@@ -28,10 +29,20 @@ class SwapTransactionRepository
             $currency = $data['currency'];
             $network = $data['network'];
             $amount = $data['amount'];
-            $fee = $data['fee'];
+            // $fee = $data['fee'];
+            $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
+            $feeAmount = $fee->amount;
+            $feePercentage = $fee->percentage;
+            $feePercentageAmount = bcmul($amount, $feePercentage, 8);
+            $feeAmount = bcdiv($feePercentageAmount, 100, 8);
+            $fee = bcadd($fee, $feeAmount, 8);
 
             // Fetch the latest exchange rate
             $exchangeRate = ExchangeRate::where('currency', $currency)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $feeCurrency = bcdiv($fee, $exchangeRate->rate_usd, 8);
+            $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')
                 ->orderBy('created_at', 'desc')
                 ->first();
 
@@ -42,7 +53,7 @@ class SwapTransactionRepository
             // Convert amounts to USD and NGN (Naira)
             $amount_usd = bcmul($amount, $exchangeRate->rate_usd, 8);
             $amount_naira = bcmul($amount, $exchangeRate->rate_naira, 8);
-            $fee_naira = bcmul($fee, $exchangeRate->rate_naira, 8);
+            $fee_naira = bcmul($fee, $exchangeRate->rate, 8);
 
             // Add calculated values to data
             $data['amount_usd'] = $amount_usd;
@@ -77,7 +88,7 @@ class SwapTransactionRepository
             if (!$userVirtualAccount) {
                 throw new Exception('Your virtual account was not found.');
             }
-            $finalAmount = bcadd($amount, $fee, 8);
+            $finalAmount = bcadd($amount, $feeCurrency, 8);
             if ($userVirtualAccount->available_balance < $finalAmount) {
                 throw new Exception('Insufficient Balance for swap.');
             }
