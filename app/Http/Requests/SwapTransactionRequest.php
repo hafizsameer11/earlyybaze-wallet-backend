@@ -26,7 +26,7 @@ class SwapTransactionRequest extends FormRequest
             'currency' => 'required|string',
             'network' => 'required|string',
             'amount' => 'required|numeric',
-            'fee' => 'required|numeric',
+            
             'exchange_rate' => 'required'
         ];
     }
