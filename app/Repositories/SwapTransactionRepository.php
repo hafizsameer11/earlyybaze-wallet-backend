@@ -64,7 +64,6 @@ class SwapTransactionRepository
             // Generate unique transaction reference
             $reference = 'EarlyBaze' . time();
 
-            // Fetch Admin account (where swaps are processed)
             $admin = User::where('email', 'admin@gmail.com')->first();
             if (!$admin) {
                 throw new Exception('Admin account not found.');

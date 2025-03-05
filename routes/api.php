@@ -128,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
+        Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
 
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);

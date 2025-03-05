@@ -60,4 +60,18 @@ class ExchangeRateRepository
         $exchangeRate->save();
         return $exchangeRate;
     }
+    public function calculateExchangeRate($currency, $amount)
+    {
+        $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+        if (!$exchangeRate) {
+            throw new \Exception('Exchange rate not found');
+        }
+        $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
+        $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8);
+        return [
+            'amount' => $amount,
+            'amount_usd' => $amountUsd,
+            'amount_naira' => $amountNaira
+        ];
+    }
 }

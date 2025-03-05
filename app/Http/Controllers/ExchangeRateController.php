@@ -50,4 +50,15 @@ class ExchangeRateController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function calculateExchangeRate(Request $request)
+    {
+        try {
+            $amount = $request->amount;
+            $currency = $request->currency;
+            $exchangeRate = $this->exchangeRateService->calculateExchangeRate($currency, $amount);
+            return    ResponseHelper::success($exchangeRate, 'Exchange rate calculated successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }
