@@ -31,6 +31,7 @@ class SwapTransactionRepository
             $amount = $data['amount'];
             // $fee = $data['fee'];
             $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
+            $fee=$fee->rate;
             $feeAmount = $fee->amount;
             $feePercentage = $fee->percentage;
             $feePercentageAmount = bcmul($amount, $feePercentage, 8);
