@@ -32,11 +32,11 @@ class SwapTransactionRepository
             // $fee = $data['fee'];
             $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
             // $fee=$fee->rate;
-            $fee = $fee->amount;
+            $feea = $fee->amount;
             $feePercentage = $fee->percentage;
             $feePercentageAmount = bcmul($amount, $feePercentage, 8);
             $feeAmount = bcdiv($feePercentageAmount, 100, 8);
-            $fee = bcadd($fee, $feeAmount, 8);
+            $fee = bcadd($feea, $feeAmount, 8);
 
             // Fetch the latest exchange rate
             $exchangeRate = ExchangeRate::where('currency', $currency)
