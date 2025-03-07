@@ -133,6 +133,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
     Route::post('wallet/swap', [TransactionController::class, 'swap']);
     Route::get('wallet/single-swap/{id}', [TransactionController::class, 'singleSwapTransaction']);
+
+    Route::post('wallet/buy', [TransactionController::class, 'buy']);
+    Route::get('wallet/single-buy/{id}', [TransactionController::class, 'singleBuyTransaction']);
+    Route::post('wallet/attach-slip/{id}', [TransactionController::class, 'attachSlip']);
+
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
 });
 //non auth routes
