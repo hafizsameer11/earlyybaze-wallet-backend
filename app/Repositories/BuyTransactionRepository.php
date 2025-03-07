@@ -41,6 +41,7 @@ class BuyTransactionRepository
         }
         $data['transaction_id'] = $transaction->id;
         $data['reference'] = $refference;
+        $data['status'] = 'pending';
         $buyTransaction = BuyTransaction::create($data);
         return $buyTransaction->load('transaction', 'bankAccount');
     }
