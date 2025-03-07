@@ -21,7 +21,6 @@ class BuyTransaction extends Model
         'receipt',
         'name_on_account',
         'amount_paid',
-        'reference',
     ];
     public function transaction()
     {
