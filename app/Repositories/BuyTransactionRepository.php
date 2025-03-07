@@ -41,7 +41,8 @@ class BuyTransactionRepository
         }
         $data['transaction_id'] = $transaction->id;
         $data['reference'] = $refference;
-        return BuyTransaction::create($data);
+        $buyTransaction = BuyTransaction::create($data);
+        return $buyTransaction->load('transaction', 'bankAccount');
     }
     public function attachSlip($id, array $data)
     {
