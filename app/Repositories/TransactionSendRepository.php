@@ -101,7 +101,7 @@ class TransactionSendRepository
             if ($exchangerate) {
                 $amount_usd = $amount * $exchangerate->rate_usd;
             }
-            $transcation = $this->transactionService->create([
+            $transcation = $this->transactionService->create(data: [
                 'type' => 'send',
                 'amount' => $amount,
                 'currency' => $currency,

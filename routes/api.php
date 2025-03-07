@@ -81,7 +81,6 @@ Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
 //Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-    //testing route for adding balance
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
     //Fee Module
     Route::prefix('fee')->group(function () {
@@ -90,7 +89,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-by-type/{type}', [FeeController::class, 'getByType']); // Get fee by type
 
     });
-    //withdrawal routes
     Route::post('/withdraw/create', [WithdrawController::class, 'create']);
     Route::get('/withdraw-request-status/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
     Route::get('/withdraw-requests', [WithdrawController::class, 'getWithdrawRequestforAuthenticatedUser']);
