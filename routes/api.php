@@ -4,6 +4,7 @@ use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\MasterWalletController;
+use App\Http\Controllers\ReferalPaymentController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
@@ -79,8 +80,10 @@ Route::prefix('auth')->group(function () {
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
-//Authenticated routes
+//Authenticated routes for user
 Route::middleware('auth:sanctum')->group(function () {
+
+
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
     //Fee Module
     Route::prefix('fee')->group(function () {
@@ -141,4 +144,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
 });
 //non auth routes
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
+    Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
+    Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
+    Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
+    Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
+});
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
