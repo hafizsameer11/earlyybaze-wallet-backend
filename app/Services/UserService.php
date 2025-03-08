@@ -239,4 +239,14 @@ class UserService
             throw new Exception('Update user profile failed. ' . $e->getMessage());
         }
     }
+
+public function getUserManagementData()
+{
+    try {
+        return $this->userRepository->getUserManagementData();
+    } catch (Exception $e) {
+        Log::error('Get user management data error: ' . $e->getMessage());
+        throw new Exception('Get user management data failed. ' . $e->getMessage());
+    }
+}
 }

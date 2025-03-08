@@ -15,7 +15,7 @@ class UserRepository
     public function create(array $data): User
     {
         //check if profit_pic
-        Log::info($data);
+        // Log::info($data);
         if (isset($data['profile_picture']) && $data['profile_picture']) {
             $path = $data['profile_picture']->store('profile_picture', 'public');
             $data['profile_picture'] = $path;
@@ -140,5 +140,43 @@ class UserRepository
         }
         $user->update($data);
         return $user;
+    }
+
+    public function getUserManagementData()
+    {
+        $totalUser = User::count();
+        $totalActiveUser = User::where('is_active', true)->count();
+        $totalInactiveUser = User::where('is_active', false)->count();
+        $stats = [
+            [
+                'heading' => 'Total',
+                'subheading' => 'Users',
+                'icon' => 'userIcon',
+                'cardValue' => $totalUser,
+                'iconBg' => 'bg-[#126EB9]',
+                'valueStatus' => false
+            ],
+            [
+                'heading' => 'Online',
+                'subheading' => 'Users',
+                'icon' => 'userIcon',
+                'cardValue' => $totalActiveUser,
+                'iconBg' => 'bg-[#126EB9]',
+                'valueStatus' => false
+            ],
+            [
+                'heading' => 'Offline',
+                'subheading' => 'Users',
+                'icon' => 'userIcon',
+                'cardValue' => $totalInactiveUser,
+                'iconBg' => 'bg-[#126EB9]',
+                'valueStatus' => false
+            ],
+        ];
+        $users = User::all();
+        return [
+            'stats' => $stats,
+            'users' => $users
+        ];
     }
 }
