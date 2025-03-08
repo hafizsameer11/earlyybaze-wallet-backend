@@ -84,11 +84,7 @@ Route::post('/webhook', [WebhookController::class, 'webhook']);
 //Authenticated routes for user
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
-    Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
-    Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
-    Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
-    Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
+
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
     //Fee Module
     Route::prefix('fee')->group(function () {
@@ -151,6 +147,11 @@ Route::middleware('auth:sanctum')->group(function () {
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->group(function () {
+        Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
+        Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
+        Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
+        Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
+        Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
     });
