@@ -32,11 +32,11 @@ class BankAccountService
         }
     }
     // public function getFor
-    public function getforUser()
+    public function getforUser($userId)
     {
         try {
-            $user = Auth::user();
-            return $this->BankAccountRepository->getForUser($user->id);
+
+            return $this->BankAccountRepository->getForUser($userId);
         } catch (Exception $e) {
             Log::error($e->getMessage());
             throw new Exception('Bank Account Not Found.');

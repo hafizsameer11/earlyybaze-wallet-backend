@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Services\BankAccountService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
 
 class UserManagementController extends Controller
 {
-    protected $userService;
-    public function __construct(UserService $userService)
+    protected $userService, $bankAccountService;
+    public function __construct(UserService $userService, BankAccountService $bankAccountService)
     {
         $this->userService = $userService;
     }
@@ -20,6 +21,33 @@ class UserManagementController extends Controller
         try {
             $data = $this->userService->getUserManagementData();
             return ResponseHelper::success($data, 'User details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getUserDetails($userId)
+    {
+        try {
+            $data = $this->userService->userDetails($userId);
+            return ResponseHelper::success($data, 'User details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getBanksForUser($userId)
+    {
+        try {
+            $data = $this->bankAccountService->getforUser($userId);
+            return ResponseHelper::success($data, 'Bank details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getUserVirtualAccounts($userId)
+    {
+        try {
+            $data = $this->userService->getUserVirtualAccounts($userId);
+            return ResponseHelper::success($data, 'User virtual accounts fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

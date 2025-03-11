@@ -8,6 +8,7 @@ use App\Http\Requests\BankAccountRequest;
 use App\Services\BankAccountService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BankAccountController extends Controller
 {
@@ -29,7 +30,8 @@ class BankAccountController extends Controller
     public function getForUser(Request $request)
     {
         try {
-            $bankAccount = $this->BankaccountService->getForUser();
+            $user=Auth::user();
+            $bankAccount = $this->BankaccountService->getForUser($user->id);
             return ResponseHelper::success($bankAccount, 'Bank account retrieved successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

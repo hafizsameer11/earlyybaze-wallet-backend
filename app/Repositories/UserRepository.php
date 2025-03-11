@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Log;
 
 class UserRepository
 {
+    protected $BankAccountRepository;
+    public function __construct(BankAccountRepository $BankAccountRepository)
+    {
+        $this->BankAccountRepository = $BankAccountRepository;
+    }
     public function create(array $data): User
     {
         //check if profit_pic
@@ -78,7 +83,7 @@ class UserRepository
     }
     public function getuserAssets($userId)
     {
-        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
 
         $virtualAccounts = $virtualAccounts->map(function ($account) {
             return [
@@ -88,6 +93,7 @@ class UserRepository
                 'currency_id' => $account->currency_id,
                 'available_balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
+                'deposit_addresses' => $account->deposit_addresses,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
@@ -173,10 +179,45 @@ class UserRepository
                 'valueStatus' => false
             ],
         ];
-        $users = User::all();
+        $users = $this->getFomatedUsers();
         return [
             'stats' => $stats,
             'users' => $users
         ];
+    }
+    public function getFomatedUsers()
+    {
+        $users = User::all();
+        return $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'status' => $user->is_active,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+                'img' => asset('storage/' . $user->profile_picture)
+            ];
+        });
+    }
+    public function userDetails($userId)
+    {
+        $user = User::find($userId);
+        $user = $user->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'status' => $user->is_active,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+                'img' => asset('storage/' . $user->profile_picture),
+                'total_amount_in_dollar' => $user->userAccount->crypto_balance,
+                'total_amount_in_naira' => $user->userAccount->naira_balance
+            ];
+        });
+        return $user;
     }
 }

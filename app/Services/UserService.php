@@ -240,13 +240,32 @@ class UserService
         }
     }
 
-public function getUserManagementData()
-{
-    try {
-        return $this->userRepository->getUserManagementData();
-    } catch (Exception $e) {
-        Log::error('Get user management data error: ' . $e->getMessage());
-        throw new Exception('Get user management data failed. ' . $e->getMessage());
+    public function getUserManagementData()
+    {
+        try {
+            return $this->userRepository->getUserManagementData();
+        } catch (Exception $e) {
+            Log::error('Get user management data error: ' . $e->getMessage());
+            throw new Exception('Get user management data failed. ' . $e->getMessage());
+        }
     }
-}
+
+    public function userDetails($userId)
+    {
+        try {
+            return $this->userRepository->userDetails($userId);
+        } catch (Exception $e) {
+            Log::error('Get user details error: ' . $e->getMessage());
+            throw new Exception('Get user details failed. ' . $e->getMessage());
+        }
+    }
+    public function getUserVirtualAccounts($userId)
+    {
+        try {
+            return $this->userRepository->getuserAssets($userId);
+        } catch (Exception $e) {
+            Log::error('Get user virtual accounts error: ' . $e->getMessage());
+            throw new Exception('Get user virtual accounts failed. ' . $e->getMessage());
+        }
+    }
 }
