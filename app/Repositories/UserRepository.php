@@ -93,7 +93,7 @@ class UserRepository
                 'currency_id' => $account->currency_id,
                 'available_balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
-                'deposit_addresses' => $account->deposit_addresses,
+                'deposit_addresses' => $account->depositAddresses,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
