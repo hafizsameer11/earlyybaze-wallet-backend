@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('referal_earnings', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');//user who get the amount
-            $table->unsignedBigInteger('referal_id');//user who made the transaction
+            $table->unsignedBigInteger('user_id'); //user who get the amount
+            $table->unsignedBigInteger('referal_id'); //user who made the transaction
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('referal_id')->references('id')->on('users');
             $table->double('amount')->nullable();

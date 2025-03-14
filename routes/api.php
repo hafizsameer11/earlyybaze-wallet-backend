@@ -6,6 +6,7 @@ use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
+use App\Http\Controllers\RefferalEarningController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
@@ -143,6 +144,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('wallet/attach-slip/{id}', [TransactionController::class, 'attachSlip']);
 
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
+
+    Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']);
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
