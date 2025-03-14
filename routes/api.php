@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\InAppBannerController;
+use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\ExchangeRateController;
@@ -169,6 +170,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //reffer management data
         Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
+
+
+        Route::prefix('InAppNotifications')->group(function () {
+            Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
+            Route::get('/get-single/{id}', [InAppNotificationController::class, 'show']); // Get single notification
+            Route::post('/create', [InAppNotificationController::class, 'store']); // Create notification
+            Route::post('/update/{id}', [InAppNotificationController::class, 'update']); // Update notification
+            Route::delete('/delete/{id}', [InAppNotificationController::class, 'destroy']); // Delete notification
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
