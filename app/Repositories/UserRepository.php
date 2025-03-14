@@ -43,7 +43,7 @@ class UserRepository
     {
         $user->delete();
     }
-    public function getById(int $id): ?User
+    public function getById(int $id)
     {
         return User::find($id);
     }

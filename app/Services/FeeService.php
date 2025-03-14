@@ -55,4 +55,12 @@ class FeeService
         }
         // return $this->FeeRepository->getByType($type);
     }
+    public function getAll()
+    {
+        try {
+            return $this->FeeRepository->all();
+        } catch (Exception $e) {
+            throw new Exception('Get All Fee Failed' . $e->getMessage());
+        }
+    }
 }

@@ -43,4 +43,13 @@ class FeeController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getAll()
+    {
+        try {
+            $fee = $this->feeService->getAll();
+            return ResponseHelper::success($fee, 'Fee fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create', [FeeController::class, 'create']); // Create a fee
         Route::post('/update/{id}', [FeeController::class, 'update']); // Update a fee
         Route::get('/get-by-type/{type}', [FeeController::class, 'getByType']); // Get fee by type
+        Route::get('/get-all', [FeeController::class, 'getAll']); // Get fee by type
 
     });
     Route::post('/withdraw/create', [WithdrawController::class, 'create']);
@@ -157,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
+        Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
