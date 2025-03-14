@@ -28,8 +28,8 @@ class RefferalManagementController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'referrals' => User::where('invite_code', $user->user_code)->count(),
-                'earned' => $user->referral_earning_naira,
-                'usd' => $user->total_referral_earnings,
+                'earned' => $user->userAccount->referral_earning_naira,
+                'usd' => $user->userAccount->total_referral_earnings,
                 'referrer' => $user->user_code,
                 'img' => $user->profile_picture
             ];
