@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
@@ -159,6 +160,11 @@ Route::middleware('auth:sanctum')->group(function () {
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
+        Route::get('/banners', [InAppBannerController::class, 'index']);
+        Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
+        Route::post('/banners', [InAppBannerController::class, 'create']);
+        Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
+        Route::delete('/banners/{id}', [InAppBannerController::class, 'delete']);
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
