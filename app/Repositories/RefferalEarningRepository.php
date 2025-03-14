@@ -22,9 +22,9 @@ class RefferalEarningRepository
         $user = User::find($id);
         $totalRefferals = User::where('invite_code', $user->user_code)->count();
         $totalRefferlBalance = UserAccount::where('user_id', $id)->first();
-        $data = ReferalEarning::where('user_id', $id)->with('user', 'referal')->get();
+        $data = ReferalEarning::where('user_id', $id)->with('referal')->get();
         return [
-            'data' => $data,
+            'earning' => $data,
             'totalRefferals' => $totalRefferals,
             'Earning' => [
                 'usd' => $totalRefferlBalance->total_referral_earnings,
