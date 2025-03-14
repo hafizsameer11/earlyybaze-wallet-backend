@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\InAppBannerController;
+use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
@@ -165,6 +166,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/banners', [InAppBannerController::class, 'create']);
         Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
         Route::delete('/banners/{id}', [InAppBannerController::class, 'delete']);
+
+        //reffer management data
+        Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
