@@ -8,7 +8,7 @@ class transactionRepository
 {
     public function all()
     {
-        // Add logic to fetch all data
+        return Transaction::wiht('user')->orderBy('created_at', 'desc')->get();
     }
 
     public function find($id)
@@ -17,7 +17,7 @@ class transactionRepository
     }
     public function getTransactionsForUser($user_id)
     {
-        return Transaction::where('user_id', $user_id)->get();
+        return Transaction::where('user_id', $user_id)->with('user')->get();
     }
     public function create(array $data)
     {

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\RefferalManagementController;
+use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
@@ -178,6 +179,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/create', [InAppNotificationController::class, 'store']); // Create notification
             Route::post('/update/{id}', [InAppNotificationController::class, 'update']); // Update notification
             Route::delete('/delete/{id}', [InAppNotificationController::class, 'destroy']); // Delete notification
+        });
+        Route::prefix('transactions')->group(function () {
+            Route::get('/get-all', [TransactionManagementController::class, 'getAll']);
+            Route::get('/get-for-user/{id}', [TransactionManagementController::class, 'getTransactionsForUser']);
         });
     });
 });
