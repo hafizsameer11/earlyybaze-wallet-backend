@@ -10,7 +10,8 @@ class UserAccount extends Model
     use HasFactory;
     protected $fillable = [
         'user_id',
-        'account_number'
+        'account_number',
+        'referral_earning_naira'
     ];
     public function user()
     {
