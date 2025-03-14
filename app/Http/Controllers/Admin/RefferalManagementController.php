@@ -16,23 +16,26 @@ class RefferalManagementController extends Controller
         $this->refferalEarningService = $refferalEarningService;
     }
     public function getRefferalManagement()
-    {
-        $users = User::with('userAccount')->get();
-        $data = $users->map(function ($user) {
-            $refferal = User::where('invite_code', $user->user_code)->count();
-            if ($refferal < 1) {
-                return null;
-            }
+{
+    $users = User::with('userAccount')->get();
+
+    $data = $users
+        ->filter(function ($user) { // ✅ Remove users with zero referrals
+            return User::where('invite_code', $user->user_code)->count() > 0;
+        })
+        ->map(function ($user) {
             return [
                 'id' => $user->id,
                 'name' => $user->name,
-                'referrals' => $refferal,
+                'referrals' => User::where('invite_code', $user->user_code)->count(),
                 'earned' => $user->referral_earning_naira,
                 'usd' => $user->total_referral_earnings,
                 'referrer' => $user->user_code,
                 'img' => $user->profile_picture
             ];
         });
-        return ResponseHelper::success($data, "Data fetched successfully", 200);
-    }
+
+    return ResponseHelper::success($data->values(), "Data fetched successfully", 200);
+}
+
 }
