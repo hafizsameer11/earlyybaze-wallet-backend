@@ -19,7 +19,7 @@ class RefferalManagementController extends Controller
     {
         $users = User::with('userAccount')->get();
         $data = $users->map(function ($user) {
-            $refferal = User::whre('invite_code', $user->user_code)->count();
+            $refferal = User::where('invite_code', $user->user_code)->count();
             if ($refferal < 1) {
                 return null;
             }
