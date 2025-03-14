@@ -25,7 +25,7 @@ class UserService
         $this->userAccountRepository = $userAccountRepository;
         $this->tatumService = $tatumService;
     }
-    public function getUserDetails(): ?User
+    public function getUserDetails()
     {
         try {
             $user = Auth::user();
