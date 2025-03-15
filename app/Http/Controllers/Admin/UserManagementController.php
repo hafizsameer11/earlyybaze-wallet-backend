@@ -38,6 +38,9 @@ class UserManagementController extends Controller
     public function getBanksForUser($userId)
     {
         try {
+            if(!$userId){
+                return ResponseHelper::error('User id is required', 500);
+            }
             $data = $this->bankAccountService->getforUser($userId);
             return ResponseHelper::success($data, 'Bank details fetched successfully', 200);
         } catch (Exception $e) {
