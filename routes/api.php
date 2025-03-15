@@ -166,6 +166,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
+        Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
 
         //banners
