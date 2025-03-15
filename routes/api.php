@@ -163,6 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
+
+        //banners
         Route::get('/banners', [InAppBannerController::class, 'index']);
         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
         Route::post('/banners', [InAppBannerController::class, 'create']);
@@ -199,6 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('kyc')->group(function (): void {
             Route::get('/get-all', [KycController::class, 'getAll']);
+            Route::post('/update-status/{id}', [KycController::class, 'updateStatus']);
         });
     });
 });
