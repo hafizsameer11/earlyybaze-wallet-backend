@@ -16,7 +16,7 @@ class KycService
 
     public function all()
     {
-        return $this->KycRepository->all();
+        return $this->KycRepository->getKycSummary();
     }
 
     public function find($id)

@@ -3,14 +3,53 @@
 namespace App\Repositories;
 
 use App\Models\Kyc;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class KycRepository
 {
-    public function all()
+    public function getKycSummary()
     {
-        return Kyc::with('user')->orderBy('id', 'desc')->get();
+        $totalUsers = User::count();
+        $verifiedUsers = User::whereHas('kyc', function ($query) {
+            $query->where('status', 'approved');
+        })->count();
+        $unverifiedUsers = $totalUsers - $verifiedUsers;
+
+        // Fetch all KYC records with user data
+        $kycData = Kyc::with('user')->orderBy('id', 'desc')->get();
+
+        return [
+            'summary' => [
+                [
+                    'icon' => 'kycIcon',
+                    'iconBg' => 'bg-[#2B12B9]',
+                    'heading' => 'total',
+                    'subheading' => 'users',
+                    'cardValue' => number_format($totalUsers),
+                    'valueStatus' => false,
+                ],
+                [
+                    'icon' => 'kycIcon',
+                    'iconBg' => 'bg-[#2B12B9]',
+                    'heading' => 'total',
+                    'subheading' => 'verified users',
+                    'cardValue' => number_format($verifiedUsers),
+                    'valueStatus' => false,
+                ],
+                [
+                    'icon' => 'kycIcon',
+                    'iconBg' => 'bg-[#2B12B9]',
+                    'heading' => 'total',
+                    'subheading' => 'unverified users',
+                    'cardValue' => number_format($unverifiedUsers),
+                    'valueStatus' => false,
+                ],
+            ],
+            'kyc_data' => $kycData,
+        ];
     }
+
 
     public function find($id)
     {

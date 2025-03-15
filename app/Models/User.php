@@ -68,4 +68,8 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserAccount::class);
     }
+    public function kyc()
+    {
+        return $this->hasOne(Kyc::class);
+    }
 }
