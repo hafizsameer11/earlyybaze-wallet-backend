@@ -203,9 +203,9 @@ class UserRepository
     }
     public function userDetails($userId)
     {
-        $user = User::where('id', $userId)->with('userAccount')->get();
-        $user = $user->map(function ($user) {
-            return [
+        $user = User::where('id', $userId)->with('userAccount')->first();
+        // $user = $user->map(function ($user) {
+           $user= [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -217,7 +217,7 @@ class UserRepository
                 'total_amount_in_dollar' => $user->userAccount->crypto_balance,
                 'total_amount_in_naira' => $user->userAccount->naira_balance
             ];
-        });
+        // });
         return $user;
     }
 }
