@@ -129,7 +129,30 @@ class UserService
             throw new Exception('Login failed ' . $e->getMessage());
         }
     }
-
+    public function adminLogin(array $data): ?array
+    {
+        try {
+            $user = $this->userRepository->findByEmail($data['email']);
+            if (!$user) {
+                throw new Exception('User not found.');
+            }
+            if ($user->role != 'admin') {
+                throw new Exception('User is not an admin.');
+            }
+            if (!Hash::check($data['password'], $user->password)) {
+                throw new Exception('Invalid password.');
+            }
+            $token = $user->createToken('auth_token')->plainTextToken;
+            // $userData = $user->only(['id', 'email']);
+            return [
+                'user' => $user,
+                'token' => $token
+            ];
+        } catch (Exception $e) {
+            Log::error('Admin login error: ' . $e->getMessage());
+            throw new Exception('Admin login failed ' . $e->getMessage());
+        }
+    }
     public function setPin(string $email, string $pin): ?User
     {
         try {
