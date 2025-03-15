@@ -203,7 +203,7 @@ class UserRepository
     }
     public function userDetails($userId)
     {
-        $user = User::find($userId);
+        $user = User::where('id', $userId)->with('userAccount')->first();
         $user = $user->map(function ($user) {
             return [
                 'id' => $user->id,
