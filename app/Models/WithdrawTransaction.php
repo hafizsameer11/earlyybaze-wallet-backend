@@ -13,7 +13,7 @@ class WithdrawTransaction extends Model
     {
         return $this->belongsTo(WithdrawRequest::class, 'withdraw_request_id');
     }
-    public function transactions()
+    public function transaction()
     {
         return $this->belongsTo(Transaction::class, 'transaction_id');
     }

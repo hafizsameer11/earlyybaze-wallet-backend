@@ -21,6 +21,10 @@ class WithdrawTransactionRepository
     {
         // Add logic to find data by ID
     }
+    public function fundByTransactionId($transactionId)
+    {
+        return WithdrawTransaction::where('transaction_id', $transactionId)->with('withdrawRequest', 'transaction')->first();
+    }
 
     public function create(array $data)
     {
@@ -34,19 +38,18 @@ class WithdrawTransactionRepository
             'user_id' => $withdrawRequest->user_id,
             'currency' => 'NGN',
             'network' => 'NGN',
-            'reference'=>$refference,
+            'reference' => $refference,
             'status' => $withdrawRequest->status,
-            'amount_usd'=>''
+            'amount_usd' => ''
         ]);
-        if(!$transaction){
+        if (!$transaction) {
             throw new \Exception('Failed to create transaction');
         }
-        $withdrawTransaction=WithdrawTransaction::create([
-            'withdraw_request_id'=>$withdrawRequestId,
-            'transaction_id'=>$transaction->id,
+        $withdrawTransaction = WithdrawTransaction::create([
+            'withdraw_request_id' => $withdrawRequestId,
+            'transaction_id' => $transaction->id,
         ]);
         return $withdrawTransaction;
-
     }
 
     public function update($id, array $data)

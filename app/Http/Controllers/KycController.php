@@ -34,4 +34,13 @@ class KycController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
+    public function getAll()
+    {
+        try {
+            $kyc = $this->kycService->all();
+            return ResponseHelper::success($kyc, 'Kyc fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
 }

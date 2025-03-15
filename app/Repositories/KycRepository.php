@@ -9,7 +9,7 @@ class KycRepository
 {
     public function all()
     {
-        // Add logic to fetch all data
+        return Kyc::with('user')->orderBy('id', 'desc')->get();
     }
 
     public function find($id)

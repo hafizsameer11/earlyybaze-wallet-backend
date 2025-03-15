@@ -197,6 +197,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
             Route::post('/withdraw/update-status/{id}', [WithdrawController::class, 'updateStatus']);
         });
+        Route::prefix('kyc')->group(function (): void {
+            Route::get('/get-all', [KycController::class, 'getAll']);
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
