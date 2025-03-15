@@ -41,7 +41,7 @@ class WithdrawRequestRepository
         }
         $status = $data['status'];
         if ($status == 'approved') {
-            $withdraw->status = 'success';
+            $withdraw->status = 'approved';
             $withdraw->save();
             $this->withdrawTransactionRepository->create([
                 'withdraw_request_id' => $withdraw->id,
