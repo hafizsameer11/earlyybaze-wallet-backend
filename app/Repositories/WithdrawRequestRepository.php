@@ -7,6 +7,11 @@ use App\Models\WithdrawRequest;
 
 class WithdrawRequestRepository
 {
+    protected $withdrawTransactionRepository;
+    public function __construct(WithdrawTransactionRepository $withdrawTransactionRepository)
+    {
+        $this->withdrawTransactionRepository = $withdrawTransactionRepository;
+    }
     public function all()
     {
         // Add logic to fetch all data
@@ -27,10 +32,32 @@ class WithdrawRequestRepository
         return $withdaaw;
     }
 
-    
-    public function update($id, array $data)
+
+    public function updateStatus($id, array $data)
     {
-        // Add logic to update data
+        $withdraw = WithdrawRequest::where('id', $id)->first();
+        if (!$withdraw) {
+            throw new \Exception('Withdraw Request not found');
+        }
+        $status = $data['status'];
+        if ($status == 'approved') {
+            $withdraw->status = 'success';
+            $withdraw->save();
+            $this->withdrawTransactionRepository->create([
+                'withdraw_request_id' => $withdraw->id,
+                'user_id' => $withdraw->user_id
+            ]);
+        } elseif ($status == 'rejected') {
+            $withdraw->status = 'failed';
+            $userAccount = UserAccount::where('user_id', $withdraw->user_id)->first();
+            $userAccount->naira_balance = $userAccount->naira_balance + $withdraw->total;
+            $withdraw->save();
+            $this->withdrawTransactionRepository->create([
+                'withdraw_request_id' => $withdraw->id,
+                'user_id' => $withdraw->user_id
+            ]);
+        }
+        return $withdraw;
     }
 
     public function delete($id)
@@ -48,5 +75,9 @@ class WithdrawRequestRepository
     public function findByTransactionId($transactionId)
     {
         // return WithdrawRequest::where('transaction_id', $transactionId)->first();
+    }
+    public function getAllwithdrawRequests()
+    {
+        return WithdrawRequest::with('bankAccount', 'user')->orderBy('created_at', 'desc')->get();
     }
 }

@@ -42,4 +42,22 @@ class WithdrawController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getAllwithdrawRequests()
+    {
+        try {
+            $withdraw = $this->withdrawService->getAllwithdrawRequests();
+            return ResponseHelper::success($withdraw, 'Withdraw fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function updateStatus(Request $request, $id)
+    {
+        try {
+            $withdraw = $this->withdrawService->updateStatus($id, $request->all());
+            return ResponseHelper::success($withdraw, 'Withdraw updated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

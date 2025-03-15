@@ -189,8 +189,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
             Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
             //withdraw single
-            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class,'getSingleWithdrawTransaction']);
-            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class,'ReferalPaymentController@destroy']);
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'ReferalPaymentController@destroy']);
+        });
+        Route::prefix('withdrawRequest')->group(function (): void {
+            Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);
+            Route::get('/get-single{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
+            Route::post('/withdraw/update-status/{id}', [WithdrawController::class, 'updateStatus']);
         });
     });
 });

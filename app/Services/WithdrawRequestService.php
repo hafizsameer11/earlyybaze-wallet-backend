@@ -51,9 +51,13 @@ class WithdrawRequestService
         }
     }
 
-    public function update($id, array $data)
+    public function updateStatus($id, array $data)
     {
-        return $this->WithdrawRequestRepository->update($id, $data);
+        try {
+            return $this->WithdrawRequestRepository->updateStatus($id, $data);
+        } catch (Exception $e) {
+            throw new Exception('Update Withdraw Request Status Failed ' . $e->getMessage());
+        }
     }
 
     public function delete($id)
@@ -76,6 +80,14 @@ class WithdrawRequestService
             return $this->WithdrawRequestRepository->getWithDrawRequestByUserId($user->id);
         } catch (Exception $e) {
             throw new Exception('Get Withdraw Request By User Id Failed' . $e->getMessage());
+        }
+    }
+    public function getAllwithdrawRequests()
+    {
+        try {
+            return $this->WithdrawRequestRepository->getAllwithdrawRequests();
+        } catch (Exception $e) {
+            throw new Exception('Get All Withdraw Requests Failed' . $e->getMessage());
         }
     }
 }
