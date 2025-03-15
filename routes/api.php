@@ -167,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
         //usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
         Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
+        Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
 
         //banners
