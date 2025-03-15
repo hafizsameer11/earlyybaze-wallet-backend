@@ -16,6 +16,7 @@ class UserManagementController extends Controller
     public function __construct(UserService $userService, BankAccountService $bankAccountService)
     {
         $this->userService = $userService;
+        $this->bankAccountService = $bankAccountService;
     }
     public function getUserManagementData()
     {
