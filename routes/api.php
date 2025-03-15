@@ -194,7 +194,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('withdrawRequest')->group(function (): void {
             Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);
-            Route::get('/get-single{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
+            Route::get('/get-single/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
             Route::post('/withdraw/update-status/{id}', [WithdrawController::class, 'updateStatus']);
         });
         Route::prefix('kyc')->group(function (): void {
