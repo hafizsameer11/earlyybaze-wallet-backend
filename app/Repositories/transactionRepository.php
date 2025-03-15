@@ -8,7 +8,7 @@ class transactionRepository
 {
     public function all()
     {
-        return Transaction::wiht('user')->orderBy('created_at', 'desc')->get();
+        return Transaction::with('user')->orderBy('created_at', 'desc')->get();
     }
 
     public function find($id)
