@@ -157,6 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->group(function () {
+
+        Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
         Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
         Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
         Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record

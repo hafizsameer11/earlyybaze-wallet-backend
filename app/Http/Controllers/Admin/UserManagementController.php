@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\BankAccountService;
 use App\Services\UserService;
 use Exception;
@@ -39,6 +40,16 @@ class UserManagementController extends Controller
         try {
             $data = $this->bankAccountService->getforUser($userId);
             return ResponseHelper::success($data, 'Bank details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function adminVirtualAccounts()
+    {
+        try {
+            $user = User::where('role', 'admin')->first();
+            $data = $this->userService->getUserVirtualAccounts($user->id);
+            return ResponseHelper::success($data, 'User virtual accounts fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
