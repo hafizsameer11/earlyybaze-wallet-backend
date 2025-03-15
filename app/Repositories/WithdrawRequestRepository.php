@@ -27,6 +27,7 @@ class WithdrawRequestRepository
         return $withdaaw;
     }
 
+    
     public function update($id, array $data)
     {
         // Add logic to update data
@@ -43,5 +44,9 @@ class WithdrawRequestRepository
     public function getWithDrawRequestByUserId($userId)
     {
         return WithdrawRequest::where('user_id', $userId)->with('bankAccount')->orderBy('created_at', 'desc')->get();
+    }
+    public function findByTransactionId($transactionId)
+    {
+        // return WithdrawRequest::where('transaction_id', $transactionId)->first();
     }
 }

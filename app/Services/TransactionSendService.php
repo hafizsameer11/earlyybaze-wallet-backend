@@ -20,7 +20,18 @@ class TransactionSendService
 
     public function find($id)
     {
+       try{
         return $this->TransactionSendRepository->find($id);
+       }catch(\Exception $e){
+        throw new \Exception($e->getMessage());
+       }
+    }
+    public function findByTransactionId($transactionId){
+        try{
+            return $this->TransactionSendRepository->findByTransactionId($transactionId);
+        }catch(\Exception $e){
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function create(array $data)

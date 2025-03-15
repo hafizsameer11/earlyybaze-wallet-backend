@@ -183,6 +183,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('transactions')->group(function () {
             Route::get('/get-all', [TransactionManagementController::class, 'getAll']);
             Route::get('/get-for-user/{id}', [TransactionManagementController::class, 'getTransactionsForUser']);
+            Route::get('/get-singe/swap/{id}', [TransactionManagementController::class, 'getSingleSwapTransaction']);
+            Route::get('/get-singe/buy/{id}', [TransactionManagementController::class, 'getSingleBuyTransaction']);
+            Route::get('/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
+            Route::get('/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
+            Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
+            //withdraw single
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class,'getSingleWithdrawTransaction']);
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class,'ReferalPaymentController@destroy']);
         });
     });
 });

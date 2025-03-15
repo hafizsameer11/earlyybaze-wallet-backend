@@ -33,11 +33,18 @@ class TransactionSendRepository
 
     public function find($id)
     {
-        $transaction = TransactionSend::find($id);
+        $transaction = TransactionSend::with('transaction')->find($id);
         if (!$transaction) {
             throw new \Exception('Transaction not found');
         }
         return $transaction;
+    }
+    public function findByTransactionId($transactionId){
+        $transaction=TransactionSend::where('transaction_id', $transactionId)->first();
+        if (!$transaction) {
+            throw new \Exception('Transaction not found');
+            }
+            return $transaction;
     }
 
     public function create(array $data)

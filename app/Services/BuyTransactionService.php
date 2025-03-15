@@ -18,7 +18,13 @@ class BuyTransactionService
     {
         return $this->BuyTransactionRepository->all();
     }
-
+public function findByTransactionId($transactionId){
+    try{
+        return $this->BuyTransactionRepository->findByTransactionId($transactionId);
+    }catch(\Exception $e){
+        throw new \Exception($e->getMessage());
+    }
+}
     public function find($id)
     {
         try {
