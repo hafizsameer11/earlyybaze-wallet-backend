@@ -27,7 +27,11 @@ class BuyTransactionRepository
     }
     public function findByTransactionId($id)
     {
-        return BuyTransaction::with('transaction', 'bankAccount')->where('transaction_id', $id)->first();
+        $transaction= BuyTransaction::with('transaction', 'bankAccount')->where('transaction_id', $id)->first();
+        if(!$transaction){
+            throw new \Exception('Transaction not found or Id not found'. $id);
+        }
+        return $transaction;
     }
 
     public function create(array $data)
