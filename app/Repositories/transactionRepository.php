@@ -3,12 +3,17 @@
 namespace App\Repositories;
 
 use App\Models\Transaction;
+use App\Models\VirtualAccount;
 
 class transactionRepository
 {
     public function all()
     {
-        return Transaction::with('user')->orderBy('created_at', 'desc')->get();
+        $totalTransactions = Transaction::count();
+        $totalWallets = VirtualAccount::count();
+
+        $transactions= Transaction::with('user')->orderBy('created_at', 'desc')->get();
+        return['transactions'=>$transactions,'totalTransactions'=>$totalTransactions,'totalWallets'=>$totalWallets];
     }
 
     public function find($id)
