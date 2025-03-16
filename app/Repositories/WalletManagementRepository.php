@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\ExchangeRate;
 use App\Models\User;
 
 class WalletManagementRepository
@@ -70,19 +71,37 @@ class WalletManagementRepository
             ]
         ];
 
-        // Table Data
-        $tableData = $users->map(function ($user) {
-            return [
-                "id" => $user->id,
-                "name" => $user->name,
-                "profileimg" => asset('storage/' . $user->profile_picture),
-                "walletCount" => $user->virtualAccounts->count(),
-                "totalFunds" => number_format($user->virtualAccounts->sum('account_balance'), 2),
-                "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
-                "status" => $user->is_active ? "online" : "offline",
-            ];
-        });
+        function getExchangeRate($currency)
+    {
+        return ExchangeRate::where('currency', $currency)
+            ->orderBy('created_at', 'desc')
+            ->first();
+    }
 
+    // Table Data
+    $tableData = $users->map(function ($user) {
+        $totalFundsUsd = 0;
+
+        foreach ($user->virtualAccounts as $account) {
+            $exchangeRate = getExchangeRate($account->currency);
+
+            // If exchange rate exists, convert balance to USD
+            if ($exchangeRate) {
+                $amountUsd = bcmul($account->account_balance, $exchangeRate->rate_usd, 8);
+                $totalFundsUsd = bcadd($totalFundsUsd, $amountUsd, 8);
+            }
+        }
+
+        return [
+            "id" => $user->id,
+            "name" => $user->name,
+            "profileimg" => $user->profile_picture ? asset('storage/' . $user->profile_picture) : asset('default-profile.png'),
+            "walletCount" => $user->virtualAccounts->count(),
+            "totalFunds" => number_format($totalFundsUsd, 2), // Display in USD
+            "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
+            "status" => $user->is_active ? "online" : "offline",
+        ];
+    });
         return [
             "cardsData" => $cardsData,
             "tableData" => $tableData
