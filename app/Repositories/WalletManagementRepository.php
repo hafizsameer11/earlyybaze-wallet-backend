@@ -75,7 +75,7 @@ class WalletManagementRepository
             return [
                 "id" => $user->id,
                 "name" => $user->name,
-                "profileimg"=>asset('storage/'.$user->profile_picture),
+                "profileimg" => asset('storage/' . $user->profile_picture),
                 "walletCount" => $user->virtualAccounts->count(),
                 "totalFunds" => number_format($user->virtualAccounts->sum('account_balance'), 2),
                 "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
@@ -83,10 +83,9 @@ class WalletManagementRepository
             ];
         });
 
-     return [
-        "cardsData" => $cardsData,
-        "tableData" => $tableData
-     ];
+        return [
+            "cardsData" => $cardsData,
+            "tableData" => $tableData
+        ];
     }
-
 }
