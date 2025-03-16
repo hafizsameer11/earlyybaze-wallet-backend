@@ -3,6 +3,10 @@
 namespace App\Repositories;
 
 use App\Models\BuyTransaction;
+use App\Models\ExchangeRate;
+use App\Models\Transaction;
+use App\Models\UserAccount;
+use App\Models\VirtualAccount;
 use App\Services\transactionService;
 
 class BuyTransactionRepository
@@ -71,5 +75,27 @@ class BuyTransactionRepository
     public function delete($id)
     {
         // Add logic to delete data
+    }
+    public function getUserAssetTransactions($userId)
+    {
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
+        $userAccount = UserAccount::where('user_id', $userId)->first();
+        $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
+            $exchangeRate = ExchangeRate::where('currency', $account->currency)->orderBy('created_at', 'desc')->first();
+            return [
+                'id' => $account->id,
+                'name' => $account->currency,
+                'symbol' => $account->walletCurrency->symbol,
+                'icon' => $account->walletCurrency->icon,
+                'balance' => $account->available_balance,
+                'account_balance' => $account->account_balance,
+                'price' => "1 $account->currency = $exchangeRate->rate_usd USD",
+            ];
+        });
+        $transactions=Transaction::where('user_id', $userId)->orderBy('created_at', 'desc')->take(4)->get();
+        return  [
+            'assets' => $virtualAccounts,
+            'transactions' => $transactions
+        ];
     }
 }

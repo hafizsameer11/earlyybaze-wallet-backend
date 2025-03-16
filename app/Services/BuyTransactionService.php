@@ -61,4 +61,11 @@ public function findByTransactionId($transactionId){
     {
         return $this->BuyTransactionRepository->delete($id);
     }
+    public function getUserAssetTransactions($userId){
+        try{
+            return $this->BuyTransactionRepository->getUserAssetTransactions($userId);
+        }catch(\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

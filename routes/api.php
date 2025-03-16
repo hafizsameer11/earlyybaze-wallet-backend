@@ -154,6 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
 
     Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']);
+    Route::get('user-asset-transaction',[TransactionController::class, 'getUserAssetTransactions']);
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {

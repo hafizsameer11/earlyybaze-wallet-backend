@@ -131,4 +131,13 @@ class TransactionController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getUserAssetTransactions(){
+        try{
+            $user = Auth::user();
+            $transactions = $this->buyTransactionService->getUserAssetTransactions($user->id);
+            return ResponseHelper::success($transactions, 'Transactions fetched successfully', 200);
+        }catch(\Exception $e){
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }
