@@ -155,7 +155,7 @@ class TransactionSendRepository
                 'sender_address' => null,
                 'user_id' => $sender->id ?? null,
                 'receiver_id' => $receiver->id ?? null,
-                'receiver_address' => $receiverDepositAddress,
+                'receiver_address' => $receiverDepositAddress->address,
                 'amount' => $amount,
                 'currency' => $currency,
                 'tx_id' => $txId,
