@@ -67,6 +67,7 @@ class BuyTransactionRepository
             $path = $data['receipt']->store('receipts', 'public');
         }
         $data['receipt'] = $path;
+        $data['receipt_attached']=true;
         $buyTransaction->update($data);
         return $buyTransaction;
     }
