@@ -34,7 +34,18 @@ class UserController extends Controller
     public function UpdateUserProfile(UpdateProfileRequest $request)
     {
         try {
-            $user = $this->userService->updateUserProfile($request->all());
+            $user = Auth::user();
+            $user = $this->userService->updateUserProfile($request->all(), $user->id);
+            return ResponseHelper::success($user, 'User profile updated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function UpdateUserProfileByAdmin(UpdateProfileRequest $request,$userId)
+    {
+        try {
+
+            $user = $this->userService->updateUserProfile($request->all(), $userId);
             return ResponseHelper::success($user, 'User profile updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

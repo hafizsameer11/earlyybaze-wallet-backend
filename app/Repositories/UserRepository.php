@@ -144,6 +144,9 @@ class UserRepository
             $path = $data['profile_picture']->store('profile_picture', 'public');
             $data['profile_picture'] = $path;
         }
+        if (isset($data['password']) && $data['password']) {
+            $data['password'] = Hash::make($data['password']);
+        }
         $user->update($data);
         return $user;
     }
@@ -205,18 +208,18 @@ class UserRepository
     {
         $user = User::where('id', $userId)->with('userAccount')->first();
         // $user = $user->map(function ($user) {
-           $user= [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'status' => $user->is_active,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-                'img' => asset('storage/' . $user->profile_picture),
-                'total_amount_in_dollar' => $user->userAccount->crypto_balance,
-                'total_amount_in_naira' => $user->userAccount->naira_balance
-            ];
+        $user = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'status' => $user->is_active,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+            'img' => asset('storage/' . $user->profile_picture),
+            'total_amount_in_dollar' => $user->userAccount->crypto_balance,
+            'total_amount_in_naira' => $user->userAccount->naira_balance
+        ];
         // });
         return $user;
     }

@@ -169,7 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
-
+        Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
         //banners
         Route::get('/banners', [InAppBannerController::class, 'index']);
         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
