@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\NairaWallet;
 use App\Models\User;
+use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -84,7 +85,7 @@ class UserRepository
     public function getuserAssets($userId)
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
-
+        $userAccount=UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) {
             return [
                 'id' => $account->id,
@@ -95,6 +96,7 @@ class UserRepository
                 'account_balance' => $account->account_balance,
                 'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
+                'nairaWallet'=>$userAccount->naira_balance,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
