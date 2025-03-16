@@ -72,36 +72,36 @@ class WalletManagementRepository
         ];
 
         function getExchangeRate($currency)
-    {
-        return ExchangeRate::where('currency', $currency)
-            ->orderBy('created_at', 'desc')
-            ->first();
-    }
-
-    // Table Data
-    $tableData = $users->map(function ($user) {
-        $totalFundsUsd = 0;
-
-        foreach ($user->virtualAccounts as $account) {
-            $exchangeRate = getExchangeRate($account->currency);
-
-            // If exchange rate exists, convert balance to USD
-            if ($exchangeRate) {
-                $amountUsd = bcmul($account->account_balance, $exchangeRate->rate_usd, 8);
-                $totalFundsUsd = bcadd($totalFundsUsd, $amountUsd, 8);
-            }
+        {
+            return ExchangeRate::where('currency', $currency)
+                ->orderBy('created_at', 'desc')
+                ->first();
         }
 
-        return [
-            "id" => $user->id,
-            "name" => $user->name,
-            "profileimg" => "/storage/".$user->profile_picture ,
-            "walletCount" => $user->virtualAccounts->count(),
-            "totalFunds" => number_format($totalFundsUsd, 2), // Display in USD
-            "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
-            "status" => $user->is_active ? "online" : "offline",
-        ];
-    });
+        // Table Data
+        $tableData = $users->map(function ($user) {
+            $totalFundsUsd = 0;
+
+            foreach ($user->virtualAccounts as $account) {
+                $exchangeRate = getExchangeRate($account->currency);
+
+                // If exchange rate exists, convert balance to USD
+                if ($exchangeRate) {
+                    $amountUsd = bcmul($account->available_balance, $exchangeRate->rate_usd, 8);
+                    $totalFundsUsd = bcadd($totalFundsUsd, $amountUsd, 8);
+                }
+            }
+
+            return [
+                "id" => $user->id,
+                "name" => $user->name,
+                "profileimg" => "/storage/" . $user->profile_picture,
+                "walletCount" => $user->virtualAccounts->count(),
+                "totalFunds" => number_format($totalFundsUsd, 2), // Display in USD
+                "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
+                "status" => $user->is_active ? "online" : "offline",
+            ];
+        });
         return [
             "cardsData" => $cardsData,
             "tableData" => $tableData
