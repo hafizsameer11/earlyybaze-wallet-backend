@@ -44,7 +44,14 @@ class TransactionManagementController extends Controller
     // public function ReferalPaymentController(){
 
     // }
-    public function getSingleInternalReceiveTransaction($id) {}
+    public function getSingleInternalReceiveTransaction($id) {
+        try {
+            $transaction = $this->transactionSendService->findByTransactionId($id);
+            return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     public function getSingleInternalSendTransaction($id)
     {
         try {
