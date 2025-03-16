@@ -95,7 +95,7 @@ class WalletManagementRepository
         return [
             "id" => $user->id,
             "name" => $user->name,
-            "profileimg" => $user->profile_picture ,
+            "profileimg" => "/storage/".$user->profile_picture ,
             "walletCount" => $user->virtualAccounts->count(),
             "totalFunds" => number_format($totalFundsUsd, 2), // Display in USD
             "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
