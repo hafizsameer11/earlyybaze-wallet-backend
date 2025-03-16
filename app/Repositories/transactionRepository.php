@@ -8,21 +8,7 @@ class transactionRepository
 {
     public function all()
     {
-        $transactions = Transaction::wiht('user')->get()->map(function ($transaction) {
-            return [
-                'username' => $transaction->user->name ?? 'Unknown User', // Assuming a relation exists
-                'transaction_type' => $transaction->type, // Assuming `type` exists in DB
-                'asset' => $transaction->currency ?? 'BTC', // Default to BTC if not set
-                'network' => $transaction->network ?? 'Bitcoin',
-                'amount' => $transaction->amount . ' ' . $transaction->asset,
-                'amountUSD' => '$' . number_format($transaction->amount * 50000, 2), // Assuming BTC/USD rate
-                'status' => $transaction->status ?? 'pending',
-                'fees' => $transaction->fees ?? '0',
-                'feesUSD' => '$' . number_format(($transaction->fees ?? 0.0000012) * 50000, 2),
-                'date' => $transaction->created_at->format('m-d-Y'),
-                'time' => $transaction->created_at->format('h:i A'),
-            ];
-        });
+        return Transaction::with('user')->orderBy('created_at', 'desc')->get();
     }
 
     public function find($id)
