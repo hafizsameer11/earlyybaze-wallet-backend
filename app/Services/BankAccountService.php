@@ -74,7 +74,7 @@ class BankAccountService
             return $this->BankAccountRepository->delete($id);
         } catch (Exception $e) {
             Log::error('Bank account deletion error: ' . $e->getMessage());
-            throw new Exception('Bank account deletion failed.');
+            throw new Exception('Bank account deletion failed.' . $e->getMessage());
         }
     }
 }
