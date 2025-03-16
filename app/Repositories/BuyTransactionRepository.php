@@ -82,9 +82,9 @@ class BuyTransactionRepository
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             $exchangeRate = ExchangeRate::where('currency', $account->currency)->orderBy('created_at', 'desc')->first();
-            $price="1 $account->currency = $exchangeRate->rate_usd USD";
-            if(!$exchangeRate){
-                $price='';
+            $price='';
+            if($exchangeRate){
+                $price="1 $account->currency = $exchangeRate->rate_usd USD";
             }
             return [
                 'id' => $account->id,
