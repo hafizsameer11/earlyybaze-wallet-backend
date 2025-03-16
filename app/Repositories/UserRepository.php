@@ -94,6 +94,7 @@ class UserRepository
                 'available_balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
                 'deposit_addresses' => $account->depositAddresses,
+                'status' => $account->active,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
