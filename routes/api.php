@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\WalletManagementController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
@@ -208,6 +209,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('kyc')->group(function (): void {
             Route::get('/get-all', [KycController::class, 'getAll']);
             Route::post('/update-status/{id}', [KycController::class, 'updateStatus']);
+        });
+        Route::prefix('walletmanagement')->group(function (): void {
+            Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
+            // Route::post('/update-status/{id}', [WalletManagementController::class, 'updateStatus']);
         });
     });
 });
