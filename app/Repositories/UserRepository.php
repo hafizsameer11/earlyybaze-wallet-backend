@@ -86,7 +86,7 @@ class UserRepository
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
         $userAccount=UserAccount::where('user_id', $userId)->first();
-        $virtualAccounts = $virtualAccounts->map(function ($account) {
+        $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             return [
                 'id' => $account->id,
                 'currency' => $account->currency,
