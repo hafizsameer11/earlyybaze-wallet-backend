@@ -18,7 +18,7 @@ class SwapTransaction extends Model
         'status',
         'exchange_rate',
         'fee_naira',
-        'amount','reference'
+        'amount','reference','network'
     ];
     public function user()
     {

@@ -60,6 +60,7 @@ class SwapTransactionRepository
             $data['amount_usd'] = $amount_usd;
             $data['amount_naira'] = $amount_naira;
             $data['fee_naira'] = $fee_naira;
+            $data['fee'] = $feeCurrency;
 
             // Generate unique transaction reference
             $reference = 'EarlyBaze' . time();
