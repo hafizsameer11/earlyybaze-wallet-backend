@@ -59,7 +59,7 @@ class TransactionSendRepository
             'tx_id' => $transaction->tx_id,
             'block_hash' => $transaction->block_hash,
             'gas_fee' => $transaction->gas_fee,
-            $r => $transaction->receiver_address,
+            $r => $transaction->receiver_virtual_account_id,
             'status' => $transaction->status,
             'amount' => $transaction->amount,
             'amount_usd' => $transaction->transaction->amount_usd,
