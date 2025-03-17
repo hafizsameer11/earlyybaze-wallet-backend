@@ -106,11 +106,15 @@ class BuyTransactionRepository
         $transactions = $transactions->map(function ($transaction) {
             //merge all data by just adding symbol of currency
             $currency = WalletCurrency::where('currency', $transaction->currency)->first();
+            $symbol='';
+            if($currency){
+                $symbol=$currency->symbol;
+            }
             return [
                 'id' => (int)$transaction->id,
                 'name' => $transaction->currency,
-                'symbol' => $currency->symbol,
-                'icon' => $currency->symbol,
+                'symbol' => $symbol,
+                'icon' => $symbol,
                 'balance' => $transaction->amount,
                 'created_at' => $transaction->created_at
             ];
