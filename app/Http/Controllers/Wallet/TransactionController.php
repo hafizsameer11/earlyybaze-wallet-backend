@@ -33,7 +33,7 @@ class TransactionController extends Controller
     {
         try {
             $transaction = $this->transactionSendService->sendInternalTransaction($request->all());
-            if($transaction['success']==false){
+            if(isset($transaction['success']) &&  $transaction['success']==false){
 
                 return ResponseHelper::error($transaction['error'], 500);
             }
