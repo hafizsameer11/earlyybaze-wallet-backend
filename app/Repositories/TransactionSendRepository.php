@@ -6,6 +6,7 @@ use App\Models\DepositAddress;
 use App\Models\TransactionSend;
 use App\Models\User;
 use App\Models\VirtualAccount;
+use App\Models\WalletCurrency;
 use App\Services\ExchangeRateService;
 use App\Services\TatumService;
 use App\Services\transactionService;
@@ -39,12 +40,28 @@ class TransactionSendRepository
         }
         return $transaction;
     }
-    public function findByTransactionId($transactionId){
-        $transaction=TransactionSend::where('transaction_id', $transactionId)->first();
+    public function findByTransactionId($transactionId)
+    {
+        $transaction = TransactionSend::where('transaction_id', $transactionId)->with('transaction')->first();
+
+        $walletCurrency = WalletCurrency::where('currency', $transaction->currency)->first();
+        $tranaction = [
+            'id' => $transaction->id,
+            'transaction_id' => $transaction->transaction_id,
+            'transaction_type' => $transaction->transaction_type,
+            'currency' => $transaction->currency,
+            'symbol' => $walletCurrency->symbol,
+            'tx_id' => $transaction->tx_id,
+            'block_hash' => $transaction->block_hash,
+            'gas_fee' => $transaction->gas_fee,
+            'status' => $transaction->status,
+            'receiver_address' => $transaction->receiver_virtual_account_id,
+            'created_at' => $transaction->created_at
+        ];
         if (!$transaction) {
             throw new \Exception('Transaction not found');
-            }
-            return $transaction;
+        }
+        return $tranaction;
     }
 
     public function create(array $data)
