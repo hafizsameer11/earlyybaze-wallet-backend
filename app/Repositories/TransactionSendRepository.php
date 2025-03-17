@@ -55,7 +55,8 @@ class TransactionSendRepository
             'block_hash' => $transaction->block_hash,
             'gas_fee' => $transaction->gas_fee,
             'status' => $transaction->status,
-            
+            'amount' => $transaction->amount,
+            'amount_usd' => $transaction->transaction->amount_usd,
             'created_at' => $transaction->created_at
         ];
         if (!$transaction) {
