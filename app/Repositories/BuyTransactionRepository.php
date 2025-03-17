@@ -7,6 +7,7 @@ use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
+use App\Models\WalletCurrency;
 use App\Services\transactionService;
 
 class BuyTransactionRepository
@@ -27,9 +28,9 @@ class BuyTransactionRepository
     }
     public function findByTransactionId($id)
     {
-        $transaction= BuyTransaction::with('transaction', 'bankAccount')->where('transaction_id', $id)->first();
-        if(!$transaction){
-            throw new \Exception('Transaction not found or Id not found'. $id);
+        $transaction = BuyTransaction::with('transaction', 'bankAccount')->where('transaction_id', $id)->first();
+        if (!$transaction) {
+            throw new \Exception('Transaction not found or Id not found' . $id);
         }
         return $transaction;
     }
@@ -67,7 +68,7 @@ class BuyTransactionRepository
             $path = $data['receipt']->store('receipts', 'public');
         }
         $data['receipt'] = $path;
-        $data['receipt_attached']=true;
+        $data['receipt_attached'] = true;
         $buyTransaction->update($data);
         return $buyTransaction;
     }
@@ -102,6 +103,18 @@ class BuyTransactionRepository
             ];
         });
         $transactions = Transaction::where('user_id', $userId)->orderBy('created_at', 'desc')->take(4)->get();
+        $transactions = $transactions->map(function ($transaction) {
+            //merge all data by just adding symbol of currency
+            $currency = WalletCurrency::where('currency', $transaction->currency)->first();
+            return [
+                'id' => (int)$transaction->id,
+                'name' => $transaction->currency,
+                'symbol' => $currency->symbol,
+                'icon' => $currency->symbol,
+                'balance' => $transaction->amount,
+                'created_at' => $transaction->created_at
+            ];
+        });
         return  [
             'assets' => $virtualAccounts,
             'transactions' => $transactions
