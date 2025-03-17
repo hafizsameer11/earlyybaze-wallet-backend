@@ -116,7 +116,8 @@ class BuyTransactionRepository
                 'symbol' => $symbol,
                 'icon' => $symbol,
                 'balance' => $transaction->amount,
-                'created_at' => $transaction->created_at
+                'created_at' => $transaction->created_at,
+                'type'=> $transaction->type,
             ];
         });
         return  [
