@@ -40,7 +40,7 @@ class TransactionSendRepository
         }
         return $transaction;
     }
-    public function findByTransactionId($transactionId)
+    public function findByTransactionId($transactionId,$type="send")
     {
         $transaction = TransactionSend::where('transaction_id', $transactionId)->with('transaction')->first();
 
@@ -55,7 +55,7 @@ class TransactionSendRepository
             'block_hash' => $transaction->block_hash,
             'gas_fee' => $transaction->gas_fee,
             'status' => $transaction->status,
-            'receiver_address' => $transaction->receiver_virtual_account_id,
+            
             'created_at' => $transaction->created_at
         ];
         if (!$transaction) {

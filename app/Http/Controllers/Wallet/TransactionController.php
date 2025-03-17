@@ -33,6 +33,10 @@ class TransactionController extends Controller
     {
         try {
             $transaction = $this->transactionSendService->sendInternalTransaction($request->all());
+            if($transaction['success']==false){
+
+                return ResponseHelper::error($transaction['error'], 500);
+            }
             return   ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

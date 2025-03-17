@@ -51,7 +51,8 @@ class TransactionSendService
     public function sendInternalTransaction(array $data)
     {
         try {
-            return $this->TransactionSendRepository->sendInternalTransaction($data);
+            $transaction= $this->TransactionSendRepository->sendInternalTransaction($data);
+            return $transaction;
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
