@@ -46,7 +46,7 @@ class TransactionManagementController extends Controller
     // }
     public function getSingleInternalReceiveTransaction($id) {
         try {
-            $transaction = $this->transactionSendService->findByTransactionId($id);
+            $transaction = $this->transactionSendService->findByTransactionId($id,$type="receive");
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

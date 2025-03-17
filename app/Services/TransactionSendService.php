@@ -26,9 +26,9 @@ class TransactionSendService
         throw new \Exception($e->getMessage());
        }
     }
-    public function findByTransactionId($transactionId){
+    public function findByTransactionId($transactionId,$type="send"){
         try{
-            return $this->TransactionSendRepository->findByTransactionId($transactionId);
+            return $this->TransactionSendRepository->findByTransactionId($transactionId,$type);
         }catch(\Exception $e){
             throw new \Exception($e->getMessage());
         }
