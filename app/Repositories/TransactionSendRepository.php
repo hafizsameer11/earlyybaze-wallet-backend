@@ -40,8 +40,13 @@ class TransactionSendRepository
         }
         return $transaction;
     }
-    public function findByTransactionId($transactionId,$type="send")
+    public function findByTransactionId($transactionId, $type = "send")
     {
+        if ($type == "send") {
+            $r = "receiver_address";
+        } else {
+            $r = "sender_address";
+        }
         $transaction = TransactionSend::where('transaction_id', $transactionId)->with('transaction')->first();
 
         $walletCurrency = WalletCurrency::where('currency', $transaction->currency)->first();
@@ -54,6 +59,7 @@ class TransactionSendRepository
             'tx_id' => $transaction->tx_id,
             'block_hash' => $transaction->block_hash,
             'gas_fee' => $transaction->gas_fee,
+            $r => $transaction->receiver_address,
             'status' => $transaction->status,
             'amount' => $transaction->amount,
             'amount_usd' => $transaction->transaction->amount_usd,
