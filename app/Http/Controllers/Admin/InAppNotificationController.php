@@ -45,7 +45,7 @@ class InAppNotificationController extends Controller
             $validatedData = $request->validated();
 
             // Handle file upload if an attachment is included
-            if ($request->hasFile('attachment')) {
+            if (isset($validatedData['attachment'])) {
                 $validatedData['attachment'] = $request->file('attachment')->store('notifications', 'public');
             }
 
