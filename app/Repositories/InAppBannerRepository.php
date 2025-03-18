@@ -28,6 +28,10 @@ class InAppBannerRepository
     public function update($id, array $data)
     {
         $banner = InAppBanner::findOrFail($id); // Find banner
+        if (isset($data["attachment"]) && $data["attachment"]) {
+            $path = $data['attachment']->store('banners', 'public');
+            $data['attachment'] = $path;
+        }
         $banner->update($data); // Update banner
         return $banner;
     }
