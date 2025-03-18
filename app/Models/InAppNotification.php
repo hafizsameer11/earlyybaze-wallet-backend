@@ -13,5 +13,6 @@ class InAppNotification extends Model
         'message',
         'type',
         'status',
+        'attachment'
     ];
 }
