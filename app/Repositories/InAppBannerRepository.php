@@ -18,6 +18,10 @@ class InAppBannerRepository
 
     public function create(array $data)
     {
+        if (isset($data["attachment"]) && $data["attachment"]) {
+            $path = $data['attachment']->store('banners', 'public');
+            $data['attachment'] = $path;
+        }
         return InAppBanner::create($data); // Create a new banner
     }
 
