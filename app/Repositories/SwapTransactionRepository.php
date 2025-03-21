@@ -8,6 +8,7 @@ use App\Models\SwapTransaction;
 use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
+use App\Models\WalletCurrency;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Exception;
@@ -145,6 +146,13 @@ class SwapTransactionRepository
     }
     public function singleSwapTransaction($id)
     {
-        return SwapTransaction::where('transaction_id', $id)->first();
+        $swap= SwapTransaction::where('transaction_id', $id)->first();
+        //add currency symbol with it
+        if (!$swap) {
+            throw new Exception('Transaction not found.');
+        }
+        $currencySymbol=WalletCurrency::where('currency', $swap->currency)->first();
+        $swap->currency_symbol=$currencySymbol->symbol;
+        return $swap;
     }
 }
