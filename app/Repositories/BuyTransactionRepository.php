@@ -24,7 +24,24 @@ class BuyTransactionRepository
 
     public function find($id)
     {
-        return BuyTransaction::with('transaction', 'bankAccount')->find($id);
+      $buy=BuyTransaction::where('transaction_id', $id)->with('transaction','bankAccount')->first();
+      if (!$buy) {
+          throw new \Exception('Transaction not found or Id not found' . $id);
+      }
+    //   return $buy
+    $formattedResponse = [
+        'coin' => ucfirst($buy->currency),  // Making the currency name capitalized
+        'network' => ucfirst($buy->network),
+        'amount_btc' => $buy->amount_coin . ' BTC',
+        'amount_usd' => '$' . number_format($buy->amount_usd, 2),
+        'amount_paid' => $buy->amount_naira ? 'NGN' . number_format($buy->amount_naira, 2) : 'N/A',
+        'account_paid_to' => $buy->bankAccount ? $buy->bankAccount->account_name . ' (' . $buy->bankAccount->bank_name . ')' : 'N/A',
+        'transaction_reference' => $buy->transaction ? $buy->transaction->reference : 'N/A',
+        'transaction_date' => \Carbon\Carbon::parse($buy->created_at)->format('d M, Y - h:i A'),
+        'status' => ucfirst($buy->status),
+    ];
+    return $formattedResponse;
+    //   return $buy;
     }
     public function findByTransactionId($id)
     {
