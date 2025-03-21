@@ -152,7 +152,7 @@ class SwapTransactionRepository
             throw new Exception('Transaction not found.');
         }
         $currencySymbol=WalletCurrency::where('currency', $swap->currency)->first();
-        $swap->currency_symbol=$currencySymbol->symbol;
+        $swap->symbol=$currencySymbol->symbol;
         return $swap;
     }
 }
