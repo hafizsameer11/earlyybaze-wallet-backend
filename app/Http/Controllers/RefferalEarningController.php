@@ -14,13 +14,23 @@ class RefferalEarningController extends Controller
     {
         $this->refferalEarningService = $refferalEarningService;
     }
-    public function getForAuthUser(){
-        try{
+    public function getForAuthUser()
+    {
+        try {
             $user = Auth::user();
-        $data=$this->refferalEarningService->getByUserId($user->id);
-        return ResponseHelper::success($data,"Data fetched successfully",200);
-
-        }catch(\Exception $e){
+            $data = $this->refferalEarningService->getByUserId($user->id);
+            return ResponseHelper::success($data, "Data fetched successfully", 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
+    public function getForUser($userId)
+    {
+        try {
+            // $user = Auth::user();
+            $data = $this->refferalEarningService->getByUserId($userId);
+            return ResponseHelper::success($data, "Data fetched successfully", 200);
+        } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }

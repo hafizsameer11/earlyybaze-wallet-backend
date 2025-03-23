@@ -185,7 +185,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //reffer management data
         Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
-
+        Route::get('refferal/get-for-user/{id}', [RefferalEarningController::class, 'getForUser']);
 
         Route::prefix('InAppNotifications')->group(function () {
             Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
@@ -236,7 +236,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
         });
         Route::get('/market-data', [MarketDataController::class, 'index']);
-
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
