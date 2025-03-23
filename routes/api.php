@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\WalletManagementController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
+use App\Http\Controllers\MarketDataController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
 use App\Http\Controllers\RefferalEarningController;
@@ -234,6 +235,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/delete/{id}', [AmlRuleController::class, 'destroy']);
             Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
         });
+        Route::get('/market-data', [MarketDataController::class, 'index']);
+
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
