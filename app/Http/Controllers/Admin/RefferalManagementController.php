@@ -25,8 +25,7 @@ class RefferalManagementController extends Controller
                 return User::where('invite_code', $user->user_code)->count() > 0;
             })
             ->map(function ($user) {
-                $withdrawTransactions = WithdrawTransaction::where('status', 'approved')
-                    ->whereHas('transaction', function ($query) use ($user) {
+                $withdrawTransactions = WithdrawTransaction::whereHas('transaction', function ($query) use ($user) {
                         $query->where('user_id', $user->id);
                     })
                     ->with('transaction')
