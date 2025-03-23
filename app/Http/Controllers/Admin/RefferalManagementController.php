@@ -26,13 +26,19 @@ class RefferalManagementController extends Controller
             })
             ->map(function ($user) {
                 $withdrawTransactions = WithdrawTransaction::whereHas('transaction', function ($query) use ($user) {
-                        $query->where('user_id', $user->id);
-                    })
-                    ->with('transaction')
-                    ->get();
+                    $query->where('user_id', $user->id);
+                })
+                ->with('transaction')
+                ->get();
 
-                $amountUsd = $withdrawTransactions->transaction->sum('amount_usd');
-                $amountNaira = $withdrawTransactions->transaction->sum('amount');
+            $amountUsd = $withdrawTransactions->sum(function ($withdraw) {
+                return $withdraw->transaction->amount_usd ?? 0;
+            });
+
+            $amountNaira = $withdrawTransactions->sum(function ($withdraw) {
+                return $withdraw->transaction->amount ?? 0;
+            });
+
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
