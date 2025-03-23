@@ -29,7 +29,7 @@ class RefferalEarningRepository
                 'amount' => $item->amount,
                 'created_at' => $item->created_at,
                 'image' => $item->referal->profile_picture,
-                'refferalCount'=>$item->referal->count()
+                'refferalCount' => $item->referal->count()
 
             ];
         });

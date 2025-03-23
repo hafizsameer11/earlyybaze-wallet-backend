@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AmlRuleController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
+use App\Http\Controllers\Admin\MaintenanceServiceController;
 use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
@@ -236,6 +237,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
         });
         Route::get('/market-data', [MarketDataController::class, 'index']);
+        Route::prefix('maintenance-services')->group(function () {
+            Route::get('/get-all', [MaintenanceServiceController::class, 'index']);          // Get all services
+            Route::post('/create', [MaintenanceServiceController::class, 'store']);          // Create new service
+            Route::get('/get-single/{id}', [MaintenanceServiceController::class, 'show']);   // Get single service by ID
+            Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
+            Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
