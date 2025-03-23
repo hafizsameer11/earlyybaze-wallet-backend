@@ -28,14 +28,15 @@ class RefferalEarningRepository
                 'name' => $item->referal->name,
                 'amount' => $item->amount,
                 'created_at' => $item->created_at,
-                'image' => $item->referal->profile_picture
+                'image' => $item->referal->profile_picture,
+                'refferalCount'=>$item->referal->count()
 
             ];
         });
         return [
             'earning' => $data,
             'totalRefferals' => $totalRefferals,
-            'reffralCode'=>$user->user_code,
+            'reffralCode' => $user->user_code,
             'Earning' => [
                 'usd' => $totalRefferlBalance->total_referral_earnings,
                 'naira' => $totalRefferlBalance->referral_earning_naira,
