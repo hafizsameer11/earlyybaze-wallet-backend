@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\RefferalManagementController;
+use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
@@ -215,6 +216,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('walletmanagement')->group(function (): void {
             Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
             // Route::post('/update-status/{id}', [WalletManagementController::class, 'updateStatus']);
+        });
+        Route::prefix('trade-limits')->group(function () {
+            Route::get('/get-all', [TradeLimitController::class, 'index']);
+            Route::post('/create', [TradeLimitController::class, 'store']);
+            Route::get('/get-single/{id}', [TradeLimitController::class, 'show']);
+            Route::post('/update/{id}', [TradeLimitController::class, 'update']);
+            Route::delete('/delete/{id}', [TradeLimitController::class, 'destroy']);
+            Route::get('/type/{type}', [TradeLimitController::class, 'getByType']); // Custom method
         });
     });
 });
