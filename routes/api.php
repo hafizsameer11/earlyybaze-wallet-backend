@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AmlRuleController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\RefferalManagementController;
@@ -224,6 +225,14 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/update/{id}', [TradeLimitController::class, 'update']);
             Route::delete('/delete/{id}', [TradeLimitController::class, 'destroy']);
             Route::get('/type/{type}', [TradeLimitController::class, 'getByType']); // Custom method
+        });
+        Route::prefix('aml-rules')->group(function () {
+            Route::get('/get-all', [AmlRuleController::class, 'index']);
+            Route::post('/create', [AmlRuleController::class, 'store']);
+            Route::get('/get-single/{id}', [AmlRuleController::class, 'show']);
+            Route::post('/update/{id}', [AmlRuleController::class, 'update']);
+            Route::delete('/delete/{id}', [AmlRuleController::class, 'destroy']);
+            Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
         });
     });
 });
