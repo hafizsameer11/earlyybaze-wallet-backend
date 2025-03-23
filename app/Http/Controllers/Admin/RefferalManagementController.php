@@ -31,14 +31,13 @@ class RefferalManagementController extends Controller
                 ->with('transaction')
                 ->get();
 
-            $amountUsd = $withdrawTransactions->sum(function ($withdraw) {
-                return $withdraw->transaction->amount_usd ?? 0;
-            });
+                $amountUsd = $withdrawTransactions->sum(function ($withdraw) {
+                    return (float) ($withdraw->transaction->amount_usd ?? 0);
+                });
 
-            $amountNaira = $withdrawTransactions->sum(function ($withdraw) {
-                return $withdraw->transaction->amount ?? 0;
-            });
-
+                $amountNaira = $withdrawTransactions->sum(function ($withdraw) {
+                    return (float) ($withdraw->transaction->amount ?? 0);
+                });
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
