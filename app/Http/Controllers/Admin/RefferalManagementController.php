@@ -25,7 +25,13 @@ class RefferalManagementController extends Controller
                 return User::where('invite_code', $user->user_code)->count() > 0;
             })
             ->map(function ($user) {
-                $withdrawTransactions = WithdrawTransaction::where('user_id', $user->id)->where('status', 'approved')->with('transaction')->get();
+                $withdrawTransactions = WithdrawTransaction::where('status', 'approved')
+    ->whereHas('transaction', function ($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })
+    ->with('transaction')
+    ->get();
+
                 $amountUsd = $withdrawTransactions->transaction->sum('amount_usd');
                 $amountNaira = $withdrawTransactions->transaction->sum('amount');
                 return [
