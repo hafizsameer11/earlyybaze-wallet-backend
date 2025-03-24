@@ -61,6 +61,7 @@ class SupportTicketRepository
         if (!$ticket) {
             throw new \Exception('Ticket not found');
         }
+
         $agent = User::find($agentId);
         if (!$agent) {
             throw new \Exception('Agent not found');
@@ -73,6 +74,8 @@ class SupportTicketRepository
         $ticketAgnt->ticket_id = $ticketId;
         $ticketAgnt->user_id = $agentId;
         $ticketAgnt->save();
+        $ticket->agent_assigned = true;
+        $ticket->save();
         return $ticket;
     }
 }
