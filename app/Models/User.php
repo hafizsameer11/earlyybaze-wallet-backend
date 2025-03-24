@@ -27,7 +27,8 @@ class User extends Authenticatable
         'otp',
         'invite_code',
         'user_code',
-        'profile_picture'
+        'profile_picture',
+        'role'
     ];
 
     /**

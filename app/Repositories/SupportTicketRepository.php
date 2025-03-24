@@ -14,7 +14,7 @@ class SupportTicketRepository
         $unanswered = SupportTicket::where('answered', 'unanswered')->count();
         $answered = SupportTicket::where('answered', 'answered')->count();
         $total = SupportTicket::count();
-        $tickets= SupportTicket::with('user')->get();
+        $tickets = SupportTicket::with('user')->get();
         return ['unanswered' => $unanswered, 'answered' => $answered, 'total' => $total, 'tickets' => $tickets];
     }
 

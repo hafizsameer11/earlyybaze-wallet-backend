@@ -180,6 +180,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
+        Route::post('/create-user', [UserManagementController::class, 'createUser']);
         //banners
         Route::get('/banners', [InAppBannerController::class, 'index']);
         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);

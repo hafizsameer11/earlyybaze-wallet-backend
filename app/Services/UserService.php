@@ -67,6 +67,28 @@ class UserService
             throw new Exception('User registration failed.');
         }
     }
+    public function createUser(array $data): ?User
+    {
+        try {
+            $data['password'] = Hash::make($data['password']);
+            $data['otp'] = rand(100000, 999999);
+            $data['user_code'] = $this->generateUserCode();
+            $user = $this->userRepository->create($data);
+            // Mail::to($user->email)->send(new OtpMail($user->otp));
+            // $this->userRepository->createNairaWallet($user);
+            // $accountNumber = $this->generateAccountNumber();
+            // $this->userAccountRepository->create([
+            //     'user_id' => $user->id,
+            //     'account_number' => $accountNumber
+            // ]);
+            $user->otp_verified = true;
+            $user->save();
+            return $user;
+        } catch (Exception $e) {
+            Log::error('User registration error: ' . $e->getMessage());
+            throw new Exception('User registration failed.');
+        }
+    }
     private function generateUserCode(): string
     {
         do {

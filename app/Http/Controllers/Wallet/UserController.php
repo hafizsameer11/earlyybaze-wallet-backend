@@ -41,7 +41,7 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function UpdateUserProfileByAdmin(UpdateProfileRequest $request,$userId)
+    public function UpdateUserProfileByAdmin(UpdateProfileRequest $request, $userId)
     {
         try {
 
@@ -138,4 +138,5 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+  
 }
