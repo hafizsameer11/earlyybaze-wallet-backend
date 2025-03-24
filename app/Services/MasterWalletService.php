@@ -27,6 +27,7 @@ class MasterWalletService
             'address' => $walletData['address'] ?? null,
             'private_key' => $walletData['privateKey'] ?? null,
             'mnemonic' => $walletData['mnemonic'] ?? null,
+            'response' => $walletData
         ]);
 
         return $masterWallet->toArray();

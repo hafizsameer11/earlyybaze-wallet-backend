@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Models\WithdrawRequest;
 use App\Services\BuyTransactionService;
 use App\Services\SwapTransactionService;
 use App\Services\TransactionSendService;
@@ -22,6 +23,15 @@ class TransactionManagementController extends Controller
         $this->swapTransactionService = $swapTransactionService;
         $this->buyTransactionService = $buyTransactionService;
         $this->withdrawService = $withdrawService;
+    }
+    public function getWithdrawRequests()
+    {
+        try {
+            $withdrawRequests=WithdrawRequest::orderBy('created_at','desc')->get();
+            return ResponseHelper::success($withdrawRequests, 'Withdraw Requests fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
     }
     public function getAll()
     {
@@ -44,9 +54,10 @@ class TransactionManagementController extends Controller
     // public function ReferalPaymentController(){
 
     // }
-    public function getSingleInternalReceiveTransaction($id) {
+    public function getSingleInternalReceiveTransaction($id)
+    {
         try {
-            $transaction = $this->transactionSendService->findByTransactionId($id,$type="receive");
+            $transaction = $this->transactionSendService->findByTransactionId($id, $type = "receive");
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

@@ -14,5 +14,6 @@ class MasterWallet extends Model
         'address',
         'private_key',
         'mnemonic',
+        'response'
     ];
 }
