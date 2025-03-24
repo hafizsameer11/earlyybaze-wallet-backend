@@ -162,7 +162,7 @@ class TransactionSendRepository
             ]);
             //create transactionsend and transaction for receiver too
 
-            $transcation = $this->transactionService->create([
+            $transcationreceived = $this->transactionService->create([
                 'type' => 'receive',
                 'amount' => $amount,
                 'currency' => $currency,
@@ -188,11 +188,11 @@ class TransactionSendRepository
                 'gas_fee' => null,
                 'status' => $status,
                 'blockchain' => $network,
-                'transaction_id' => $transcation->id
+                'transaction_id' => $transcationreceived->id
             ]);
 
             // Return Data for Controller
-            return $response;
+            return ['response' => $response, 'transaction_id' => $transcation->id, ];
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
