@@ -85,7 +85,7 @@ class UserRepository
     public function getuserAssets($userId)
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
-        $userAccount=UserAccount::where('user_id', $userId)->first();
+        $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             return [
                 'id' => $account->id,
@@ -96,7 +96,7 @@ class UserRepository
                 'account_balance' => $account->account_balance,
                 'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
-                'nairaWallet'=>$userAccount->naira_balance,
+                'nairaWallet' => $userAccount->naira_balance,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
@@ -225,6 +225,12 @@ class UserRepository
         ];
         // });
         return $user;
+    }
+
+    public function getNonUsers()
+    {
+        $users = User::whereNot('role', 'user')->get();
+        return $users;
     }
     // public function 
 }

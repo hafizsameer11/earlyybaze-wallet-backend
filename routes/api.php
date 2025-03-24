@@ -271,6 +271,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/delete/{id}', [PayoutRuleController::class, 'destroy']);
             Route::get('/get-by-event/{event}', [PayoutRuleController::class, 'getByEvent']);
         });
+        Route::prefix('support')->group(function () {
+            Route::get('/get-non-users', [UserManagementController::class, 'getNonUsers']);
+            Route::get('/get-all-tickets', [SupportController::class, 'getAllTickets']);
+            Route::post('/assign-to-agent', [SupportController::class, 'assignToAgent']); // {ticket_id, user_id}
+            Route::post('/create-reply-by-admin', [SupportController::class, 'createReplyByAdmin']);
+            Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

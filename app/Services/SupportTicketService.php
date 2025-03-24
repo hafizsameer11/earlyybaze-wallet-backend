@@ -15,7 +15,11 @@ class SupportTicketService
 
     public function all()
     {
-        return $this->SupportTicketRepository->all();
+        try {
+            return $this->SupportTicketRepository->all();
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function find($id)
@@ -51,5 +55,9 @@ class SupportTicketService
     public function delete($id)
     {
         return $this->SupportTicketRepository->delete($id);
+    }
+    public function assignToAgent($data)
+    {
+        return $this->SupportTicketRepository->assignToAgent($data);
     }
 }

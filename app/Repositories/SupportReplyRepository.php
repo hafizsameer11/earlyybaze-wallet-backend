@@ -20,7 +20,23 @@ class SupportReplyRepository
     public function createByUser(array $data, $userId)
     {
         $ticket = SupportTicket::find($data['ticket_id']);
-      
+
+        if (!$ticket) {
+            throw new \Exception('Ticket not found');
+        }
+        $ticket->update(['answered' => 'unanswered']);
+
+        if (isset($data['attachment']) && $data['attachment']) {
+            $path = $data['attachment']->store('attachment', 'public');
+            $data['attachment'] = $path;
+        }
+        $data['sender_type'] = 'user';
+        return SupportReply::create($data);
+    }
+    public function createByAdmin(array $data)
+    {
+        $ticket = SupportTicket::find($data['ticket_id']);
+
         if (!$ticket) {
             throw new \Exception('Ticket not found');
         }
@@ -30,7 +46,7 @@ class SupportReplyRepository
             $path = $data['attachment']->store('attachment', 'public');
             $data['attachment'] = $path;
         }
-        $data['sender_type'] = 'user';
+        $data['sender_type'] = 'admin';
         return SupportReply::create($data);
     }
     public function getAllByTicket($ticketId)

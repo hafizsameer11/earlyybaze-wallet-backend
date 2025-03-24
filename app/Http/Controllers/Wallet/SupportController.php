@@ -61,4 +61,32 @@ class SupportController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function createReplyByAdmin(SupportReplyRequest $request)
+    {
+        try {
+            $user = Auth::user();
+            $ticket = $this->SupportReplyService->createByAdmin($request->all());
+            return ResponseHelper::success($ticket, 'Reply created successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function assignToAgent(Request $request)
+    {
+        try {
+            $ticket = $this->SupportTicketService->assignToAgent($request->all());
+            return ResponseHelper::success($ticket, 'Ticket assigned to agent successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getAllTickets()
+    {
+        try {
+            $tickets = $this->SupportTicketService->all();
+            return ResponseHelper::success($tickets, 'Tickets retrieved successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

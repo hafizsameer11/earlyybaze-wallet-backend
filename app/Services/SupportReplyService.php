@@ -26,14 +26,22 @@ class SupportReplyService
     public function createByUser(array $data, $userId)
     {
         try {
-            return $this->SupportReplyRepository->createByUser($data,$userId);
+            return $this->SupportReplyRepository->createByUser($data, $userId);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
+    public function createByAdmin(array $data)
+    {
+        try {
+            return $this->SupportReplyRepository->createByAdmin($data);
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
     }
     public function getAllByTicket($ticketId)
     {
-       try {
+        try {
             return $this->SupportReplyRepository->getAllByTicket($ticketId);
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());

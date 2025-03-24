@@ -39,7 +39,7 @@ class UserManagementController extends Controller
     public function getBanksForUser($userId)
     {
         try {
-            if(!$userId){
+            if (!$userId) {
                 return ResponseHelper::error('User id is required', 500);
             }
             $data = $this->bankAccountService->getforUser($userId);
@@ -63,6 +63,15 @@ class UserManagementController extends Controller
         try {
             $data = $this->userService->getUserVirtualAccounts($userId);
             return ResponseHelper::success($data, 'User virtual accounts fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getNonUsers()
+    {
+        try {
+            $data = $this->userService->getNonUsers();
+            return ResponseHelper::success($data, 'Non users fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

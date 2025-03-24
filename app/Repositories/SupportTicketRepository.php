@@ -3,13 +3,15 @@
 namespace App\Repositories;
 
 use App\Models\SupportTicket;
+use App\Models\TicketAgent;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class SupportTicketRepository
 {
     public function all()
     {
-        // Add logic to fetch all data
+        return SupportTicket::all();
     }
 
     public function find($id)
@@ -26,8 +28,8 @@ class SupportTicketRepository
     {
         $user = Auth::user();
         $data['user_id'] = $user->id;
-        $ticket=SupportTicket::where('user_id',$user->id)->where('status','open')->where('subject',$data['subject'])->first();
-        if($ticket){
+        $ticket = SupportTicket::where('user_id', $user->id)->where('status', 'open')->where('subject', $data['subject'])->first();
+        if ($ticket) {
             throw new \Exception('You already have an open ticket for ' . $data['subject']);
         }
         // Add logic to create data
@@ -50,5 +52,27 @@ class SupportTicketRepository
     public function delete($id)
     {
         // Add logic to delete data
+    }
+    public function assignToAgent($data)
+    {
+        $ticketId = $data['ticket_id'];
+        $agentId = $data['user_id'];
+        $ticket = SupportTicket::find($ticketId);
+        if (!$ticket) {
+            throw new \Exception('Ticket not found');
+        }
+        $agent = User::find($agentId);
+        if (!$agent) {
+            throw new \Exception('Agent not found');
+        }
+        $ticketAgnt = TicketAgent::where('ticket_id', $ticketId)->first();
+        if ($ticketAgnt) {
+            throw new \Exception('Ticket already assigned to an agent');
+        }
+        $ticketAgnt = new TicketAgent();
+        $ticketAgnt->ticket_id = $ticketId;
+        $ticketAgnt->user_id = $agentId;
+        $ticketAgnt->save();
+        return $ticket;
     }
 }

@@ -291,4 +291,13 @@ class UserService
             throw new Exception('Get user virtual accounts failed. ' . $e->getMessage());
         }
     }
+    public function getNonUsers()
+    {
+        try {
+            return $this->userRepository->getNonUsers();
+        } catch (Exception $e) {
+            Log::error('Get non users error: ' . $e->getMessage());
+            throw new Exception('Get non users failed. ' . $e->getMessage());
+        }
+    }
 }
