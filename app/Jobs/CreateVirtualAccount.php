@@ -90,6 +90,7 @@ class CreateVirtualAccount implements ShouldQueue
                 Log::info("Virtual account created and stored for user {$this->user->id}: ", $accountData);
 
                 dispatch(new AssignDepositAddress($virtualAccount));
+                dispatch(new RegisterTatumWebhook($virtualAccount->account_id));
             }
         } catch (\Exception $e) {
             Log::error("CreateVirtualAccount Job failed: " . $e->getMessage());
