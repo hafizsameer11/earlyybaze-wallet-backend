@@ -19,10 +19,11 @@ class MasterWalletController extends Controller
     {
         $validated = $request->validate([
             'blockchain' => 'required|string',
+            'endpoint' => 'required|string'
         ]);
 
         try {
-            $wallet = $this->walletService->createMasterWallet($validated['blockchain']);
+            $wallet = $this->walletService->createMasterWallet($validated['blockchain'], $validated['endpoint']);
             return response()->json(['message' => 'Master wallet created', 'wallet' => $wallet], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

@@ -43,27 +43,27 @@ class TatumService
         return $response->json();
     }
 
-    public function createWallet(string $blockchain): array
+    public function createWallet(string $blockchain, string $endpoint): array
     {
-        $endpoint = match ($blockchain) {
-            'bitcoin' => '/bitcoin/wallet',                     // Bitcoin
-            'bsc' => '/bsc/wallet',                     // Bitcoin
-            'avalanche' => '/avalanche/wallet',                     // Bitcoin
-            'fantom' => '/fantom/wallet',                     // Bitcoin
-            'ethereum' => '/ethereum/wallet',                   // Ethereum
-            'xrp' => '/xrp/account',                            // XRP (Ripple)
-            'xlm' => '/xlm/account',                            // Stellar
-            'litecoin' => '/litecoin/wallet',                   // Litecoin
-            'bitcoin-cash' => '/bcash/wallet',                  // Bitcoin Cash
-            'binance-smart-chain' => '/v3/bsc/wallet',             // Binance Smart Chain
-            'solana' => '/solana/wallet',                       // Solana
-            'tron' => '/tron/wallet',                           // Tron
-            'polygon' => '/polygon/wallet',                     // Polygon (MATIC)
-            'dogecoin' => '/v3/dogecoin/wallet',                   // Dogecoin
-            'celo' => '/v3/celo/wallet',                           // Celo
-            'algorand' => '/v3/algorand/wallet',                   // Algorand
-            default => throw new \Exception("Unsupported blockchain: $blockchain"),
-        };
+        // $endpoint = match ($blockchain) {
+        //     'bitcoin' => '/bitcoin/wallet',                     // Bitcoin
+        //     'bsc' => '/bsc/wallet',                     // Bitcoin
+        //     'avalanche' => '/avalanche/wallet',                     // Bitcoin
+        //     'fantom' => '/fantom/wallet',                     // Bitcoin
+        //     'ethereum' => '/ethereum/wallet',                   // Ethereum
+        //     'xrp' => '/xrp/account',                            // XRP (Ripple)
+        //     'xlm' => '/xlm/account',                            // Stellar
+        //     'litecoin' => '/litecoin/wallet',                   // Litecoin
+        //     'bitcoin-cash' => '/bcash/wallet',                  // Bitcoin Cash
+        //     'binance-smart-chain' => '/v3/bsc/wallet',             // Binance Smart Chain
+        //     'solana' => '/solana/wallet',                       // Solana
+        //     'tron' => '/tron/wallet',                           // Tron
+        //     'polygon' => '/polygon/wallet',                     // Polygon (MATIC)
+        //     'dogecoin' => '/v3/dogecoin/wallet',                   // Dogecoin
+        //     'celo' => '/v3/celo/wallet',                           // Celo
+        //     'algorand' => '/v3/algorand/wallet',                   // Algorand
+        //     default => throw new \Exception("Unsupported blockchain: $blockchain"),
+        // };
 
         $response = Http::withHeaders(['x-api-key' => $this->apiKey])
             ->get("{$this->baseUrl}{$endpoint}");

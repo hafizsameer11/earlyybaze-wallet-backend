@@ -16,10 +16,10 @@ class MasterWalletService
         $this->tatumService = $tatumService;
     }
 
-    public function createMasterWallet(string $blockchain): array
+    public function createMasterWallet(string $blockchain,string $endpoint): array
     {
         // Generate wallet using Tatum API
-        $walletData = $this->tatumService->createWallet($blockchain);
+        $walletData = $this->tatumService->createWallet($blockchain, $endpoint);
 
         $masterWallet = $this->walletRepository->create([
             'blockchain' => $blockchain,
@@ -37,5 +37,4 @@ class MasterWalletService
     {
         return $this->walletRepository->getAll();
     }
-    
 }
