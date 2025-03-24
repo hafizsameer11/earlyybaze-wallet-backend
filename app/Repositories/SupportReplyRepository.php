@@ -46,7 +46,7 @@ class SupportReplyRepository
             $path = $data['attachment']->store('attachment', 'public');
             $data['attachment'] = $path;
         }
-        $data['sender_type'] = 'admin';
+        $data['sender_type'] = 'support';
         return SupportReply::create($data);
     }
     public function getAllByTicket($ticketId)
