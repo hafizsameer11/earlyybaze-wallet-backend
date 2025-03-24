@@ -43,7 +43,7 @@ class RegisterTatumWebhook implements ShouldQueue
         $response = Http::withHeaders([
             'x-api-key' => $apiKey,
             'Content-Type' => 'application/json',
-        ])->post("$baseUrl/v3/subscription", $payload);
+        ])->post("$baseUrl/subscription", $payload);
 
         if ($response->successful()) {
             Log::info("✅ Tatum webhook subscription registered successfully", [
