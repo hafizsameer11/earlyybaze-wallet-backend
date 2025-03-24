@@ -11,7 +11,11 @@ class SupportTicketRepository
 {
     public function all()
     {
-        return SupportTicket::all();
+        $unanswered = SupportTicket::where('answered', 'unanswered')->count();
+        $answered = SupportTicket::where('answered', 'answered')->count();
+        $total = SupportTicket::count();
+        $tickets= SupportTicket::all();
+        return ['unanswered' => $unanswered, 'answered' => $answered, 'total' => $total, 'tickets' => $tickets];
     }
 
     public function find($id)
