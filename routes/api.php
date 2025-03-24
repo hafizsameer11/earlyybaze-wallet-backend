@@ -4,7 +4,10 @@ use App\Http\Controllers\Admin\AmlRuleController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\MaintenanceServiceController;
+use App\Http\Controllers\Admin\ModuleController;
+use App\Http\Controllers\Admin\PayoutRuleController;
 use App\Http\Controllers\Admin\RefferalManagementController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
@@ -243,6 +246,30 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single/{id}', [MaintenanceServiceController::class, 'show']);   // Get single service by ID
             Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
             Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
+        });
+
+        Route::prefix('roles')->group(function () {
+            Route::get('/get-all', [RoleController::class, 'index']);
+            Route::post('/create', [RoleController::class, 'store']);
+            Route::get('/get-single/{id}', [RoleController::class, 'show']);
+            Route::post('/update/{id}', [RoleController::class, 'update']);
+            Route::delete('/delete/{id}', [RoleController::class, 'destroy']);
+            Route::get('/{id}/permissions', [RoleController::class, 'getRoleModulePermissions']);
+            Route::post('/{id}/modules', [RoleController::class, 'assignModules']);
+        });
+
+        Route::prefix('modules')->group(function () {
+            Route::get('/get-all', [ModuleController::class, 'index']);
+            Route::post('/create', [ModuleController::class, 'store']);
+            Route::delete('/delete/{id}', [ModuleController::class, 'destroy']);
+        });
+        Route::prefix('payout-rules')->group(function () {
+            Route::get('/get-all', [PayoutRuleController::class, 'index']);
+            Route::post('/create', [PayoutRuleController::class, 'store']);
+            Route::get('/get-single/{id}', [PayoutRuleController::class, 'show']);
+            Route::post('/update/{id}', [PayoutRuleController::class, 'update']);
+            Route::delete('/delete/{id}', [PayoutRuleController::class, 'destroy']);
+            Route::get('/get-by-event/{event}', [PayoutRuleController::class, 'getByEvent']);
         });
     });
 });
