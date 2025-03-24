@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\MasterWalletRepository;
 use App\Services\TatumService;
+use Illuminate\Support\Facades\Log;
 
 class MasterWalletService
 {
@@ -20,14 +21,14 @@ class MasterWalletService
     {
         // Generate wallet using Tatum API
         $walletData = $this->tatumService->createWallet($blockchain, $endpoint);
-
+        Log::info("walletData: ".json_encode($walletData));
         $masterWallet = $this->walletRepository->create([
             'blockchain' => $blockchain,
             'xpub' => $walletData['xpub'] ?? null,
             'address' => $walletData['address'] ?? null,
             'private_key' => $walletData['privateKey'] ?? null,
             'mnemonic' => $walletData['mnemonic'] ?? null,
-            'response' => $walletData
+            'response' => json_encode($walletData)
         ]);
 
         return $masterWallet->toArray();
