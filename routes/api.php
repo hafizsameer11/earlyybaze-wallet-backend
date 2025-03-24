@@ -159,6 +159,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('wallet/attach-slip/{id}', [TransactionController::class, 'attachSlip']);
 
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
+    Route::get('transaction/currency/{name}', [TransactionController::class, 'getTransactionsForCurrency']);
 
     Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']);
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);

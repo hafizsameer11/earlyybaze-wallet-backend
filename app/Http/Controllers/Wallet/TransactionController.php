@@ -33,7 +33,7 @@ class TransactionController extends Controller
     {
         try {
             $transaction = $this->transactionSendService->sendInternalTransaction($request->all());
-            if(isset($transaction['success']) &&  $transaction['success']==false){
+            if (isset($transaction['success']) &&  $transaction['success'] == false) {
 
                 return ResponseHelper::error($transaction['error'], 500);
             }
@@ -67,6 +67,16 @@ class TransactionController extends Controller
         try {
             $user = Auth::user();
             $transaction = $this->transactionService->getTransactionsForUser($user->id);
+            return ResponseHelper::success($transaction, 'Transactions fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getTransactionsForCurrency($currency)
+    {
+        try {
+            $user = Auth::user();
+            $transaction = $this->transactionService->getTransactionnsForUserWithCurrency($user->id, $currency);
             return ResponseHelper::success($transaction, 'Transactions fetched successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -135,12 +145,13 @@ class TransactionController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function getUserAssetTransactions(){
-        try{
+    public function getUserAssetTransactions()
+    {
+        try {
             $user = Auth::user();
             $transactions = $this->buyTransactionService->getUserAssetTransactions($user->id);
             return ResponseHelper::success($transactions, 'Transactions fetched successfully', 200);
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }

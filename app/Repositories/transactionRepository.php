@@ -27,6 +27,13 @@ class transactionRepository
         $transactions = Transaction::where('user_id', $user_id)->with('user')->get();
         return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
     }
+    public function getTransactionnsForUserWithCurrency($user_id, $currency)
+    {
+        $totalTransactions = Transaction::where('user_id', $user_id)->where('currency', $currency)->count();
+        $totalWallets = VirtualAccount::where('user_id', $user_id)->count();
+        $transactions = Transaction::where('user_id', $user_id)->with('user')->get();
+        return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
+    }
     public function create(array $data)
     {
         return Transaction::create($data);

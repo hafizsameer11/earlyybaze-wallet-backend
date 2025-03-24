@@ -26,6 +26,14 @@ class transactionService
             throw new Exception($e->getMessage());
         }
     }
+    public function getTransactionnsForUserWithCurrency($user_id,$currency)
+    {
+        try {
+            return $this->transactionRepository->getTransactionnsForUserWithCurrency($user_id, $currency);
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+    }
     // public function getTransactionBytype
 
     public function find($id)
