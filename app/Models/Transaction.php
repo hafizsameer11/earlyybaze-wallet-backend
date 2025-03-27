@@ -19,6 +19,8 @@ class Transaction extends Model
         'type',
         'network',
         'amount_usd',
+        'fee',
+        'fee_usd'
     ];
     public function user()
     {
