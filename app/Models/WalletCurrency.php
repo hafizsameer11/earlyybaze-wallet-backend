@@ -14,6 +14,9 @@ class WalletCurrency extends Model
         'naira_price',
         'price',
         'symbol',
+        'decimals',
+        'token_type',
+        'contract_address'
     ];
     public function virtualAccounts()
     {

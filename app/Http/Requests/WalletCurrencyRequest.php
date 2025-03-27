@@ -28,6 +28,9 @@ class WalletCurrencyRequest extends FormRequest
             'price' => 'nullable',
             'naira_price' => 'nullable',
             'symbol' => 'nullable',
+            'token_type' => 'nullable',
+            'contract_address' => 'nullable',
+            'decimals' => 'nullable',
         ];
     }
     public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
