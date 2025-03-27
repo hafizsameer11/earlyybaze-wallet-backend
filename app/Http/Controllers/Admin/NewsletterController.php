@@ -33,13 +33,9 @@ class NewsletterController extends Controller
         $newsletter->users()->attach($userIds);
 
         foreach (User::whereIn('id', $userIds)->get() as $user) {
-            // store sent time in pivot
             $newsletter->users()->updateExistingPivot($user->id, [
                 'sent_at' => now()
             ]);
-
-            // Send email (basic)
-            // Mail::to($user->email)->send(new \App\Mail\NewsletterMail($newsletter, $user));
         }
 
         $newsletter->update(['status' => 'completed']);
