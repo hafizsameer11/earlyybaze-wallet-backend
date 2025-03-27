@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\MaintenanceServiceController;
 use App\Http\Controllers\Admin\ModuleController;
+use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\PayoutRuleController;
 use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\RoleController;
@@ -284,6 +285,13 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::get('/get-dashboard-data',[DashboardController::class,'dashboardData']);
+
+        Route::prefix('newsletters')->group(function () {
+            Route::get('/get-all', [NewsletterController::class, 'index']);
+            Route::post('/create', [NewsletterController::class, 'store']);
+            Route::get('/get-single/{id}', [NewsletterController::class, 'show']);
+            Route::get('/user/{userId}', [NewsletterController::class, 'userNewsletters']);
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
