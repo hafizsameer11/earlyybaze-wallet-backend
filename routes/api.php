@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AmlRuleController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\MaintenanceServiceController;
@@ -281,6 +282,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/create-reply-by-admin', [SupportController::class, 'createReplyByAdmin']);
             Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
         });
+
+        Route::get('/get-dashboard-data',[DashboardController::class,'dashboardData']);
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
