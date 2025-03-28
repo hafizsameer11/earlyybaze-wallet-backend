@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\BlockChainHelper;
 use App\Models\WalletCurrency;
-use BlockChainHelper;
+
 use Illuminate\Http\Request;
 
 class BlockChainController extends Controller
