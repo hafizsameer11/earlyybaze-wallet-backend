@@ -192,7 +192,7 @@ class BlockChainHelper
         $masterWallet = MasterWallet::where('blockchain', strtoupper($blockchain))->first();
         if (!$masterWallet) return false;
 
-        $privateKey = Crypt::decrypt($virtualAccount->private_key);
+        $privateKey = Crypt::decrypt($masterWallet->private_key);
 
         // Define endpoint
         $endpoint = match ($blockchain) {
