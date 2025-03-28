@@ -182,19 +182,28 @@ class BlockChainHelper
     {
         $blockchain = strtolower($virtualAccount->blockchain);
         $user = $virtualAccount->user;
-        $walletCurrency = strtoupper($virtualAccount->currency); // e.g. USDT_TRON
+        $walletCurrency = strtoupper($virtualAccount->currency);
 
-        // Skip BTC → use batching logic for that
+        // Skip BTC
         if ($blockchain === 'bitcoin') {
             return 'BTC transfers to master wallet are handled via batching.';
         }
 
-        $masterWallet = MasterWallet::where('blockchain', strtoupper($blockchain))->first();
-        if (!$masterWallet) return false;
+        // Get deposit address + private key
+        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->first();
+        if (!$deposit) {
+            throw new \Exception("Deposit address not found for VA ID: {$virtualAccount->id}");
+        }
 
-        $privateKey = Crypt::decrypt($masterWallet->private_key);
+        $fromPrivateKey = \Illuminate\Support\Facades\Crypt::decrypt($deposit->private_key);
 
-        // Define endpoint
+        // Get master wallet
+        $masterWallet = \App\Models\MasterWallet::where('blockchain', strtoupper($blockchain))->first();
+        if (!$masterWallet) {
+            throw new \Exception("Master wallet not configured for blockchain: {$blockchain}");
+        }
+
+        // Endpoint mapping
         $endpoint = match ($blockchain) {
             'ethereum' => '/ethereum/transaction',
             'bsc' => '/bsc/transaction',
@@ -206,37 +215,36 @@ class BlockChainHelper
 
         if (!$endpoint) return false;
 
-        // Contract-based tokens
+        // Contract tokens
         $tokenContracts = [
             'USDT_TRON' => 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj',
             'USDT_BSC' => '0x55d398326f99059fF775485246999027B3197955',
-            'USDT_ETH' => '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            'USDT_ETH' => '0xdAC17F958D2ee523a220620699459C13D831ec7',
             'USDC_BSC' => '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
             'USDC_ETH' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
             'USDC_SOL' => 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
         ];
 
         $payload = [
-            'senderAccountId' => $virtualAccount->account_id,
-            'fromPrivateKey' => $privateKey,
+            'from' => $deposit->address,
+            'fromPrivateKey' => $fromPrivateKey,
             'to' => $masterWallet->address,
             'amount' => (string)$amount,
         ];
 
-        // If token transfer is needed
+        // Handle token transfer
         if (array_key_exists($walletCurrency, $tokenContracts)) {
             $contractAddress = $tokenContracts[$walletCurrency];
 
             if ($blockchain === 'tron') {
                 $payload['tokenId'] = $contractAddress;
-            } elseif ($blockchain === 'sol') {
+            } elseif ($blockchain === 'solana') {
                 $endpoint = '/solana/transaction/spl';
                 $payload['contractAddress'] = $contractAddress;
             } else {
-                // ERC20 / BEP20
                 $payload['contractAddress'] = $contractAddress;
                 $endpoint = match ($blockchain) {
-                    'eth' => '/ethereum/transaction/token',
+                    'ethereum' => '/ethereum/transaction/token',
                     'bsc' => '/bsc/transaction/token',
                     default => $endpoint,
                 };
@@ -246,24 +254,17 @@ class BlockChainHelper
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key')
         ])->post(config('tatum.base_url') . $endpoint, $payload);
-        Log::info("Transer to master waller response json: " . json_encode($response->json()));
+
+        Log::info("Transfer to master wallet response: " . json_encode($response->json()));
+
         if ($response->failed()) {
             throw new \Exception("Failed to transfer to master wallet: " . $response->body());
         }
 
         $tx = $response->json();
 
-        // Transaction::create([
-        //     'user_id' => $user->id,
-        //     'blockchain' => strtoupper($blockchain),
-        //     'currency' => $walletCurrency,
-        //     'from_address' => $virtualAccount->address,
-        //     'to_address' => $masterWallet->address,
-        //     'amount' => $amount,
-        //     'tx_hash' => $tx['txId'] ?? null,
-        //     'type' => 'to_master',
-        // ]);
-        MasterWalletTransaction::create([
+        // Record transaction
+        \App\Models\MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
             'blockchain' => $blockchain,
@@ -274,20 +275,9 @@ class BlockChainHelper
             'tx_hash' => $tx['txId'] ?? null,
         ]);
 
-        // // Estimate gas fee
-        // $fee = estimateGasFee($blockchain, $amount, true); // pass `true` to indicate token tx if needed
-
-        // GasFeeLog::create([
-        //     'user_id' => $user->id,
-        //     'blockchain' => strtoupper($blockchain),
-        //     'estimated_fee' => $fee['fee'],
-        //     'fee_currency' => $fee['currency'],
-        //     'tx_type' => 'to_master',
-        //     'tx_hash' => $tx['txId'] ?? null,
-        // ]);
-
         return $tx;
     }
+
     public static function batchSweepBTCToMasterWallet()
     {
         $unswept = \App\Models\DepositAddress::where('blockchain', 'BTC')

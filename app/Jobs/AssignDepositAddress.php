@@ -35,14 +35,14 @@ class AssignDepositAddress implements ShouldQueue
             $wallet = $service->generateAndAssignToVirtualAccount($this->virtualAccount);
 
             // Step 2: Save in DB
-            DepositAddress::create([
-                'virtual_account_id' => $this->virtualAccount->id,
-                'blockchain' => $this->virtualAccount->blockchain,
-                'currency' => $this->virtualAccount->currency,
-                'index' => $wallet['index'],
-                'address' => $wallet['address'],
-                'private_key' => $wallet['private_key'],
-            ]);
+            // DepositAddress::create([
+            //     'virtual_account_id' => $this->virtualAccount->id,
+            //     'blockchain' => $this->virtualAccount->blockchain,
+            //     'currency' => $this->virtualAccount->currency,
+            //     'index' => $wallet['index'],
+            //     'address' => $wallet['address'],
+            //     'private_key' => $wallet['private_key'],
+            // ]);
 
             Log::info("✅ Deposit address assigned for VA ID {$this->virtualAccount->id}: {$wallet['address']}");
         } catch (\Exception $e) {
