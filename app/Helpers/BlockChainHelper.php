@@ -195,7 +195,7 @@ class BlockChainHelper
             throw new \Exception("Deposit address not found for VA ID: {$virtualAccount->id}");
         }
         $encryptedKey=$deposit->private_key;
-        $privateKey = Crypt::decryptString($encryptedKey); // ✅ correct
+        $fromPrivateKey = Crypt::decryptString($encryptedKey); // ✅ correct
 
 
         // Get master wallet
