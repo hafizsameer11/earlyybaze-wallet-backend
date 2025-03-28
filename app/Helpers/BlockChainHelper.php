@@ -411,7 +411,7 @@ class BlockChainHelper
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $masterWallet->address,
             'amount' => (string) $amount,
-            'tokenAddress' => 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj', // USDT_TRON
+            'tokenAddress' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT_TRON
             'feeLimit' => 100, // max fee in TRX
         ];
 
