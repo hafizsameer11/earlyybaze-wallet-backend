@@ -173,6 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('blockchain')->group(function () {
         Route::get('/get-balance-by-address',[BlockChainController::class,'checkAddressBalance']);
+        Route::post('/manual-transform-to-master-wallet',[BlockChainController::class,'manualTransformToMasterWalts']);
     });
     Route::prefix('admin')->group(function () {
 
