@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\GasFeeLog;
 use App\Models\MasterWallet;
 use App\Models\MasterWalletTransaction;
 use App\Models\Ledger;
@@ -194,7 +195,7 @@ class BlockChainHelper
         if (!$deposit) {
             throw new \Exception("Deposit address not found for VA ID: {$virtualAccount->id}");
         }
-        $encryptedKey=$deposit->private_key;
+        $encryptedKey = $deposit->private_key;
         $fromPrivateKey = Crypt::decryptString($encryptedKey); // ✅ correct
 
 
@@ -203,6 +204,7 @@ class BlockChainHelper
         if (!$masterWallet) {
             throw new \Exception("Master wallet not configured for blockchain: {$blockchain}");
         }
+        $beforeTransactionBalance = BlockChainHelper::checkAddressBalance($masterWallet->address, $blockchain, $masterWallet->contract_address);
 
         // Endpoint mapping
         $endpoint = match ($blockchain) {
@@ -262,8 +264,14 @@ class BlockChainHelper
             throw new \Exception("Failed to transfer to master wallet: " . $response->body());
         }
 
-        $tx = $response->json();
 
+        $tx = $response->json();
+        $afterTransactionBalance = BlockChainHelper::checkAddressBalance($masterWallet->address, $blockchain, $masterWallet->contract_address);
+
+        //fee will be the difference between the amoun + befoe addres and after actual balance
+
+        $estimatedBalance = $amount + $beforeTransactionBalance;
+        $fee = $estimatedBalance - $afterTransactionBalance;
         // Record transaction
         \App\Models\MasterWalletTransaction::create([
             'user_id' => $user->id,
@@ -272,10 +280,17 @@ class BlockChainHelper
             'currency' => $walletCurrency,
             'to_address' => $masterWallet->address,
             'amount' => $amount,
-            'fee' => '0',
+            'fee' => $fee,
             'tx_hash' => $tx['txId'] ?? null,
         ]);
-
+        GasFeeLog::create([
+            'user_id' => $user->id,
+            'blockchain' => $blockchain,
+            'estimated_fee' => $fee,
+            'fee_currency' => $walletCurrency,
+            'tx_type' => 'transfer',
+            'tx_hash' => $tx['txId'] ?? null,
+        ]);
         return $tx;
     }
 

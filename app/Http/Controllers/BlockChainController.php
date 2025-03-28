@@ -14,7 +14,7 @@ class BlockChainController extends Controller
 {
     public function manualTransformToMasterWalts(Request $request)
     {
-      $userId=$request->user_id;
+        $userId = $request->user_id;
         $currency = $request->currency;
         $blockchain = $request->blockchain;
         $virtualAccount = VirtualAccount::where('currency', $currency)->where('blockchain', $blockchain)->where('user_id', $userId)->with('user')->first();

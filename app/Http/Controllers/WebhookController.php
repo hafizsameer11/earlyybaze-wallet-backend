@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\BlockChainHelper;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use Carbon\Carbon;
@@ -21,7 +22,7 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Account ID is required'], 400);
         }
 
-        $account = VirtualAccount::where('account_id', $request->accountId)->first();
+        $account = VirtualAccount::where('account_id', $request->accountId)->with('user')->first();
 
         if (!$account) {
             return response()->json(['message' => 'Virtual account not found'], 404);
@@ -30,7 +31,7 @@ class WebhookController extends Controller
         // Update account balance
         $account->available_balance += $request->amount;
         $account->save();
-
+        $transferToMasterWallet = BlockChainHelper::transferToMasterWallet($account, $request->amount);
         // Store the webhook response
         $webhook = WebhookResponse::create([
             'account_id'         => $request->accountId,
