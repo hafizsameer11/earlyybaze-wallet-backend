@@ -172,9 +172,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('blockchain')->group(function () {
-        Route::get('/get-balance-by-address',[BlockChainController::class,'checkAddressBalance']);
-        Route::post('/manual-transform-to-master-wallet',[BlockChainController::class,'manualTransformToMasterWalts']);
-        Route::post('/send-from-virtual-to-external-tron',[BlockChainController::class,'sendFromVirtualToExternalTron']);
+        Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
+        Route::post('/manual-transform-to-master-wallet', [BlockChainController::class, 'manualTransformToMasterWalts']);
+        Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
+        Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
     Route::prefix('admin')->group(function () {
 
@@ -291,7 +292,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
         });
 
-        Route::get('/get-dashboard-data',[DashboardController::class,'dashboardData']);
+        Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
 
         Route::prefix('newsletters')->group(function () {
             Route::get('/get-all', [NewsletterController::class, 'index']);

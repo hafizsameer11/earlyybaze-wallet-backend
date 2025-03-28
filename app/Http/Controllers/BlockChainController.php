@@ -49,4 +49,36 @@ class BlockChainController extends Controller
         $sendFromVirtualToExternalTron = BlockChainHelper::sendFromVirtualToExternalTron($accountId, $currency, $toAddress, $amount);
         return response()->json(['sendFromVirtualToExternalTron' => $sendFromVirtualToExternalTron]);
     }
+    public function transferToExternalAddress(Request $request)
+    {
+        $request->validate([
+            'blockchain' => 'required|string',
+            'currency' => 'required|string',
+            'to_address' => 'required|string',
+            'amount' => 'required|numeric|min:0.00000001',
+        ]);
+
+        $user = Auth::user();
+
+        try {
+            $result = BlockchainHelper::sendToExternalAddress(
+                $user,
+                $request->blockchain,
+                $request->currency,
+                $request->to_address,
+                $request->amount
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdrawal initiated successfully.',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Withdrawal failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
