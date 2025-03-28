@@ -507,4 +507,96 @@ class BlockChainHelper
             return ['fee' => 0, 'currency' => $currency];
         }
     }
+    public static function sendFromVirtualToExternalTron($accountId, $currency, $toAddress, $amount)
+    {
+        $blockchain = 'TRON';
+        $currency = strtoupper($currency);
+        $fee = 0; // Placeholder, you can update your fee logic
+        $sendAmount = $amount - $fee;
+
+        if ($sendAmount <= 0) {
+            throw new \Exception("Amount after fee must be greater than 0.");
+        }
+
+        // Get contract address only for USDT
+        $contractAddress = null;
+        if ($currency === 'USDT') {
+            $walletCurrency = WalletCurrency::where([
+                'blockchain' => $blockchain,
+                'currency' => 'USDT',
+            ])->first();
+
+            if (!$walletCurrency || !$walletCurrency->contract_address) {
+                throw new \Exception("USDT_TRON contract address not found.");
+            }
+
+            $contractAddress = $walletCurrency->contract_address;
+        }
+
+        // Get TRON master wallet
+        $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
+        if (!$masterWallet) {
+            throw new \Exception("Master wallet not found for TRON.");
+        }
+
+        $privateKey = Crypt::decrypt($masterWallet->private_key);
+
+        // Step 1: Withdraw from virtual ledger
+        $withdrawalResponse = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
+            'senderAccountId' => $accountId,
+            'address' => $toAddress,
+            'amount' => (string) $amount,
+            'fee' => (string) $fee,
+            'attr' => "Withdrawal to $currency address on TRON",
+        ]);
+
+        if ($withdrawalResponse->failed()) {
+            throw new \Exception("Ledger withdrawal failed: " . $withdrawalResponse->body());
+        }
+
+        $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
+
+        // Step 2: Send on-chain transaction
+        $endpoint = '/tron/transaction';
+        $payload = [
+            'fromPrivateKey' => $privateKey,
+            'to' => $toAddress,
+            'amount' => (string) $sendAmount,
+        ];
+
+        if ($currency === 'USDT') {
+            $payload['tokenId'] = $contractAddress;
+        }
+
+        $txResponse = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . $endpoint, $payload);
+
+        if ($txResponse->failed()) {
+            if ($withdrawalId) {
+                Http::withHeaders([
+                    'x-api-key' => config('tatum.api_key'),
+                ])->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
+            }
+            throw new \Exception("Blockchain transaction failed: " . $txResponse->body());
+        }
+
+        $txHash = $txResponse->json()['txId'] ?? null;
+
+        // Step 3: Link ledger withdrawal with blockchain tx
+        if ($withdrawalId && $txHash) {
+            Http::withHeaders([
+                'x-api-key' => config('tatum.api_key'),
+            ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
+        }
+
+        return [
+            'txHash' => $txHash,
+            'sent' => $sendAmount,
+            'fee' => $fee,
+            'total' => $amount,
+        ];
+    }
 }

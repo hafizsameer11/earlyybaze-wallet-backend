@@ -40,4 +40,13 @@ class BlockChainController extends Controller
         $balance = BlockChainHelper::checkAddressBalance($address, $blockchain, $tokenContract);
         return response()->json(['balance' => $balance]);
     }
+    public function sendFromVirtualToExternalTron(Request $request)
+    {
+        $accountId = $request->accountId;
+        $currency = $request->currency;
+        $toAddress = $request->toAddress;
+        $amount = $request->amount;
+        $sendFromVirtualToExternalTron = BlockChainHelper::sendFromVirtualToExternalTron($accountId, $currency, $toAddress, $amount);
+        return response()->json(['sendFromVirtualToExternalTron' => $sendFromVirtualToExternalTron]);
+    }
 }
