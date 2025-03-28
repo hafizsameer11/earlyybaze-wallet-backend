@@ -55,7 +55,7 @@ class CreateVirtualAccount implements ShouldQueue
                     'x-api-key' => $this->apiKey,
                 ])->post($this->apiUrl . '/ledger/account', [
                     'currency' => $walletCurrency->currency,
-                    'xpub' => $masterWallet->xpub,
+                    // 'xpub' => $masterWallet->xpub,
                     'customer' => [
                         'externalId' => (string) $this->user->id,
                     ],
