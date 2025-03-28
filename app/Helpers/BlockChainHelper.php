@@ -542,7 +542,7 @@ class BlockChainHelper
                             return (float) $sun / 1_000_000;
                         }
 
-                        return 0;
+                        return  $response->json();
                         // return $response->ok() ? (float)$response->json()['balance']['availableBalance'] / 1_000_000 : 1;
                     }
 
