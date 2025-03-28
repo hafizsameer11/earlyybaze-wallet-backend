@@ -329,7 +329,7 @@ public static function batchSweepBTCToMasterWallet()
     return "Swept {$totalAmount} BTC to master wallet in tx: $txId";
 }
 
-public static function checkAddressBalance(string $address, string $blockchain = 'bitcoin', string $tokenContract = null): float
+public static function checkAddressBalance(string $address, string $blockchain = 'bitcoin', string $tokenContract = null)
 {
     $blockchain = strtolower($blockchain);
     $baseUrl = config('tatum.base_url');
