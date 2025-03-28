@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
+use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
@@ -169,6 +170,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::prefix('blockchain')->group(function () {
+        Route::get('/get-balance-by-address',[BlockChainController::class,'checkAddressBalance']);
+    });
     Route::prefix('admin')->group(function () {
 
         Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
