@@ -194,8 +194,9 @@ class BlockChainHelper
         if (!$deposit) {
             throw new \Exception("Deposit address not found for VA ID: {$virtualAccount->id}");
         }
+        $encryptedKey=$deposit->private_key;
+        $privateKey = Crypt::decryptString($encryptedKey); // ✅ correct
 
-        $fromPrivateKey = \Illuminate\Support\Facades\Crypt::decrypt($deposit->private_key);
 
         // Get master wallet
         $masterWallet = \App\Models\MasterWallet::where('blockchain', strtoupper($blockchain))->first();
