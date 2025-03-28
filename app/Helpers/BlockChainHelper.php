@@ -345,7 +345,8 @@ public static function checkAddressBalance(string $address, string $blockchain =
             case 'litecoin': {
                     $endpoint = "$baseUrl/{$blockchain}/address/balance/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
-                    return $response->ok() ? (float)$response->json()['balance'] : 0;
+                    // return $response->ok() ? (float)$response->json()['balance'] : 0;
+                    return $response->json();
                 }
 
             case 'ethereum':
@@ -354,12 +355,14 @@ public static function checkAddressBalance(string $address, string $blockchain =
                         // Token balance (e.g. USDT, USDC)
                         $endpoint = "$baseUrl/{$blockchain}/address/balance/{$tokenContract}/$address";
                         $response = Http::withHeaders($headers)->get($endpoint);
-                        return $response->ok() ? (float)$response->json()['balance'] : 0;
+                        // return $response->ok() ? (float)$response->json()['balance'] : 0;
+                        return $response->json();
                     } else {
                         // Native coin (ETH, BNB)
                         $endpoint = "$baseUrl/{$blockchain}/account/balance/$address";
                         $response = Http::withHeaders($headers)->get($endpoint);
-                        return $response->ok() ? (float)$response->json()['balance'] : 0;
+                        // return $response->ok() ? (float)$response->json()['balance'] : 0;
+                        return $response->json();
                     }
                 }
 
@@ -374,7 +377,8 @@ public static function checkAddressBalance(string $address, string $blockchain =
             case 'solana': {
                     $endpoint = "$baseUrl/solana/account/balance/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
-                    return $response->ok() ? (float)$response->json()['balance'] : 0;
+                    // return $response->ok() ? (float)$response->json()['balance'] : 0;
+                    return $response->json();
                 }
 
             default:
