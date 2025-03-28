@@ -370,7 +370,12 @@ public static function checkAddressBalance(string $address, string $blockchain =
                     $endpoint = "$baseUrl/tron/account/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
                     //return complete json
-                    return $response->json();
+                    if ($response->ok()) {
+                        $sun = $response->json()['balance'] ?? 0;
+                        return (float) $sun / 1_000_000;
+                    }
+
+                    return 0;
                     // return $response->ok() ? (float)$response->json()['balance']['availableBalance'] / 1_000_000 : 1;
                 }
 
