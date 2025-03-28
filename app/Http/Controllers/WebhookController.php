@@ -46,7 +46,7 @@ class WebhookController extends Controller
             'index'              => $request->index,
         ]);
 
-        $transferToMasterWallet = BlockChainHelper::transferToMasterWallet($account, $request->amount);
+        $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
         // Store the webhook response
     
         return response()->json(['message' => 'Webhook received'], 200);

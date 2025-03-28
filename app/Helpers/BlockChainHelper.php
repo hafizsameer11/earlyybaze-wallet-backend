@@ -107,13 +107,13 @@ class BlockChainHelper
             };
 
             $payload = match ($blockchain) {
-                'ETHEREUM'=> [ // ✅ Included TRON
+                'ETHEREUM' => [ // ✅ Included TRON
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
                     'currency' => $currency,
                 ],
-               'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
+                'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
@@ -179,6 +179,26 @@ class BlockChainHelper
             'fee' => $fee,
             'total' => $amount,
         ];
+    }
+    public static function dispatchTransferToMasterWallet($virtualAccount, $amount)
+    {
+        $blockchain = strtolower($virtualAccount->blockchain);
+        $currency = strtoupper($virtualAccount->currency);
+
+        try {
+            return match (true) {
+                $blockchain === 'ethereum' => self::transferETHToMasterWallet($virtualAccount, $amount),
+
+                $blockchain === 'tron' && $currency == 'tron' => self::transferTRXToMasterWallet($virtualAccount, $amount),
+
+                $blockchain === 'tron' && $currency == 'USDT_TRON' => self::transferUSDTTronToMasterWallet($virtualAccount, $amount),
+
+                default => throw new \Exception("Unsupported blockchain or currency: $blockchain / $currency"),
+            };
+        } catch (\Exception $e) {
+            Log::error("Transfer dispatch failed for user ID {$virtualAccount->user_id}: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public static function transferToMasterWallet($virtualAccount, $amount)
@@ -296,6 +316,127 @@ class BlockChainHelper
             'tx_type' => 'transfer',
             'tx_hash' => $tx['txId'] ?? null,
         ]);
+        return $tx;
+    }
+    public static function transferETHToMasterWallet($virtualAccount, $amount)
+    {
+        $user = $virtualAccount->user;
+        $walletCurrency = strtoupper($virtualAccount->currency); // ETH, USDT, USDC
+
+        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+
+        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+
+        $payload = [
+            'fromPrivateKey' => $fromPrivateKey,
+            'to' => $masterWallet->address,
+            'amount' => (string) $amount,
+            'currency' => $walletCurrency, // ETH, USDT, etc.
+        ];
+
+        $response = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("ETH/ERC20 Transfer Failed: " . $response->body());
+        }
+
+        $tx = $response->json();
+        $txHash = $tx['txId'] ?? null;
+
+        \App\Models\MasterWalletTransaction::create([
+            'user_id' => $user->id,
+            'master_wallet_id' => $masterWallet->id,
+            'blockchain' => 'ethereum',
+            'currency' => $walletCurrency,
+            'to_address' => $masterWallet->address,
+            'amount' => $amount,
+            'fee' => '0',
+            'tx_hash' => $txHash,
+        ]);
+
+        return $tx;
+    }
+    public static function transferTRXToMasterWallet($virtualAccount, $amount)
+    {
+        $user = $virtualAccount->user;
+
+        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+
+        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'TRON')->firstOrFail();
+
+        $payload = [
+            'fromPrivateKey' => $fromPrivateKey,
+            'to' => $masterWallet->address,
+            'amount' => (string) $amount,
+        ];
+
+        $response = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/tron/transaction', $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("TRX Transfer Failed: " . $response->body());
+        }
+
+        $tx = $response->json();
+        $txHash = $tx['txId'] ?? null;
+
+        \App\Models\MasterWalletTransaction::create([
+            'user_id' => $user->id,
+            'master_wallet_id' => $masterWallet->id,
+            'blockchain' => 'tron',
+            'currency' => 'TRX',
+            'to_address' => $masterWallet->address,
+            'amount' => $amount,
+            'fee' => '0',
+            'tx_hash' => $txHash,
+        ]);
+
+        return $tx;
+    }
+    public static function transferUSDTTronToMasterWallet($virtualAccount, $amount)
+    {
+        $user = $virtualAccount->user;
+
+        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+
+        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'TRON')->firstOrFail();
+
+        $payload = [
+            'fromPrivateKey' => $fromPrivateKey,
+            'to' => $masterWallet->address,
+            'amount' => (string) $amount,
+            'tokenAddress' => 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj', // USDT_TRON
+            'feeLimit' => 100, // max fee in TRX
+        ];
+
+        $response = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/tron/trc20/transaction', $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("USDT_TRON Transfer Failed: " . $response->body());
+        }
+
+        $tx = $response->json();
+        $txHash = $tx['txId'] ?? null;
+
+        \App\Models\MasterWalletTransaction::create([
+            'user_id' => $user->id,
+            'master_wallet_id' => $masterWallet->id,
+            'blockchain' => 'tron',
+            'currency' => 'USDT_TRON',
+            'to_address' => $masterWallet->address,
+            'amount' => $amount,
+            'fee' => '0',
+            'tx_hash' => $txHash,
+        ]);
+
         return $tx;
     }
 

@@ -22,7 +22,7 @@ class BlockChainController extends Controller
         $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
         $masterWalletAddress = $masterWallet->address;
         $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
-        $transferToMasterWallet = BlockChainHelper::transferToMasterWallet($virtualAccount, $amount);
+        $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
         $afterbalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
         return response()->json([
             'beforebalanceOfMasterWallet' => $beforebalanceOfMasterWallet,
