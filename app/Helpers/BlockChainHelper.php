@@ -51,7 +51,7 @@ class BlockChainHelper{
 
     $withdrawalResponse = Http::withHeaders([
         'x-api-key' => config('tatum.api_key'),
-    ])->post(config('tatum.base_url') . '/v3/offchain/withdrawal', [
+    ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
         'senderAccountId' => $ledgerAccountId,
         'address' => $toAddress,
         'amount' => (string) $amount,
@@ -70,10 +70,10 @@ class BlockChainHelper{
 
     if ($isToken) {
         $endpoint = match ($blockchain) {
-            'ETHEREUM' => '/v3/ethereum/transaction/token',
-            'BSC'      => '/v3/bsc/transaction/token',
-            'TRON'     => '/v3/tron/transaction',
-            'SOLANA'   => '/v3/solana/transaction/spl',
+            'ETHEREUM' => '/ethereum/transaction/token',
+            'BSC'      => '/bsc/transaction/token',
+            'TRON'     => '/tron/transaction',
+            'SOLANA'   => '/solana/transaction/spl',
             default    => throw new \Exception("Token transfers not supported on $blockchain"),
         };
 
@@ -99,11 +99,11 @@ class BlockChainHelper{
         };
     } else {
         $endpoint = match ($blockchain) {
-            'ETHEREUM' => '/v3/ethereum/transaction',
-            'BSC'      => '/v3/bsc/transaction',
-            'BITCOIN'  => '/v3/bitcoin/transaction',
-            'LITECOIN' => '/v3/litecoin/transaction',
-            'SOLANA'   => '/v3/solana/transaction',
+            'ETHEREUM' => '/ethereum/transaction',
+            'BSC'      => '/bsc/transaction',
+            'BITCOIN'  => '/bitcoin/transaction',
+            'LITECOIN' => '/litecoin/transaction',
+            'SOLANA'   => '/solana/transaction',
             default    => throw new \Exception("Native transfer not supported for $blockchain"),
         };
 
@@ -134,7 +134,7 @@ class BlockChainHelper{
         if ($withdrawalId) {
             Http::withHeaders([
                 'x-api-key' => config('tatum.api_key'),
-            ])->delete(config('tatum.base_url') . "/v3/offchain/withdrawal/{$withdrawalId}");
+            ])->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
         }
         throw new \Exception("Blockchain transaction failed: " . $response->body());
     }
@@ -144,7 +144,7 @@ class BlockChainHelper{
     if ($withdrawalId && $txHash) {
         Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . "/v3/offchain/withdrawal/{$withdrawalId}/{$txHash}");
+        ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
     }
 
     MasterWalletTransaction::create([
@@ -313,7 +313,7 @@ public static function batchSweepBTCToMasterWallet()
 
     $response = Http::withHeaders([
         'x-api-key' => config('tatum.api_key'),
-    ])->post(config('tatum.base_url') . '/v3/bitcoin/transaction', $payload);
+    ])->post(config('tatum.base_url') . '/bitcoin/transaction', $payload);
 
     if ($response->failed()) {
         throw new \Exception("Batch sweep failed: " . $response->body());
@@ -343,7 +343,7 @@ public static function checkAddressBalance(string $address, string $blockchain =
         switch ($blockchain) {
             case 'bitcoin':
             case 'litecoin': {
-                    $endpoint = "$baseUrl/v3/{$blockchain}/address/balance/$address";
+                    $endpoint = "$baseUrl/{$blockchain}/address/balance/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
                     return $response->ok() ? (float)$response->json()['balance'] : 0;
                 }
@@ -352,25 +352,27 @@ public static function checkAddressBalance(string $address, string $blockchain =
             case 'bsc': {
                     if ($tokenContract) {
                         // Token balance (e.g. USDT, USDC)
-                        $endpoint = "$baseUrl/v3/{$blockchain}/address/balance/{$tokenContract}/$address";
+                        $endpoint = "$baseUrl/{$blockchain}/address/balance/{$tokenContract}/$address";
                         $response = Http::withHeaders($headers)->get($endpoint);
                         return $response->ok() ? (float)$response->json()['balance'] : 0;
                     } else {
                         // Native coin (ETH, BNB)
-                        $endpoint = "$baseUrl/v3/{$blockchain}/account/balance/$address";
+                        $endpoint = "$baseUrl/{$blockchain}/account/balance/$address";
                         $response = Http::withHeaders($headers)->get($endpoint);
                         return $response->ok() ? (float)$response->json()['balance'] : 0;
                     }
                 }
 
             case 'tron': {
-                    $endpoint = "$baseUrl/v3/tron/account/$address";
+                    $endpoint = "$baseUrl/tron/account/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
-                    return $response->ok() ? (float)$response->json()['balance']['availableBalance'] / 1_000_000 : 0;
+                    //return complete json
+                    return $response->json();
+                    // return $response->ok() ? (float)$response->json()['balance']['availableBalance'] / 1_000_000 : 1;
                 }
 
             case 'solana': {
-                    $endpoint = "$baseUrl/v3/solana/account/balance/$address";
+                    $endpoint = "$baseUrl/solana/account/balance/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
                     return $response->ok() ? (float)$response->json()['balance'] : 0;
                 }
@@ -379,8 +381,9 @@ public static function checkAddressBalance(string $address, string $blockchain =
                 throw new \Exception("Unsupported blockchain: $blockchain");
         }
     } catch (\Throwable $e) {
-        Log::error("Balance check failed for $blockchain ($address): " . $e->getMessage());
-        return 0;
+        // Log::error("Balance check failed for $blockchain ($address): " . $e->getMessage());
+        // return 0;
+        throw new \Exception("Balance check failed for $blockchain ($address): " . $e->getMessage());
     }
 }
 
@@ -404,7 +407,7 @@ public static function logAndEstimateGasFee(array $params): array
             case 'ltc': {
                     $response = Http::withHeaders([
                         'x-api-key' => $apiKey,
-                    ])->get("{$baseUrl}/v3/blockchain/fee/" . strtoupper($blockchain));
+                    ])->get("{$baseUrl}/blockchain/fee/" . strtoupper($blockchain));
 
                     if ($response->failed()) break;
 
@@ -418,7 +421,7 @@ public static function logAndEstimateGasFee(array $params): array
             case 'bsc': {
                     $response = Http::withHeaders([
                         'x-api-key' => $apiKey,
-                    ])->post("{$baseUrl}/v3/{$blockchain}/gas");
+                    ])->post("{$baseUrl}/{$blockchain}/gas");
 
                     if ($response->failed()) break;
 
