@@ -224,7 +224,7 @@ class BlockChainHelper
         $tokenContracts = [
             'USDT_TRON' => 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj',
             'USDT_BSC' => '0x55d398326f99059fF775485246999027B3197955',
-            'USDT_ETH' => '0xdAC17F958D2ee523a220620699459C13D831ec7',
+            'USDT' => '0xdAC17F958D2ee523a220620699459C13D831ec7',
             'USDC_BSC' => '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
             'USDC_ETH' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
             'USDC_SOL' => 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -236,6 +236,9 @@ class BlockChainHelper
             'to' => $masterWallet->address,
             'amount' => (string)$amount,
         ];
+        if ($blockchain == 'ethereum') {
+            $payload['currency'] = $walletCurrency;
+        }
 
         // Handle token transfer
         if (array_key_exists($walletCurrency, $tokenContracts)) {
@@ -249,7 +252,7 @@ class BlockChainHelper
             } else {
                 $payload['contractAddress'] = $contractAddress;
                 $endpoint = match ($blockchain) {
-                    'ethereum' => '/ethereum/transaction/token',
+                    // 'ethereum' => '/ethereum/transaction/token',
                     'bsc' => '/bsc/transaction/token',
                     default => $endpoint,
                 };
@@ -360,6 +363,7 @@ class BlockChainHelper
         $headers = [
             'x-api-key' => $apiKey,
         ];
+        // Log::info
 
         try {
             switch ($blockchain) {
