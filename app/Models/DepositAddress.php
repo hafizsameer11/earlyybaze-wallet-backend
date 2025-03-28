@@ -13,6 +13,8 @@ class DepositAddress extends Model
         'blockchain',
         'currency',
         'address',
+        'index',
+        'private_key',
     ];
 
     public function virtualAccount()
