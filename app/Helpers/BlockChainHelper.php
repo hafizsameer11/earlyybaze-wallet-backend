@@ -367,7 +367,7 @@ public static function checkAddressBalance(string $address, string $blockchain =
                 }
 
             case 'tron': {
-                    $endpoint = "https://api.tatum.io/v4/tron/account/$address";
+                    $endpoint = "$baseUrl/tron/account/$address";
                     $response = Http::withHeaders($headers)->get($endpoint);
                     //return complete json
                     return $response->json();
