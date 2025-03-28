@@ -520,10 +520,10 @@ class BlockChainHelper
 
         // Get contract address only for USDT
         $contractAddress = null;
-        if ($currency === 'USDT') {
+        if ($currency === 'USDT_TRON') {
             $walletCurrency = WalletCurrency::where([
                 'blockchain' => $blockchain,
-                'currency' => 'USDT',
+                'currency' => 'USDT_TRON',
             ])->first();
 
             if (!$walletCurrency || !$walletCurrency->contract_address) {
