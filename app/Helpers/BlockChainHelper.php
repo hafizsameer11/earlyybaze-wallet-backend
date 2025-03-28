@@ -1,5 +1,5 @@
 <?php
-
+namespace App\Helpers;
 use App\Models\MasterWallet;
 use App\Models\MasterWalletTransaction;
 use App\Models\Ledger;
