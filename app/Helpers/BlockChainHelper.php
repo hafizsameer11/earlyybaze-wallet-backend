@@ -375,7 +375,7 @@ class BlockChainHelper
                 case 'bsc': {
                         if ($tokenContract) {
                             // Token balance (e.g. USDT, USDC)
-                            $endpoint = "$baseUrl/{$blockchain}/address/balance/{$tokenContract}/$address";
+                            $endpoint = "$baseUrl/{$blockchain}/token/balance/{$tokenContract}/$address";
                             $response = Http::withHeaders($headers)->get($endpoint);
                             // return $response->ok() ? (float)$response->json()['balance'] : 0;
                             return $response->json();
