@@ -108,11 +108,12 @@ class BlockChainHelper
                 'BITCOIN'  => '/bitcoin/transaction',
                 'LITECOIN' => '/litecoin/transaction',
                 'SOLANA'   => '/solana/transaction',
+                'TRON'     => '/tron/transaction', // ✅ Added native TRON support
                 default    => throw new \Exception("Native transfer not supported for $blockchain"),
             };
 
             $payload = match ($blockchain) {
-                'ETHEREUM', 'BSC', 'SOLANA' => [
+                'ETHEREUM', 'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
@@ -129,6 +130,7 @@ class BlockChainHelper
                 ],
             };
         }
+
 
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
