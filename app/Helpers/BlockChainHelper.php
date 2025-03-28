@@ -82,12 +82,6 @@ class BlockChainHelper
             };
 
             $payload = match ($blockchain) {
-                'ETHEREUM', 'BSC' => [
-                    'to' => $toAddress,
-                    'amount' => (string)$sendAmount,
-                    'contractAddress' => $contractAddress,
-                    'fromPrivateKey' => $privateKey,
-                ],
                 'TRON' => [
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
@@ -113,7 +107,13 @@ class BlockChainHelper
             };
 
             $payload = match ($blockchain) {
-                'ETHEREUM', 'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
+                'ETHEREUM'=> [ // ✅ Included TRON
+                    'fromPrivateKey' => $privateKey,
+                    'to' => $toAddress,
+                    'amount' => (string)$sendAmount,
+                    'currency' => $currency,
+                ],
+               'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
