@@ -31,8 +31,6 @@ class WebhookController extends Controller
         // Update account balance
         $account->available_balance += $request->amount;
         $account->save();
-        $transferToMasterWallet = BlockChainHelper::transferToMasterWallet($account, $request->amount);
-        // Store the webhook response
         $webhook = WebhookResponse::create([
             'account_id'         => $request->accountId,
             'subscription_type'  => $request->subscriptionType,
@@ -48,6 +46,9 @@ class WebhookController extends Controller
             'index'              => $request->index,
         ]);
 
+        $transferToMasterWallet = BlockChainHelper::transferToMasterWallet($account, $request->amount);
+        // Store the webhook response
+    
         return response()->json(['message' => 'Webhook received'], 200);
     }
 

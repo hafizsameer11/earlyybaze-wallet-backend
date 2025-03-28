@@ -271,12 +271,12 @@ class BlockChainHelper
 
 
         $tx = $response->json();
-        $afterTransactionBalance = BlockChainHelper::checkAddressBalance($masterWallet->address, $blockchain, $masterWallet->contract_address);
+        // $afterTransactionBalance = BlockChainHelper::checkAddressBalance($masterWallet->address, $blockchain, $masterWallet->contract_address);
 
-        //fee will be the difference between the amoun + befoe addres and after actual balance
+        // //fee will be the difference between the amoun + befoe addres and after actual balance
 
-        $estimatedBalance = $amount + $beforeTransactionBalance;
-        $fee = $estimatedBalance - $afterTransactionBalance;
+        // $estimatedBalance = $amount + $beforeTransactionBalance['balance'];
+        // $fee = $estimatedBalance - $afterTransactionBalance['balance'];
         // Record transaction
         \App\Models\MasterWalletTransaction::create([
             'user_id' => $user->id,
@@ -285,13 +285,13 @@ class BlockChainHelper
             'currency' => $walletCurrency,
             'to_address' => $masterWallet->address,
             'amount' => $amount,
-            'fee' => $fee,
+            'fee' => '0',
             'tx_hash' => $tx['txId'] ?? null,
         ]);
         GasFeeLog::create([
             'user_id' => $user->id,
             'blockchain' => $blockchain,
-            'estimated_fee' => $fee,
+            'estimated_fee' => '0',
             'fee_currency' => $walletCurrency,
             'tx_type' => 'transfer',
             'tx_hash' => $tx['txId'] ?? null,
