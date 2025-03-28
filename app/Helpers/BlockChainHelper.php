@@ -189,7 +189,7 @@ class BlockChainHelper
             return match (true) {
                 $blockchain === 'ethereum' => self::transferETHToMasterWallet($virtualAccount, $amount),
 
-                $blockchain === 'tron' && $currency == 'tron' => self::transferTRXToMasterWallet($virtualAccount, $amount),
+                $blockchain === 'tron' && $currency == 'TRON' => self::transferTRXToMasterWallet($virtualAccount, $amount),
 
                 $blockchain === 'tron' && $currency == 'USDT_TRON' => self::transferUSDTTronToMasterWallet($virtualAccount, $amount),
 
