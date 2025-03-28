@@ -82,7 +82,7 @@ class CreateVirtualAccount implements ShouldQueue
                     'frozen' => $accountData['frozen'],
                     'account_balance' => $accountData['balance']['accountBalance'],
                     'available_balance' => $accountData['balance']['availableBalance'],
-                    'xpub' => $accountData['xpub'],
+                    'xpub' => 'Not Linked',
                     'accounting_currency' => $accountData['accountingCurrency'],
                     'currency_id' => $walletCurrency->id,
                 ]);
