@@ -32,7 +32,7 @@ class WalletAddressService
 
             // 2. Get next index, start from 2 (0/1 reserved)
             $lastIndex = DepositAddress::where('blockchain', $this->blockchain)->max('index');
-            $index = is_null($lastIndex) ? 3 : $lastIndex + 1;
+            $index = is_null($lastIndex) ? 5 : $lastIndex + 1;
 
             // 3. Generate deposit address
             $addressResponse = Http::withHeaders([
