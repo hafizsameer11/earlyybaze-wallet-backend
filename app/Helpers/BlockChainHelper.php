@@ -323,48 +323,54 @@ class BlockChainHelper
     }
     public static function transferETHToMasterWallet($virtualAccount, $amount)
     {
-        $user = $virtualAccount->user;
-        $walletCurrency = strtoupper($virtualAccount->currency); // ETH, USDT, USDC
+        try {
+            $user = $virtualAccount->user;
+            $walletCurrency = strtoupper($virtualAccount->currency); // ETH, USDT, USDC
 
-        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
-        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+            $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+            $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
-        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+            $masterWallet = \App\Models\MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+            $gasfee = self::estimateGasFee($deposit->address, $masterWallet->address, $amount, 'ETH');
+            Log::info("gas fee for transaction is ", $gasfee);
+            $payload = [
+                'fromPrivateKey' => $fromPrivateKey,
+                'to' => $masterWallet->address,
+                'amount' => (string) $amount,
+                'currency' => $walletCurrency, // ETH, USDT, etc.
+            ];
+            $payload['fee'] = [
+                'gasLimit' => '80000', // Example for ERC20
+                'gasPrice' => '60000000000' // 60 Gwei
+            ];
 
-        $payload = [
-            'fromPrivateKey' => $fromPrivateKey,
-            'to' => $masterWallet->address,
-            'amount' => (string) $amount,
-            'currency' => $walletCurrency, // ETH, USDT, etc.
-        ];
-        $payload['fee'] = [
-            'gasLimit' => '80000', // Example for ERC20
-            'gasPrice' => '60000000000' // 60 Gwei
-        ];
+            $response = Http::withHeaders([
+                'x-api-key' => config('tatum.api_key'),
+            ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
 
-        $response = Http::withHeaders([
-            'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
+            if ($response->failed()) {
+                throw new \Exception("ETH/ERC20 Transfer Failed: " . $response->body());
+            }
 
-        if ($response->failed()) {
-            throw new \Exception("ETH/ERC20 Transfer Failed: " . $response->body());
+            $tx = $response->json();
+            $txHash = $tx['txId'] ?? null;
+
+            \App\Models\MasterWalletTransaction::create([
+                'user_id' => $user->id,
+                'master_wallet_id' => $masterWallet->id,
+                'blockchain' => 'ethereum',
+                'currency' => $walletCurrency,
+                'to_address' => $masterWallet->address,
+                'amount' => $amount,
+                'fee' => '0',
+                'tx_hash' => $txHash,
+            ]);
+
+            return $tx;
+        } catch (\Exception $e) {
+            Log::error("Transfer ETH to master wallet failed: " . $e->getMessage());
+            throw $e;
         }
-
-        $tx = $response->json();
-        $txHash = $tx['txId'] ?? null;
-
-        \App\Models\MasterWalletTransaction::create([
-            'user_id' => $user->id,
-            'master_wallet_id' => $masterWallet->id,
-            'blockchain' => 'ethereum',
-            'currency' => $walletCurrency,
-            'to_address' => $masterWallet->address,
-            'amount' => $amount,
-            'fee' => '0',
-            'tx_hash' => $txHash,
-        ]);
-
-        return $tx;
     }
     public static function transferTRXToMasterWallet($virtualAccount, $amount)
     {
@@ -487,7 +493,40 @@ class BlockChainHelper
 
         return $tx;
     }
+    public static function estimateGasFee(string $from, string $to, string $amount, string $currency = 'ETH')
+    {
+        $baseUrl = config('tatum.base_url');
+        $apiKey = config('tatum.api_key');
 
+        $endpoint = '/blockchainOperations/gas';
+
+        $payload = [
+            'from' => $from,
+            'to' => $to,
+            'amount' => $amount,
+            'chain' => 'ETH',
+            'data' => '', // Optional, empty string for now
+        ];
+
+        if (in_array(strtoupper($currency), ['USDT', 'USDC'])) {
+            $contractAddresses = [
+                'USDT' => '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+                'USDC' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
+            ];
+
+            $payload['contractAddress'] = $contractAddresses[strtoupper($currency)] ?? null;
+        }
+
+        $response = Http::withHeaders([
+            'x-api-key' => $apiKey,
+        ])->post("{$baseUrl}{$endpoint}", $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("Gas estimation failed: " . $response->body());
+        }
+
+        return $response->json();
+    }
 
     public static function batchSweepBTCToMasterWallet()
     {

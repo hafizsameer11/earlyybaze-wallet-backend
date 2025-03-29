@@ -14,21 +14,27 @@ class BlockChainController extends Controller
 {
     public function manualTransformToMasterWalts(Request $request)
     {
-        $userId = $request->user_id;
-        $currency = $request->currency;
-        $blockchain = $request->blockchain;
-        $virtualAccount = VirtualAccount::where('currency', $currency)->where('blockchain', $blockchain)->where('user_id', $userId)->with('user')->first();
-        $amount = $request->amount;
-        $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
-        $masterWalletAddress = $masterWallet->address;
-        $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
-        $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
-        $afterbalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
-        return response()->json([
-            'beforebalanceOfMasterWallet' => $beforebalanceOfMasterWallet,
-            'transferToMasterWallet' => $transferToMasterWallet,
-            'afterbalanceOfMasterWallet' => $afterbalanceOfMasterWallet,
-        ]);
+        try {
+            $userId = $request->user_id;
+            $currency = $request->currency;
+            $blockchain = $request->blockchain;
+            $virtualAccount = VirtualAccount::where('currency', $currency)->where('blockchain', $blockchain)->where('user_id', $userId)->with('user')->first();
+            $amount = $request->amount;
+            $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
+            $masterWalletAddress = $masterWallet->address;
+            $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
+            $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
+            $afterbalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
+            return response()->json([
+                'beforebalanceOfMasterWallet' => $beforebalanceOfMasterWallet,
+                'transferToMasterWallet' => $transferToMasterWallet,
+                'afterbalanceOfMasterWallet' => $afterbalanceOfMasterWallet,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
     }
     public function checkAddressBalance(Request $request)
     {
