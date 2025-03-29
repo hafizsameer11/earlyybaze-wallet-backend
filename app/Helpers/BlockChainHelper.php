@@ -505,7 +505,7 @@ class BlockChainHelper
             'to' => $to,
             'amount' => $amount,
             'chain' => 'ETH',
-            'data' => '', // Optional, empty string for now
+            
         ];
 
         if (in_array(strtoupper($currency), ['USDT', 'USDC'])) {
