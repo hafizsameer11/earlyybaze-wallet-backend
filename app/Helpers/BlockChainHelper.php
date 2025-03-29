@@ -414,7 +414,7 @@ class BlockChainHelper
             'to' => $masterWallet->address,
             'amount' => (string) $amount,
             'tokenAddress' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT_TRON
-            'feeLimit' => 100, // max fee in TRX
+            'feeLimit' => 10000, // max fee in TRX
         ];
 
         $response = Http::withHeaders([
