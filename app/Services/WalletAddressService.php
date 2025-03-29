@@ -17,7 +17,7 @@ class WalletAddressService
 
     public function __construct(string $blockchain)
     {
-        $this->blockchain = strtoupper($blockchain);
+        $this->blockchain = strtolower($blockchain);
         $this->apiKey = config('tatum.api_key');
         $this->apiUrl = config('tatum.base_url');
     }
