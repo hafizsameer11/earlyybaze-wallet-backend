@@ -495,9 +495,9 @@ class BlockChainHelper
     }
     public static function estimateGasFee(string $from, string $to, string $amount, string $currency = 'ETH')
     {
-        $baseUrl = config('tatum.base_url');
+        // $baseUrl = config('tatum.base_url');
         $apiKey = config('tatum.api_key');
-
+        $baseUrl='https://api.tatum.io/v4';
         $endpoint = '/blockchainOperations/gas';
 
         $payload = [
