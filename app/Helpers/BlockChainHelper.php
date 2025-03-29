@@ -334,7 +334,9 @@ class BlockChainHelper
             $gasfee = self::estimateGasFee($deposit->address, $masterWallet->address, $amount, 'ETH');
             Log::info("gas fee for transaction is ", $gasfee);
 
-            $gasLimit = $gasfee['gasLimit']; // OK as-is
+            $estimatedLimit = (int) $gasfee['gasLimit'];
+            $bufferedLimit = (string) ($estimatedLimit +800); // Add 5,000 gas units buffer
+            
             $gasPriceWei = $gasfee['gasPrice'];
             $gasPriceGwei = (string) max(1, intval(ceil(intval($gasfee['gasPrice']) / 1e9)));
 
@@ -345,7 +347,7 @@ class BlockChainHelper
                 'currency' => $walletCurrency, // ETH, USDT, etc.
             ];
             $payload['fee'] = [
-                'gasLimit' => $gasLimit, // Example for ERC20
+                'gasLimit' => $bufferedLimit, // Example for ERC20
                 'gasPrice' => $gasPriceGwei // 60 Gwei
             ];
 
