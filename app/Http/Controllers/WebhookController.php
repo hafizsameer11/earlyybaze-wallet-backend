@@ -68,14 +68,14 @@ class WebhookController extends Controller
 
         // Trigger transfer to master wallet
         try {
-            $txId = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
+            // $txId = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
             $transcation = $this->transactionRepository->create(data: [
                 'type' => 'receive',
                 'amount' => $request->amount,
                 'currency' => $account->currency,
                 'status' => 'completed',
                 'network' => $account->blockchain,
-                'reference' => $txId,
+                'reference' => $request->reference,
                 'user_id' => $userId,
                 'amount_usd' => $amountUsd,
                 'transfer_type' => 'external',
