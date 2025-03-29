@@ -30,7 +30,7 @@ class WalletAddressService
             // Blockchain groups for shared address
             $addressGroups = [
                 'tron' => ['tron', 'usdt_tron'],
-                'ethereum' => ['ethereum', 'usdt', 'usdc'],
+                'ethereum' => ['eth', 'usdt', 'usdc'],
                 'bsc' => ['bsc', 'usdt_bsc', 'usdc_bsc'],
             ];
 
