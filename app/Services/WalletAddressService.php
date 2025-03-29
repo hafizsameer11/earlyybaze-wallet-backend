@@ -33,11 +33,11 @@ class WalletAddressService
                 'ethereum' => ['eth', 'usdt', 'usdc'],
                 'bsc' => ['bsc', 'usdt_bsc', 'usdc_bsc'],
             ];
-
+            Log::info("Currenct Blockchain: {$this->blockchain}");
             $groupBlockchains = collect($addressGroups)->first(function ($group) {
                 return in_array($this->blockchain, $group);
             });
-
+            Log::info("Group Blockchains: " . json_encode($groupBlockchains));
             // 1. Check for existing address in the same group for this user
             $existing = DepositAddress::whereIn('currency', $groupBlockchains ?? [$this->blockchain])
                 ->where('blockchain', $this->blockchain)
