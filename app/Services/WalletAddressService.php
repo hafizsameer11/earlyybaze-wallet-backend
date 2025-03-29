@@ -51,7 +51,7 @@ class WalletAddressService
 
                 return DepositAddress::create([
                     'virtual_account_id' => $virtualAccount->id,
-                    'blockchain' => $this->blockchain,
+                    'blockchain' => strtolower($virtualAccount->blockchain),
                     'currency' => $virtualAccount->currency,
                     'index' => $existing->index,
                     'address' => $existing->address,
