@@ -190,6 +190,7 @@ class BlockChainHelper
         try {
             return match (true) {
                 $blockchain === 'ethereum' => self::transferETHToMasterWallet($virtualAccount, $amount),
+                $blockchain === 'bsc' => self::transferBSCToMasterWallet($virtualAccount, $amount),
 
                 $blockchain === 'tron' && $currency == 'TRON' => self::transferTRXToMasterWallet($virtualAccount, $amount),
 
@@ -441,6 +442,48 @@ class BlockChainHelper
 
         return $tx;
     }
+    public static function transferBSCToMasterWallet($virtualAccount, $amount)
+    {
+        $user = $virtualAccount->user;
+        $currency = strtoupper($virtualAccount->currency); // BNB, USDT_BSC, USDC_BSC
+
+        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+
+        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'BSC')->firstOrFail();
+
+        $payload = [
+            'fromPrivateKey' => $fromPrivateKey,
+            'to' => $masterWallet->address,
+            'amount' => (string) $amount,
+            'currency' => $currency,
+        ];
+
+        $response = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/bsc/transaction', $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("BSC Transfer Failed: " . $response->body());
+        }
+
+        $tx = $response->json();
+        $txHash = $tx['txId'] ?? null;
+
+        \App\Models\MasterWalletTransaction::create([
+            'user_id' => $user->id,
+            'master_wallet_id' => $masterWallet->id,
+            'blockchain' => 'bsc',
+            'currency' => $currency,
+            'to_address' => $masterWallet->address,
+            'amount' => $amount,
+            'fee' => '0',
+            'tx_hash' => $txHash,
+        ]);
+
+        return $tx;
+    }
+
 
     public static function batchSweepBTCToMasterWallet()
     {

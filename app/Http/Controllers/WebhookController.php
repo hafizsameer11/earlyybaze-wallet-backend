@@ -11,12 +11,17 @@ use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
- 
+
 
 
     public function webhook(Request $request)
     {
         Log::info($request->all());
+
+        // Early exit if reference already exists
+        if (WebhookResponse::where('reference', $request->reference)->exists()) {
+            return response()->json(['message' => 'Duplicate reference. Webhook ignored.'], 200);
+        }
 
         if (!$request->has('accountId')) {
             return response()->json(['message' => 'Account ID is required'], 400);
@@ -31,7 +36,9 @@ class WebhookController extends Controller
         // Update account balance
         $account->available_balance += $request->amount;
         $account->save();
-        $webhook = WebhookResponse::create([
+
+        // Log webhook response
+        WebhookResponse::create([
             'account_id'         => $request->accountId,
             'subscription_type'  => $request->subscriptionType,
             'amount'             => $request->amount,
@@ -46,10 +53,9 @@ class WebhookController extends Controller
             'index'              => $request->index,
         ]);
 
-        $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
-        // Store the webhook response
-    
+        // Trigger transfer to master wallet
+        BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
+
         return response()->json(['message' => 'Webhook received'], 200);
     }
-
 }
