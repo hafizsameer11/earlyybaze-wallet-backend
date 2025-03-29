@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\BlockChainHelper;
+use App\Helpers\ExchangeFeeHelper;
+use App\Models\FailedMasterTransfer;
+use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
+use App\Repositories\transactionRepository;
+use App\Services\transactionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +17,12 @@ use Illuminate\Support\Facades\Log;
 class WebhookController extends Controller
 {
 
+    protected $transactionRepository;
+    public function __construct(transactionRepository $transactionRepository)
+    {
+
+        $this->transactionRepository = $transactionRepository;
+    }
 
 
     public function webhook(Request $request)
@@ -24,21 +35,23 @@ class WebhookController extends Controller
         }
 
         if (!$request->has('accountId')) {
-            return response()->json(['message' => 'Account ID is required'], 400);
+            return response()->json(['message' => 'Account ID is required'], 200);
         }
 
         $account = VirtualAccount::where('account_id', $request->accountId)->with('user')->first();
 
         if (!$account) {
-            return response()->json(['message' => 'Virtual account not found'], 404);
+            return response()->json(['message' => 'Virtual account not found'], 200);
         }
 
         // Update account balance
         $account->available_balance += $request->amount;
         $account->save();
-
+        $userId = $account->user->id;
+        $exchangeRate = ExchangeFeeHelper::caclulateExchangeRate($request->amount, $account->currency);
+        $amountUsd = $exchangeRate['amount_usd'];
         // Log webhook response
-        WebhookResponse::create([
+        $webhook =  WebhookResponse::create([
             'account_id'         => $request->accountId,
             'subscription_type'  => $request->subscriptionType,
             'amount'             => $request->amount,
@@ -54,7 +67,42 @@ class WebhookController extends Controller
         ]);
 
         // Trigger transfer to master wallet
-        BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
+        try {
+            $txId = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
+            $transcation = $this->transactionRepository->create(data: [
+                'type' => 'receive',
+                'amount' => $request->amount,
+                'currency' => $account->currency,
+                'status' => 'completed',
+                'network' => $account->blockchain,
+                'reference' => $txId,
+                'user_id' => $userId,
+                'amount_usd' => $amountUsd,
+                'transfer_type' => 'external',
+            ]);
+            ReceiveTransaction::create([
+                'user_id'            => $userId,
+                'virtual_account_id' => $account->id,
+                'transaction_id'     => $transcation->id,
+                'transaction_type'   => 'on_chain',
+                'sender_address'     => $request->from,
+                'reference'          => $request->reference,
+                'tx_id'              => $request->txId,
+                'amount'             => $request->amount,
+                'currency'           => $account->currency,
+                'blockchain'         => $account->blockchain,
+                'amount_usd'         => $amountUsd,
+                'status'             => 'completed',
+            ]);
+        } catch (\Exception $e) {
+            $failedMasterTransfer = FailedMasterTransfer::create([
+                'virtual_account_id' => $account->id,
+                'webhook_response_id' => $webhook->id,
+                'reason' => $e->getMessage(),
+            ]);
+            Log::error('Failed to dispatch transfer to master wallet: ' . $e->getMessage());
+            return response()->json(['message' => 'Webhook received'], 200);
+        }
 
         return response()->json(['message' => 'Webhook received'], 200);
     }

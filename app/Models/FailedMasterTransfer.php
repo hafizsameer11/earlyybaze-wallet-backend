@@ -11,5 +11,6 @@ class FailedMasterTransfer extends Model
     protected $fillable = [
         'virtual_account_id',
         'webhook_response_id',
+        'reason',
     ];
 }

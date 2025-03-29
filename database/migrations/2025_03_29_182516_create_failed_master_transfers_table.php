@@ -17,6 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('webhook_response_id')->nullable();
             $table->foreign('virtual_account_id')->references('id')->on('virtual_accounts');
             $table->foreign('webhook_response_id')->references('id')->on('webhook_responses');
+            $table->text('reason')->nullable();
             $table->timestamps();
         });
     }
