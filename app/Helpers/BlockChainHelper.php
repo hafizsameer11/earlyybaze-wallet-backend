@@ -691,9 +691,9 @@ class BlockChainHelper
         }
 
         // Get user's deposit address and private key
-        $deposit = DepositAddress::where('virtual_account_id', $virtualAccountId)->first();
+        $deposit = DepositAddress::where('virtual_account_id', $virtualAccountId->id)->first();
         if (!$deposit) {
-            throw new \Exception("Deposit address not found for VA ID: {$accountId}");
+            throw new \Exception("Deposit address not found for VA ID: {$virtualAccountId->id}");
         }
 
         $privateKey = Crypt::decryptString($deposit->private_key);
