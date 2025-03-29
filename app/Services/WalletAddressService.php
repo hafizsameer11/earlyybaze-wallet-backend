@@ -25,66 +25,90 @@ class WalletAddressService
     public function generateAndAssignToVirtualAccount($virtualAccount)
     {
         return DB::transaction(function () use ($virtualAccount) {
-            // 1. Get Master Wallet
+            $userId = $virtualAccount->user_id;
+
+            // Blockchain groups for shared address
+            $addressGroups = [
+                'tron' => ['tron', 'usdt_tron'],
+                'ethereum' => ['ethereum', 'usdt', 'usdc'],
+                'bsc' => ['bsc', 'usdt_bsc', 'usdc_bsc'],
+            ];
+
+            $groupBlockchains = collect($addressGroups)->first(function ($group) {
+                return in_array($this->blockchain, $group);
+            });
+
+            // 1. Check for existing address in the same group for this user
+            $existing = DepositAddress::whereIn('currency', $groupBlockchains ?? [$this->blockchain])
+                ->where('blockchain', $this->blockchain)
+                ->whereHas('virtualAccount', fn($q): mixed => $q->where('user_id', $userId))
+                ->first();
+
+            if ($existing) {
+                // Reuse existing address and private key
+                Http::withHeaders(['x-api-key' => $this->apiKey])
+                    ->post("{$this->apiUrl}/offchain/account/{$virtualAccount->account_id}/address/{$existing->address}");
+
+                return DepositAddress::create([
+                    'virtual_account_id' => $virtualAccount->id,
+                    'blockchain' => $this->blockchain,
+                    'currency' => $virtualAccount->currency,
+                    'index' => $existing->index,
+                    'address' => $existing->address,
+                    'private_key' => $existing->private_key,
+                ]);
+            }
+
+            // 2. Get master wallet
             $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->lockForUpdate()->firstOrFail();
             $xpub = $masterWallet->xpub;
             $mnemonic = $masterWallet->mnemonic;
 
-            // 2. Get next index, start from 2 (0/1 reserved)
+            // 3. Get next index (start from 5)
             $lastIndex = DepositAddress::where('blockchain', $this->blockchain)->max('index');
             $index = is_null($lastIndex) ? 5 : $lastIndex + 1;
 
-            // 3. Generate deposit address
-            $addressResponse = Http::withHeaders([
-                'x-api-key' => $this->apiKey,
-            ])->get("{$this->apiUrl}/{$this->blockchain}/address/{$xpub}/{$index}");
+            // 4. Generate deposit address
+            $addressResponse = Http::withHeaders(['x-api-key' => $this->apiKey])
+                ->get("{$this->apiUrl}/{$this->blockchain}/address/{$xpub}/{$index}");
 
             if ($addressResponse->failed()) {
                 throw new \Exception("Failed to generate address: " . $addressResponse->body());
             }
-            // Log::info("Address Response: " . $addressResponse->body());
-            Log::info("Address Response: " . json_encode($addressResponse->json()));
-            $address = $addressResponse->json('address');
 
-            // 4. Generate private key
-            $privateKeyResponse = Http::withHeaders([
-                'x-api-key' => $this->apiKey,
-            ])->post("{$this->apiUrl}/{$this->blockchain}/wallet/priv", [
-                'mnemonic' => $mnemonic,
-                'index' => $index,
-            ]);
+            $address = $addressResponse->json('address');
+            Log::info("Generated Address: $address (index: $index)");
+
+            // 5. Generate private key
+            $privateKeyResponse = Http::withHeaders(['x-api-key' => $this->apiKey])
+                ->post("{$this->apiUrl}/{$this->blockchain}/wallet/priv", [
+                    'mnemonic' => $mnemonic,
+                    'index' => $index,
+                ]);
 
             if ($privateKeyResponse->failed()) {
                 throw new \Exception("Failed to generate private key: " . $privateKeyResponse->body());
             }
-            Log::info("Private Key Response: " . json_encode($privateKeyResponse->json()));
 
             $privateKey = $privateKeyResponse->json('key');
 
-            // 5. Assign this address to the virtual account
-            $assignResponse = Http::withHeaders([
-                'x-api-key' => $this->apiKey,
-            ])->post("{$this->apiUrl}/offchain/account/{$virtualAccount->account_id}/address/{$address}");
+            // 6. Assign to virtual account
+            $assignResponse = Http::withHeaders(['x-api-key' => $this->apiKey])
+                ->post("{$this->apiUrl}/offchain/account/{$virtualAccount->account_id}/address/{$address}");
 
-            // Log full response
-            Log::info("Assign Response: " . json_encode($assignResponse->json()));
-
-            // Throw if failed
             if ($assignResponse->failed()) {
-                throw new \Exception("Failed to assign deposit address to VA: " . $assignResponse->body());
+                throw new \Exception("Failed to assign address to VA: " . $assignResponse->body());
             }
 
-            // 6. Save everything in DB
-            $depositAddress = DepositAddress::create([
+            // 7. Save to DB
+            return DepositAddress::create([
                 'virtual_account_id' => $virtualAccount->id,
-                'blockchain' => $this->blockchain,
+                'blockchain' => strtolower($this->blockchain),
                 'currency' => $virtualAccount->currency,
                 'index' => $index,
                 'address' => $address,
                 'private_key' => Crypt::encryptString($privateKey),
             ]);
-
-            return $depositAddress;
         });
     }
 }

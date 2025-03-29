@@ -539,8 +539,8 @@ class BlockChainHelper
                         //return complete json
                         if ($response->ok()) {
                             $sun = $response->json()['balance'] ?? 0;
-                          
-                        return  $response->json();
+
+                            return  $response->json();
                         }
 
                         return  $response->json();
