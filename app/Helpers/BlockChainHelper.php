@@ -2,10 +2,12 @@
 
 namespace App\Helpers;
 
+use App\Models\DepositAddress;
 use App\Models\GasFeeLog;
 use App\Models\MasterWallet;
 use App\Models\MasterWalletTransaction;
 use App\Models\Ledger;
+use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
@@ -671,6 +673,7 @@ class BlockChainHelper
         if ($sendAmount <= 0) {
             throw new \Exception("Amount after fee must be greater than 0.");
         }
+        $virtualAccountId = VirtualAccount::where('account_id', $accountId)->first();
 
         // Get contract address only for USDT
         $contractAddress = null;
@@ -687,13 +690,13 @@ class BlockChainHelper
             $contractAddress = $walletCurrency->contract_address;
         }
 
-        // Get TRON master wallet
-        $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
-        if (!$masterWallet) {
-            throw new \Exception("Master wallet not found for TRON.");
+        // Get user's deposit address and private key
+        $deposit = DepositAddress::where('virtual_account_id', $virtualAccountId)->first();
+        if (!$deposit) {
+            throw new \Exception("Deposit address not found for VA ID: {$accountId}");
         }
 
-        $privateKey = Crypt::decrypt($masterWallet->private_key);
+        $privateKey = Crypt::decryptString($deposit->private_key);
 
         // Step 1: Withdraw from virtual ledger
         $withdrawalResponse = Http::withHeaders([
@@ -713,15 +716,17 @@ class BlockChainHelper
         $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
 
         // Step 2: Send on-chain transaction
-        $endpoint = '/tron/transaction';
+        $endpoint = $currency === 'USDT_TRON' ? '/tron/trc20/transaction' : '/tron/transaction';
+
         $payload = [
             'fromPrivateKey' => $privateKey,
             'to' => $toAddress,
             'amount' => (string) $sendAmount,
         ];
 
-        if ($currency === 'USDT') {
-            $payload['tokenId'] = $contractAddress;
+        if ($currency === 'USDT_TRON') {
+            $payload['tokenAddress'] = $contractAddress;
+            $payload['feeLimit'] = 100000000; // 100 TRX for safety margin
         }
 
         $txResponse = Http::withHeaders([
