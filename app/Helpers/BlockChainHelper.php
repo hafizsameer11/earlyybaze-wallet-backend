@@ -339,10 +339,10 @@ class BlockChainHelper
                 'amount' => (string) $amount,
                 'currency' => $walletCurrency, // ETH, USDT, etc.
             ];
-            $payload['fee'] = [
-                'gasLimit' => $gasfee['gasLimit'], // Example for ERC20
-                'gasPrice' => $gasfee['gasPrice'] // 60 Gwei
-            ];
+            // $payload['fee'] = [
+            //     'gasLimit' => $gasfee['gasLimit'], // Example for ERC20
+            //     'gasPrice' => $gasfee['gasPrice'] // 60 Gwei
+            // ];
 
             $response = Http::withHeaders([
                 'x-api-key' => config('tatum.api_key'),
