@@ -333,16 +333,20 @@ class BlockChainHelper
             $masterWallet = \App\Models\MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
             $gasfee = self::estimateGasFee($deposit->address, $masterWallet->address, $amount, 'ETH');
             Log::info("gas fee for transaction is ", $gasfee);
+
+            $gasLimit = $gasfee['gasLimit']; // OK as-is
+            $gasPriceWei = $gasfee['gasPrice'];
+            $gasPriceGwei = (string) (intval($gasPriceWei) / 1e9); // Convert Wei → Gwei (as string)
             $payload = [
                 'fromPrivateKey' => $fromPrivateKey,
                 'to' => $masterWallet->address,
                 'amount' => (string) $amount,
                 'currency' => $walletCurrency, // ETH, USDT, etc.
             ];
-            // $payload['fee'] = [
-            //     'gasLimit' => $gasfee['gasLimit'], // Example for ERC20
-            //     'gasPrice' => $gasfee['gasPrice'] // 60 Gwei
-            // ];
+            $payload['fee'] = [
+                'gasLimit' => $gasLimit, // Example for ERC20
+                'gasPrice' => $gasPriceGwei // 60 Gwei
+            ];
 
             $response = Http::withHeaders([
                 'x-api-key' => config('tatum.api_key'),
@@ -497,7 +501,7 @@ class BlockChainHelper
     {
         // $baseUrl = config('tatum.base_url');
         $apiKey = config('tatum.api_key');
-        $baseUrl='https://api.tatum.io/v4';
+        $baseUrl = 'https://api.tatum.io/v4';
         $endpoint = '/blockchainOperations/gas';
 
         $payload = [
@@ -505,7 +509,7 @@ class BlockChainHelper
             'to' => $to,
             'amount' => $amount,
             'chain' => 'ETH',
-            
+
         ];
 
         if (in_array(strtoupper($currency), ['USDT', 'USDC'])) {
