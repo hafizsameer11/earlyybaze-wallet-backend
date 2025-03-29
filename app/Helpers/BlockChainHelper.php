@@ -335,7 +335,7 @@ class BlockChainHelper
             Log::info("gas fee for transaction is ", $gasfee);
 
             $estimatedLimit = (int) $gasfee['gasLimit'];
-            $bufferedLimit = (string) ($estimatedLimit +10000); // Add 5,000 gas units buffer
+            $bufferedLimit = (string) ($estimatedLimit +70000); // Add 5,000 gas units buffer
             
             $gasPriceWei = $gasfee['gasPrice'];
             $gasPriceGwei = (string) max(1, intval(ceil(intval($gasfee['gasPrice']) / 1e9)));
