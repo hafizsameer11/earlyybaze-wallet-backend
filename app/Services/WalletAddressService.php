@@ -39,10 +39,10 @@ class WalletAddressService
             });
             Log::info("Group Blockchains: " . json_encode($groupBlockchains));
             // 1. Check for existing address in the same group for this user
-            $existing = DepositAddress::whereIn('currency', $groupBlockchains ?? [$this->blockchain])
-                ->where('blockchain', $this->blockchain)
-                ->whereHas('virtualAccount', fn($q): mixed => $q->where('user_id', $userId))
-                ->first();
+            $existing = DepositAddress::where('blockchain', $this->blockchain)
+            ->whereHas('virtualAccount', fn($q) => $q->where('user_id', $userId))
+            ->first();
+
 
             if ($existing) {
                 // Reuse existing address and private key
