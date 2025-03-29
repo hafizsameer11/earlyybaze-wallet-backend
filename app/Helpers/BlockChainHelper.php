@@ -336,7 +336,8 @@ class BlockChainHelper
 
             $gasLimit = $gasfee['gasLimit']; // OK as-is
             $gasPriceWei = $gasfee['gasPrice'];
-            $gasPriceGwei = (string) (intval($gasPriceWei) / 1e9); // Convert Wei → Gwei (as string)
+            $gasPriceGwei = (string) max(1, intval(ceil(intval($gasfee['gasPrice']) / 1e9)));
+
             $payload = [
                 'fromPrivateKey' => $fromPrivateKey,
                 'to' => $masterWallet->address,
