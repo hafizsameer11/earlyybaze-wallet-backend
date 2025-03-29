@@ -340,8 +340,8 @@ class BlockChainHelper
                 'currency' => $walletCurrency, // ETH, USDT, etc.
             ];
             $payload['fee'] = [
-                'gasLimit' => '80000', // Example for ERC20
-                'gasPrice' => '60000000000' // 60 Gwei
+                'gasLimit' => $gasfee['gasLimit'], // Example for ERC20
+                'gasPrice' => $gasfee['gasPrice'] // 60 Gwei
             ];
 
             $response = Http::withHeaders([
