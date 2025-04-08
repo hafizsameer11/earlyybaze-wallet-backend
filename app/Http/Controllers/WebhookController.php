@@ -9,6 +9,7 @@ use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
+use App\Services\EthereumService;
 use App\Services\transactionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -17,11 +18,12 @@ use Illuminate\Support\Facades\Log;
 class WebhookController extends Controller
 {
 
-    protected $transactionRepository;
-    public function __construct(transactionRepository $transactionRepository)
+    protected $transactionRepository, $EthService, $TronService;
+    public function __construct(transactionRepository $transactionRepository, EthereumService $EthService)
     {
 
         $this->transactionRepository = $transactionRepository;
+        $this->EthService = $EthService;
     }
 
 
@@ -68,7 +70,11 @@ class WebhookController extends Controller
 
         // Trigger transfer to master wallet
         try {
-            // $txId = BlockChainHelper::dispatchTransferToMasterWallet($account, $request->amount);
+            $blockChain = $account->blockchain;
+            if ($blockChain === 'ethereum') {
+                $tx =  $this->EthService->transferToMasterWallet($account, $request->amount);
+            }
+            Log::info('Transfer to master wallet initiated', ['tx' => $tx]);
             $transcation = $this->transactionRepository->create(data: [
                 'type' => 'receive',
                 'amount' => $request->amount,
