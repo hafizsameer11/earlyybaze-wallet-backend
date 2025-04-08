@@ -74,7 +74,7 @@ class User extends Authenticatable
         return $this->hasOne(Kyc::class);
     }
     public function newsletters()
-{
-    return $this->belongsToMany(Newsletter::class, 'user_newsletters')->withTimestamps()->withPivot('is_read', 'sent_at');
-}
+    {
+        return $this->belongsToMany(Newsletter::class, 'user_newsletters')->withTimestamps()->withPivot('is_read', 'sent_at');
+    }
 }
