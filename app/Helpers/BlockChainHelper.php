@@ -501,39 +501,45 @@ class BlockChainHelper
         return $tx;
     }
     public static function estimateGasFee(string $from, string $to, string $amount, string $currency = 'ETH')
-    {
-        // $baseUrl = config('tatum.base_url');
-        $apiKey = config('tatum.api_key');
-        $baseUrl = 'https://api.tatum.io/v4';
-        $endpoint = '/blockchainOperations/gas';
+{
+    $apiKey = config('tatum.api_key');
+    $baseUrl = 'https://api.tatum.io/v4';
+    $endpoint = '/blockchainOperations/gas';
 
-        $payload = [
-            'from' => $from,
-            'to' => $to,
-            'amount' => $amount,
-            'chain' => 'ETH',
+    $payload = [
+        'from' => $from,
+        'to' => $to,
+        'chain' => 'ETH',
+    ];
 
+    $currency = strtoupper($currency);
+
+    if (in_array($currency, ['USDT', 'USDC'])) {
+        $contractAddresses = [
+            'USDT' => '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            'USDC' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
         ];
 
-        if (in_array(strtoupper($currency), ['USDT', 'USDC'])) {
-            $contractAddresses = [
-                'USDT' => '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-                'USDC' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
-            ];
-
-            $payload['contractAddress'] = $contractAddresses[strtoupper($currency)] ?? null;
+        if (!isset($contractAddresses[$currency])) {
+            throw new \Exception("Contract address for {$currency} is not defined.");
         }
 
-        $response = Http::withHeaders([
-            'x-api-key' => $apiKey,
-        ])->post("{$baseUrl}{$endpoint}", $payload);
-
-        if ($response->failed()) {
-            throw new \Exception("Gas estimation failed: " . $response->body());
-        }
-
-        return $response->json();
+        $payload['contractAddress'] = $contractAddresses[$currency];
+    } else {
+        // Only add amount for native token transfers like ETH
+        $payload['amount'] = $amount;
     }
+
+    $response = Http::withHeaders([
+        'x-api-key' => $apiKey,
+    ])->post("{$baseUrl}{$endpoint}", $payload);
+
+    if ($response->failed()) {
+        throw new \Exception("Gas estimation failed: " . $response->body());
+    }
+
+    return $response->json();
+}
 
     public static function batchSweepBTCToMasterWallet()
     {
