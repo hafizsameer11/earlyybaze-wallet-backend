@@ -43,7 +43,7 @@ class EthereumService
 
         // 2. Check ETH balance of user address
         $ethBalance = BlockChainHelper::checkAddressBalance($fromAddress, 'ethereum');
-
+        $ethBalance = $ethBalance['balance'];
         if ($ethBalance < $requiredGasEth) {
             // 3. Top-up gas if insufficient
             $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEth);
@@ -75,7 +75,7 @@ class EthereumService
 
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
             ->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-
+        Log::info('Top-up response: for address ' . $toAddress, ['response' => $response->json()]);
         if ($response->failed()) {
             throw new \Exception("Top-up failed: " . $response->body());
         }
@@ -114,7 +114,8 @@ class EthereumService
 
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
             ->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-
+        //log response
+        Log::info('Transfer response: for address ' . $toAddress, ['response' => $response->json()]);
         if ($response->failed()) {
             throw new \Exception("Transfer failed: " . $response->body());
         }
