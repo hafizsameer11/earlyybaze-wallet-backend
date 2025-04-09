@@ -24,50 +24,65 @@ class EthereumService
      * @throws \Exception
      */
 
-     public function transferToMasterWallet($virtualAccount, $amount)
-     {
-         $user = $virtualAccount->user;
-         $currency = strtoupper($virtualAccount->currency);
+    public function transferToMasterWallet($virtualAccount, $amount)
+    {
+        $user = $virtualAccount->user;
+        $currency = strtoupper($virtualAccount->currency);
 
-         $deposit = DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
-         $fromAddress = $deposit->address;
-         $fromPrivateKey = Crypt::decryptString($deposit->private_key);
+        $deposit = DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromAddress = $deposit->address;
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
-         $masterWallet = MasterWallet::where('blockchain', 'ethereum')->firstOrFail();
-         $toAddress = $masterWallet->address;
+        $masterWallet = MasterWallet::where('blockchain', 'ethereum')->firstOrFail();
+        $toAddress = $masterWallet->address;
 
-         // 1. Estimate gas
-         $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);
-         $originalGasLimit = $gasEstimation['gasLimit'];
-         $gasPrice = $gasEstimation['gasPrice'];
+        // 1. Estimate gas
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);
+        $originalGasLimit = $gasEstimation['gasLimit'];
+        $gasPrice = $gasEstimation['gasPrice'];
 
-         // Apply a 10% buffer to gas limit
-         $bufferedGasLimit = ceil($originalGasLimit * 1.1); // Round up
+        // Apply a 10% buffer to gas limit
+        $bufferedGasLimit = ceil($originalGasLimit * 1.1); // Round up
 
-         $requiredGasWei = bcmul((string)$gasPrice, (string)$bufferedGasLimit);
-         $requiredGasEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+        $requiredGasWei = bcmul((string)$gasPrice, (string)$bufferedGasLimit);
+        $requiredGasEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
 
-         // 2. Check ETH balance of user address
-         $ethBalance = BlockChainHelper::checkAddressBalance($fromAddress, 'ethereum');
-         $ethBalance = $ethBalance['balance'];
-         Log::info('ETH balance for address ' . $fromAddress, ['balance' => $ethBalance]);
+        // 2. Check ETH balance of user address
+        $ethBalance = BlockChainHelper::checkAddressBalance($fromAddress, 'ethereum');
+        $ethBalance = $ethBalance['balance'];
 
-         if (bccomp($ethBalance, $requiredGasEth, 18) < 0) {
-             // 3. Top-up gas if insufficient
-             $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEth);
-             $txDetails = $this->getTransactionDetails($tx['txId']);
+        // Normalize both values to 18 decimals
+        $ethBalanceFormatted = number_format((float)$ethBalance, 18, '.', '');
+        $requiredGasEthFormatted = number_format((float)$requiredGasEth, 18, '.', '');
 
-             if (!($txDetails['status'] ?? false)) {
-                 throw new \Exception("Gas top-up failed. Cannot proceed.");
-             }
+        Log::info('Gas Check Debug', [
+            'ethBalance' => $ethBalanceFormatted,
+            'requiredGasEth' => $requiredGasEthFormatted,
+            'bufferedGasLimit' => $bufferedGasLimit,
+            'gasPrice' => $gasPrice
+        ]);
 
-             // 4. Log actual gas used for top-up
-             $this->logActualGasFee($user->id, $tx['txId'], 'ETH', 'gas-topup');
-         }
+        if (bccomp($ethBalanceFormatted, $requiredGasEthFormatted, 18) < 0) {
+            Log::info("ETH balance is insufficient. Initiating gas top-up.");
 
-         // 5. Perform transfer to master wallet
-         return $this->executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet);
-     }
+            // 3. Top-up gas if insufficient
+            $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEthFormatted);
+            $txDetails = $this->getTransactionDetails($tx['txId']);
+
+            if (!($txDetails['status'] ?? false)) {
+                throw new \Exception("Gas top-up failed. Cannot proceed.");
+            }
+
+            // 4. Log actual gas used for top-up
+            $this->logActualGasFee($user->id, $tx['txId'], 'ETH', 'gas-topup');
+        } else {
+            Log::info("ETH balance is sufficient. Proceeding with asset transfer.");
+        }
+
+        // 5. Perform transfer to master wallet
+        return $this->executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet);
+    }
+
 
 
     public function topUpUserForGas($masterWallet, $toAddress, $requiredGasEth)
