@@ -42,7 +42,7 @@ class EthereumService
         $gasPrice = $gasEstimation['gasPrice'];
 
         // Apply a 10% buffer to gas limit
-        $bufferedGasLimit = ceil($originalGasLimit * 1.1); // Round up
+        $bufferedGasLimit = ceil($originalGasLimit * 1.3); // Round up
 
         $requiredGasWei = bcmul((string)$gasPrice, (string)$bufferedGasLimit);
         $requiredGasEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
