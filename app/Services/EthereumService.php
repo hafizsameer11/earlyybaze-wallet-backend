@@ -344,12 +344,10 @@ class EthereumService
 
         foreach ($tokens as $token) {
             Log::info('Fetching token balance for ' . $token->currency);
+            $payload = ['chain' => 'ETH'];
             $tokenResponse = Http::withHeaders([
                 'x-api-key' => config('tatum.api_key'),
-            ])->get(config('tatum.base_url') . "/blockchain/token/balance/ethereum/{$token->contract_address}/{$address}", [
-                'chain' => 'ETH',
-            ]);
-
+            ])->get(config('tatum.base_url') . "/blockchain/token/balance/ETH/{$token->contract_address}/{$address}");
 
             if ($tokenResponse->ok()) {
                 $balance = $tokenResponse->json()['balance'] ?? '0';
