@@ -48,7 +48,7 @@ class WebhookController extends Controller
 
         // Update account balance
         $account->available_balance += $request->amount;
-        $account->save();
+        // $account->save();
         $userId = $account->user->id;
         $exchangeRate = ExchangeFeeHelper::caclulateExchangeRate($request->amount, $account->currency);
         $amountUsd = $exchangeRate['amount_usd'];
