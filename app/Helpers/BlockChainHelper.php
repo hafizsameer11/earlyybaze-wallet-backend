@@ -525,7 +525,7 @@ class BlockChainHelper
             }
 
             $payload['contractAddress'] = $contractAddresses[$currency];
-            $payload['amount'] = 0;
+            $payload['amount'] = "0.000001";
         } else {
             // Only add amount for native token transfers like ETH
             $payload['amount'] = $amount;
