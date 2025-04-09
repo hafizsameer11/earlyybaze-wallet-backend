@@ -90,7 +90,7 @@ class EthereumService
 
     public function topUpUserForGas($masterWallet, $toAddress, $requiredGasEth)
     {
-        $fromPrivateKey = Crypt::decryptString($masterWallet->private_key);
+        $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
         Log::info('Top-up for gas initiated', [
             'fromPrivateKey' => $fromPrivateKey,
             'toAddress' => $toAddress,
