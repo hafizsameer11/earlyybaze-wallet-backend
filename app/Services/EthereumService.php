@@ -94,7 +94,8 @@ class EthereumService
         Log::info('Top-up for gas initiated', [
             'fromPrivateKey' => $fromPrivateKey,
             'toAddress' => $toAddress,
-            'requiredGasEth' => $requiredGasEth
+            'requiredGasEth' => $requiredGasEth,
+            'masterWallet' => $masterWallet,
         ]);
         $bufferedAmount = bcadd($requiredGasEth, '0.0002', 18);
 
