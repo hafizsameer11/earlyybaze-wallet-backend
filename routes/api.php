@@ -300,6 +300,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single/{id}', [NewsletterController::class, 'show']);
             Route::get('/user/{userId}', [NewsletterController::class, 'userNewsletters']);
         });
+        Route::prefix('master-wallet')->group(function () {
+            Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
+        });
     });
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

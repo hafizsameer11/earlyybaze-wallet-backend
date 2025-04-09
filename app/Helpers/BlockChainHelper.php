@@ -109,13 +109,13 @@ class BlockChainHelper
             };
 
             $payload = match ($blockchain) {
-                'ETHEREUM' => [ // ✅ Included TRON
+                'ETHEREUM' => [
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,
                     'currency' => $currency,
                 ],
-                'BSC', 'SOLANA', 'TRON' => [ // ✅ Included TRON
+                'BSC', 'SOLANA', 'TRON' => [
                     'fromPrivateKey' => $privateKey,
                     'to' => $toAddress,
                     'amount' => (string)$sendAmount,

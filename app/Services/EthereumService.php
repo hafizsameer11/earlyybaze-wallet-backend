@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Helpers\BlockChainHelper;
 use App\Models\DepositAddress;
 use App\Models\GasFeeLog;
+use App\Models\Ledger;
 use App\Models\MasterWallet;
 use App\Models\MasterWalletTransaction;
+use App\Models\WalletCurrency;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -70,19 +72,20 @@ class EthereumService
 
             // 3. Top-up gas if insufficient
             $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEthFormatted);
-            $txDetails = $this->getTransactionDetails($tx['txId']);
+            $txDetails = $this->getTransactionDetailsWithPolling($tx['txId']);
+            Log::info('Gas top-up transaction details', [
+                'txId' => $tx['txId'],
+                'txDetails' => $txDetails,
+            ]);
 
             if (!($txDetails['status'] ?? false)) {
                 throw new \Exception("Gas top-up failed. Cannot proceed.");
             }
-
-            // 4. Log actual gas used for top-up
             $this->logActualGasFee($user->id, $tx['txId'], 'ETH', 'gas-topup');
         } else {
             Log::info("ETH balance is sufficient. Proceeding with asset transfer.");
         }
 
-        // 5. Perform transfer to master wallet
         return $this->executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet);
     }
 
@@ -114,6 +117,27 @@ class EthereumService
         }
 
         return $response->json();
+    }
+
+    public function getTransactionDetailsWithPolling($txHash, $maxRetries = 5, $delaySeconds = 3)
+    {
+        for ($i = 0; $i < $maxRetries; $i++) {
+            $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
+                ->get(config('tatum.base_url') . "/ethereum/transaction/{$txHash}");
+
+            if ($response->ok()) {
+                $data = $response->json();
+
+                // If status true or false, return immediately
+                if (isset($data['status'])) {
+                    return $data;
+                }
+            }
+
+            sleep($delaySeconds);
+        }
+
+        throw new \Exception("Transaction not confirmed within timeout.");
     }
 
     public function getTransactionDetails($txHash)
@@ -192,38 +216,149 @@ class EthereumService
             ]);
         }
     }
-    public function transferToExternalAddress(string $toAddress, string $amount, string $currency = 'ETH', array $fee = [])
+    public function transferToExternalAddress($user, string $toAddress, string $amount, string $currency = 'ETH', array $fee = [])
     {
-        // Get master wallet and decrypt private key
-        $masterWallet = MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
-        $fromPrivateKey = Crypt::decryptString($masterWallet->private_key);
-        $fromAddress = $masterWallet->address;
+        $blockchain = 'ETHEREUM';
+        $currency = strtoupper($currency);
+        $feeAmount = 0; // Placeholder if you're calculating this dynamically later
 
-        // Build payload
+        // 1. Get user's virtual account ID
+        $ledgerAccountId = $user->virtualAccounts()
+            ->where('blockchain', $blockchain)
+            ->where('currency', $currency)
+            ->value('account_id');
+
+        if (!$ledgerAccountId) {
+            throw new \Exception("User ledger account not found for $currency on $blockchain.");
+        }
+
+        // 2. Initiate offchain withdrawal (reserve funds in Tatum ledger)
+        $withdrawalResponse = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
+            'senderAccountId' => $ledgerAccountId,
+            'address' => $toAddress,
+            'amount' => (string)$amount,
+            'fee' => (string)$feeAmount,
+            'attr' => 'Withdrawal to external wallet',
+        ]);
+
+        if ($withdrawalResponse->failed()) {
+            throw new \Exception("Ledger withdrawal failed: " . $withdrawalResponse->body());
+        }
+
+        $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
+
+        // 3. Decrypt master wallet to broadcast transaction
+        $masterWallet = MasterWallet::where('blockchain', $blockchain)->firstOrFail();
+        $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
+
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
-            'amount' => (string) $amount,
-            'currency' => strtoupper($currency),
+            'amount' => (string)$amount,
+            'currency' => $currency,
         ];
 
-        // Include fee if provided
         if (!empty($fee)) {
             $payload['fee'] = [
-                'gasLimit' => (string) $fee['gasLimit'],
-                'gasPrice' => (string) $fee['gasPrice'],
+                'gasLimit' => (string)$fee['gasLimit'],
+                'gasPrice' => (string)$fee['gasPrice'],
             ];
         }
 
-        // Send transaction
+        // 4. Broadcast transaction
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
 
         if ($response->failed()) {
-            throw new \Exception("Transfer to external address failed: " . $response->body());
+            // Rollback reserved ledger funds
+            if ($withdrawalId) {
+                Http::withHeaders(['x-api-key' => config('tatum.api_key')])
+                    ->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
+            }
+            throw new \Exception("Blockchain transaction failed: " . $response->body());
         }
 
-        return $response->json(); // Includes txId
+        $txHash = $response->json()['txId'] ?? null;
+
+        // 5. Mark withdrawal as complete
+        if ($withdrawalId && $txHash) {
+            Http::withHeaders([
+                'x-api-key' => config('tatum.api_key'),
+            ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
+        }
+
+        // 6. Create ledger & master wallet logs
+        MasterWalletTransaction::create([
+            'user_id' => $user->id,
+            'master_wallet_id' => $masterWallet->id,
+            'blockchain' => $blockchain,
+            'currency' => $currency,
+            'to_address' => $toAddress,
+            'amount' => $amount,
+            'fee' => $feeAmount,
+            'tx_hash' => $txHash,
+        ]);
+
+        Ledger::create([
+            'user_id' => $user->id,
+            'type' => 'withdrawal',
+            'blockchain' => $blockchain,
+            'currency' => $currency,
+            'amount' => $amount,
+            'tx_hash' => $txHash,
+        ]);
+
+        return [
+            'txHash' => $txHash,
+            'sent' => $amount,
+            'fee' => $feeAmount,
+            'total' => $amount,
+        ];
+    }
+    public function getEthereumMasterBalances()
+    {
+        $masterWallet = MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+        $address = $masterWallet->address;
+
+        // Get all ERC-20 tokens configured for Ethereum
+        $tokens = WalletCurrency::where('blockchain', 'ETHEREUM')
+            ->where('is_token', true)
+            ->get();
+
+        // 1. Get ETH balance
+        $ethResponse = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->get(config('tatum.base_url') . "/ethereum/account/balance/{$address}");
+
+        if ($ethResponse->failed()) {
+            throw new \Exception("Failed to fetch ETH balance: " . $ethResponse->body());
+        }
+
+        $ethBalance = $ethResponse->json()['balance'] ?? '0';
+
+        // 2. Get ERC-20 token balances
+        $tokenBalances = [];
+
+        foreach ($tokens as $token) {
+            $tokenResponse = Http::withHeaders([
+                'x-api-key' => config('tatum.api_key'),
+            ])->get(config('tatum.base_url') . "/blockchain/token/balance/ethereum/{$token->contract_address}/{$address}");
+
+            if ($tokenResponse->ok()) {
+                $balance = $tokenResponse->json()['balance'] ?? '0';
+                $tokenBalances[$token->currency] = $balance;
+            } else {
+                $tokenBalances[$token->currency] = 'Error: ' . $tokenResponse->status();
+            }
+        }
+
+        return [
+            'address' => $address,
+            'eth_balance' => $ethBalance,
+            'token_balances' => $tokenBalances,
+        ];
     }
 }

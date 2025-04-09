@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EthereumService;
 use App\Services\MasterWalletService;
 use Illuminate\Http\Request;
 
 class MasterWalletController extends Controller
 {
     //
-    protected $walletService;
+    protected $walletService,$EthService;
 
-    public function __construct(MasterWalletService $walletService)
+    public function __construct(MasterWalletService $walletService, EthereumService $EthService)
     {
         $this->walletService = $walletService;
+        $this->EthService = $EthService;
     }
 
     public function create(Request $request)
@@ -34,5 +36,9 @@ class MasterWalletController extends Controller
     {
         $wallets = $this->walletService->getMasterWallets();
         return response()->json($wallets, 200);
+    }
+    public function getEthBalance(){
+        $balance = $this->EthService->getEthereumMasterBalances();
+        return response()->json($balance, 200);
     }
 }
