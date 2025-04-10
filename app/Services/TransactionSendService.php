@@ -20,16 +20,17 @@ class TransactionSendService
 
     public function find($id)
     {
-       try{
-        return $this->TransactionSendRepository->find($id);
-       }catch(\Exception $e){
-        throw new \Exception($e->getMessage());
-       }
+        try {
+            return $this->TransactionSendRepository->find($id);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
-    public function findByTransactionId($transactionId,$type="send"){
-        try{
-            return $this->TransactionSendRepository->findByTransactionId($transactionId,$type);
-        }catch(\Exception $e){
+    public function findByTransactionId($transactionId, $type = "send")
+    {
+        try {
+            return $this->TransactionSendRepository->findByTransactionId($transactionId, $type);
+        } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
     }
@@ -51,7 +52,7 @@ class TransactionSendService
     public function sendInternalTransaction(array $data)
     {
         try {
-            $transaction= $this->TransactionSendRepository->sendInternalTransaction($data);
+            $transaction = $this->TransactionSendRepository->sendInternalTransaction($data);
             return $transaction;
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());

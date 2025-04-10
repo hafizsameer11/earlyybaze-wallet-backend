@@ -32,7 +32,7 @@ class TransactionController extends Controller
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
         try {
-            $transaction = $this->transactionSendService->sendInternalTransaction($request->all());
+            $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
             if (isset($transaction['success']) &&  $transaction['success'] == false) {
 
                 return ResponseHelper::error($transaction['error'], 500);
@@ -86,7 +86,7 @@ class TransactionController extends Controller
     {
         try {
             $user = Auth::user();
-            $transaction = $this->transactionSendService->sendOnChainTransaction($request->all());
+            $transaction = $this->transactionSendService->sendOnChainTransaction($request->validated());
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -97,7 +97,7 @@ class TransactionController extends Controller
     {
         try {
             $user = Auth::user();
-            $transaction = $this->swapTransactionService->swap($request->all());
+            $transaction = $this->swapTransactionService->swap($request->validated());
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

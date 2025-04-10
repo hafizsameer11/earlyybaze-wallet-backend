@@ -30,120 +30,96 @@ class SwapTransactionRepository
             $currency = $data['currency'];
             $network = $data['network'];
             $amount = $data['amount'];
-            // $fee = $data['fee'];
+
+            // Fetch fee
             $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
-            // $fee=$fee->rate;
-            $feea = $fee->amount;
-            $feePercentage = $fee->percentage;
-            $feePercentageAmount = bcmul($amount, $feePercentage, 8);
-            $feeAmount = bcdiv($feePercentageAmount, 100, 8);
-            $fee = bcadd($feea, $feeAmount, 8);
+            $fixedFee = $fee->amount;
+            $percentageFee = $fee->percentage;
 
-            // Fetch the latest exchange rate
-            $exchangeRate = ExchangeRate::where('currency', $currency)
-                ->orderBy('created_at', 'desc')
-                ->first();
-            $feeCurrency = bcdiv($fee, $exchangeRate->rate_usd, 8);
-            $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')
-                ->orderBy('created_at', 'desc')
-                ->first();
+            // Calculate fee
+            $percentageFeeAmount = bcmul($amount, $percentageFee, 8);
+            $percentageFeeConverted = bcdiv($percentageFeeAmount, 100, 8);
+            $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
 
-            if (!$exchangeRate) {
-                throw new Exception('Exchange rate unavailable. Please try again later.');
-            }
+            // Fetch exchange rate
+            $exchangeRate = ExchangeRate::where('currency', $currency)->latest()->firstOrFail();
+            $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
 
-            // Convert amounts to USD and NGN (Naira)
-            $amount_usd = bcmul($amount, $exchangeRate->rate_usd, 8);
-            $amount_naira = bcmul($amount, $exchangeRate->rate_naira, 8);
-            $fee_naira = bcmul($feea, $exchangeRatenaira->rate, 8);
+            // Fee in token and converted currencies
+            $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
+            $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
+            $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8);
+            $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
 
             // Add calculated values to data
-            $data['amount_usd'] = $amount_usd;
-            $data['amount_naira'] = $amount_naira;
-            $data['fee_naira'] = $fee_naira;
+            $data['amount_usd'] = $amountUsd;
+            $data['amount_naira'] = $amountNaira;
+            $data['fee_naira'] = $feeNaira;
             $data['fee'] = $feeCurrency;
 
-            // Generate unique transaction reference
             $reference = 'EarlyBaze' . time();
 
-            $admin = User::where('email', 'admin@gmail.com')->first();
-            if (!$admin) {
-                throw new Exception('Admin account not found.');
-            }
+            // Get admin and user
+            $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
+            $user = Auth::user();
 
+            // Virtual accounts
             $adminVirtualAccount = VirtualAccount::where('user_id', $admin->id)
                 ->where('currency', $currency)
                 ->where('blockchain', $network)
-                ->first();
+                ->firstOrFail();
 
-            if (!$adminVirtualAccount) {
-                throw new Exception('Swap is currently unavailable. Please try again later.');
-            }
-
-            // Fetch authenticated user & their Virtual Account
-            $user = Auth::user();
             $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
                 ->where('currency', $currency)
                 ->where('blockchain', $network)
-                ->first();
+                ->firstOrFail();
 
-            if (!$userVirtualAccount) {
-                throw new Exception('Your virtual account was not found.');
-            }
-            $finalAmount = bcadd($amount, $feeCurrency, 8);
-            if ($userVirtualAccount->available_balance < $finalAmount) {
-                throw new Exception('Insufficient Balance for swap.');
+            // Check user balance
+            $totalToDeduct = bcadd($amount, $feeCurrency, 8);
+            if (bccomp($userVirtualAccount->available_balance, $totalToDeduct, 8) < 0) {
+                throw new Exception('Insufficient balance for swap.');
             }
 
-            // Execute internal transfer from user to admin
-            $response = $this->tatumService->transferFunds(
-                $userVirtualAccount->account_id,
-                $adminVirtualAccount->account_id,
-                $finalAmount,
-                $currency
-            );
-            Log::info('Swap Internal Transfer Response: ' . json_encode($response));
-            $status = 'failed';
-            $txId = null;
+            // Deduct from user, credit to admin, and add to user Naira
+            $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
+            $userVirtualAccount->save();
+
+            $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $totalToDeduct, 8);
+            $adminVirtualAccount->save();
+
             $userAccount = UserAccount::where('user_id', $user->id)->first();
-            if (isset($response['reference'])) {
-                $status = 'completed';
-                $txId = $response['reference'];
-                $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $finalAmount, 8);
-                $userVirtualAccount->save();
-                $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $finalAmount, 8);
-                $adminVirtualAccount->save();
-                $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amount_naira, 8);
+            if ($userAccount) {
+                $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
                 $userAccount->save();
-            } elseif (isset($response['errorCode']) && $response['errorCode'] === "balance.insufficient") {
-                throw new Exception("Insufficient balance: " . $response['message']);
             }
 
-            // Store transaction details
+            // Save transaction record
             $transaction = $this->transactionService->create([
                 'type' => 'swap',
-                'amount' => $finalAmount,
+                'amount' => $totalToDeduct,
                 'currency' => $currency,
-                'status' => $status,
+                'status' => 'completed',
                 'network' => $network,
-                'reference' => $txId,
+                'reference' => $reference,
                 'user_id' => $user->id,
-                'amount_usd' => $amount_usd
+                'amount_usd' => $amountUsd
             ]);
 
-            // Store Swap Transaction Record
-            $data['status'] = $status;
+            // Save swap transaction
+            $data['status'] = 'completed';
             $data['user_id'] = $user->id;
-            $data['reference'] = $txId;
+            $data['reference'] = $reference;
             $data['transaction_id'] = $transaction->id;
             $swapTransaction = SwapTransaction::create($data);
 
             return $swapTransaction;
+
         } catch (Exception $e) {
             Log::error("Swap Failed: " . $e->getMessage());
             throw new Exception($e->getMessage());
         }
     }
+
     public function singleSwapTransaction($id)
     {
         $swap= SwapTransaction::where('transaction_id', $id)->first();

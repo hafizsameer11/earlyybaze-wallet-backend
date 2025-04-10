@@ -35,7 +35,7 @@ class UserController extends Controller
     {
         try {
             $user = Auth::user();
-            $user = $this->userService->updateUserProfile($request->all(), $user->id);
+            $user = $this->userService->updateUserProfile($request->validated(), $user->id);
             return ResponseHelper::success($user, 'User profile updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -45,7 +45,7 @@ class UserController extends Controller
     {
         try {
 
-            $user = $this->userService->updateUserProfile($request->all(), $userId);
+            $user = $this->userService->updateUserProfile($request->validated(), $userId);
             return ResponseHelper::success($user, 'User profile updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -116,9 +116,15 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
-    public function allwalletCurrenciesforUser()
+    public function allwalletCurrenciesforUser(Request $request)
     {
         try {
+            $isBuy = $request->isBuy;
+            if (!$isBuy) {
+                $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
+                return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
+            }
+
             $walletCurrencies = $this->userService->allwalletcurrenciesforuser();
             return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
         } catch (Exception $e) {
@@ -138,5 +144,4 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-  
 }

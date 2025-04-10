@@ -12,6 +12,8 @@ use App\Services\TatumService;
 use App\Services\transactionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+// use Str;
+use Illuminate\Support\Str;
 
 class TransactionSendRepository
 {
@@ -78,125 +80,121 @@ class TransactionSendRepository
     public function sendInternalTransaction(array $data)
     {
         try {
-            // Extract request parameters
             $currency = $data['currency'];
             $network = $data['network'];
             $email = $data['email'];
             $amount = $data['amount'];
 
-            // Find Receiver
             $receiver = User::where('email', $email)->first();
             if (!$receiver) {
                 return ['success' => false, 'error' => 'Receiver not found'];
             }
+
             $sender = Auth::user();
+
+            $senderAccount = VirtualAccount::where('user_id', $sender->id)
+                ->where('currency', $currency)
+                ->where('blockchain', $network)
+                ->first();
+
             $receiverAccount = VirtualAccount::where('user_id', $receiver->id)
                 ->where('currency', $currency)
                 ->where('blockchain', $network)
                 ->first();
 
-            if (!$receiverAccount) {
-                return ['success' => false, 'error' => 'Receiver account not found'];
+            if (!$senderAccount || !$receiverAccount) {
+                return ['success' => false, 'error' => 'Sender or receiver account not found'];
             }
+
+            if ($senderAccount->available_balance < $amount) {
+                return ['success' => false, 'error' => 'Insufficient balance'];
+            }
+
             $receiverDepositAddress = DepositAddress::where('virtual_account_id', $receiverAccount->id)->first();
-            $senderAccount = VirtualAccount::where('user_id', $sender->id)
-                ->where('currency', $currency)
-                ->where('blockchain', $network)
-                ->first();
-            if (!$senderAccount) {
-                return ['success' => false, 'error' => 'Sender account not found'];
-            }
-            $receiverAccountId = $receiverAccount->account_id;
-            $senderAccountId = $senderAccount->account_id;
-            $response = $this->tatumService->transferFunds($senderAccountId, $receiverAccountId, $amount, $currency);
-            Log::info('Internal transfer response: ' . json_encode($response));
-            $status = 'failed';
-            $txId = null;
-            $errorMessage = null;
-            if (isset($response['reference'])) {
-                $status = 'completed'; // Success case
-                $txId = $response['reference'];
-                $senderAccount->available_balance -= $amount;
-                $senderAccount->account_balance -= $amount;
-                $senderAccount->save();
-                $receiverAccount->available_balance += $amount;
-                $receiverAccount->account_balance += $amount;
-                $receiverAccount->save();
-            } elseif (isset($response['errorCode']) && $response['errorCode'] === "balance.insufficient") {
-                $status = 'failed';
-                $errorMessage = "Insufficient balance: " . $response['message'];
-            }
+
+            // Adjust balances
+            $senderAccount->available_balance -= $amount;
+            $senderAccount->account_balance -= $amount;
+            $senderAccount->save();
+
+            $receiverAccount->available_balance += $amount;
+            $receiverAccount->account_balance += $amount;
+            $receiverAccount->save();
+
+            // Calculate USD equivalent
             $exchangerate = $this->exchangeRateService->getByCurrency($currency);
-            //exchange rate can throw error if not found so handle it
-            $amount_usd = null;
-            if ($exchangerate) {
-                $amount_usd = $amount * $exchangerate->rate_usd;
-            }
-            $transcation = $this->transactionService->create(data: [
+            $amountUsd = $exchangerate ? $amount * $exchangerate->rate_usd : null;
+
+            // Generate a reference
+            $reference = strtoupper(Str::random(16));
+
+            // Record sender transaction
+            $senderTransaction = $this->transactionService->create([
                 'type' => 'send',
                 'amount' => $amount,
                 'currency' => $currency,
-                'status' => $status,
+                'status' => 'completed',
                 'network' => $network,
-                'reference' => $txId,
+                'reference' => $reference,
                 'user_id' => $sender->id,
-                'amount_usd' => $amount_usd
+                'amount_usd' => $amountUsd
             ]);
+
             TransactionSend::create([
                 'transaction_type' => 'internal',
-                'sender_virtual_account_id' => $senderAccountId,
-                'receiver_virtual_account_id' => $receiverAccountId,
+                'sender_virtual_account_id' => $senderAccount->account_id,
+                'receiver_virtual_account_id' => $receiverAccount->account_id,
                 'sender_address' => null,
-                'user_id' => $sender->id ?? null,
-                'receiver_id' => $receiver->id ?? null,
-                'receiver_address' => $receiverDepositAddress,
+                'user_id' => $sender->id,
+                'receiver_id' => $receiver->id,
+                'receiver_address' => $receiverDepositAddress->address ?? null,
                 'amount' => $amount,
                 'currency' => $currency,
-                'tx_id' => $txId,
-                'block_height' => null,
-                'block_hash' => null,
-                'gas_fee' => null,
-                'status' => $status,
+                'tx_id' => $reference,
+                'status' => 'completed',
                 'blockchain' => $network,
-                'transaction_id' => $transcation->id
+                'transaction_id' => $senderTransaction->id
             ]);
-            //create transactionsend and transaction for receiver too
 
-            $transcationreceived = $this->transactionService->create([
+            // Record receiver transaction
+            $receiverTransaction = $this->transactionService->create([
                 'type' => 'receive',
                 'amount' => $amount,
                 'currency' => $currency,
-                'status' => $status,
+                'status' => 'completed',
                 'network' => $network,
-                'reference' => $txId,
+                'reference' => $reference,
                 'user_id' => $receiver->id,
-                'amount_usd' => $amount_usd
-            ]);
-            TransactionSend::create([
-                'transaction_type' => 'internal',
-                'sender_virtual_account_id' => $senderAccountId,
-                'receiver_virtual_account_id' => $receiverAccountId,
-                'sender_address' => null,
-                'user_id' => $sender->id ?? null,
-                'receiver_id' => $receiver->id ?? null,
-                'receiver_address' => $receiverDepositAddress->address,
-                'amount' => $amount,
-                'currency' => $currency,
-                'tx_id' => $txId,
-                'block_height' => null,
-                'block_hash' => null,
-                'gas_fee' => null,
-                'status' => $status,
-                'blockchain' => $network,
-                'transaction_id' => $transcationreceived->id
+                'amount_usd' => $amountUsd
             ]);
 
-            // Return Data for Controller
-            return ['response' => $response, 'transaction_id' => $transcation->id, ];
+            TransactionSend::create([
+                'transaction_type' => 'internal',
+                'sender_virtual_account_id' => $senderAccount->account_id,
+                'receiver_virtual_account_id' => $receiverAccount->account_id,
+                'sender_address' => null,
+                'user_id' => $sender->id,
+                'receiver_id' => $receiver->id,
+                'receiver_address' => $receiverDepositAddress->address ?? null,
+                'amount' => $amount,
+                'currency' => $currency,
+                'tx_id' => $reference,
+                'status' => 'completed',
+                'blockchain' => $network,
+                'transaction_id' => $receiverTransaction->id
+            ]);
+
+            return [
+                'success' => true,
+                'transaction_id' => $senderTransaction->id,
+                'reference' => $reference,
+            ];
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            Log::error('Internal Transfer Error: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
     public function sendOnChainTransaction(array $data)
     {
         try {
