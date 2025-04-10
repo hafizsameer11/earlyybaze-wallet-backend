@@ -12,6 +12,7 @@ use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -120,6 +121,7 @@ class UserController extends Controller
     {
         try {
             $isBuy = $request->isBuy;
+            Log::info('Is Buy: ' . $isBuy);
             if (!$isBuy) {
                 $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
                 return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
