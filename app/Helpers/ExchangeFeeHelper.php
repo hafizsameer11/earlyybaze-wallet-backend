@@ -25,6 +25,7 @@ class ExchangeFeeHelper
     public static function caclulateFee($amount, $currency, $type, ?string $methode = 'external_transfer', $from = null, $to = null)
     {
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
         if (!$exchangeRate) {
             throw new \Exception('Exchange rate not found');
         }
@@ -81,7 +82,7 @@ class ExchangeFeeHelper
         // 3. Total USD Fee
         $totalFeeUsd = bcadd($platformFeeUsd, $blockchainFeeUsd, 8);
         $totalFeeCurrency = bcdiv($totalFeeUsd, $exchangeRate->rate_usd, 8);
-        $totalFeeNaira = bcmul($totalFeeUsd, $exchangeRate->rate_naira, 8);
+        $totalFeeNaira = bcmul($totalFeeUsd, $nairaExchangeRate->rate, 8);
 
         return [
             'platform_fee_usd' => $platformFeeUsd,
@@ -92,5 +93,4 @@ class ExchangeFeeHelper
             'gas_details' => $gasFeeDetails,
         ];
     }
-
 }
