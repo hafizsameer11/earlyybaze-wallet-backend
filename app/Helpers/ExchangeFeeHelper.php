@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use App\Models\ExchangeRate;
 use App\Models\Fee;
+use App\Models\TransactionFee;
 
 class ExchangeFeeHelper
 {
@@ -22,7 +23,7 @@ class ExchangeFeeHelper
             'amount_naira' => $amountNaira
         ];
     }
-    public static function caclulateFee($amount, $currency, $type, ?string $methode = 'external_transfer', $from = null, $to = null)
+    public static function caclulateFee($amount, $currency, $type, ?string $methode = 'external_transfer', $from = null, $to = null,$userId = null)
     {
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
         $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
@@ -83,6 +84,26 @@ class ExchangeFeeHelper
         $totalFeeUsd = bcadd($platformFeeUsd, $blockchainFeeUsd, 8);
         $totalFeeCurrency = bcdiv($totalFeeUsd, $exchangeRate->rate_usd, 8);
         $totalFeeNaira = bcmul($totalFeeUsd, $nairaExchangeRate->rate, 8);
+        TransactionFee::create([
+            'user_id' => $userId, // or pass user ID as parameter
+            'transaction_type' => $type,
+            'currency' => $currency,
+            'amount' => $amount,
+
+            'platform_fee_usd' => $platformFeeUsd,
+            'blockchain_fee_usd' => $blockchainFeeUsd,
+            'total_fee_usd' => $totalFeeUsd,
+            'fee_currency' => $totalFeeCurrency,
+            'fee_naira' => $totalFeeNaira,
+
+            'gas_limit' => $gasFeeDetails['gas_limit'] ?? null,
+            'gas_price' => $gasFeeDetails['gas_price'] ?? null,
+            'native_fee' => $gasFeeDetails['native_fee'] ?? null,
+            'native_fee_doubled' => $gasFeeDetails['native_fee_doubled'] ?? null,
+            'native_currency' => $gasFeeDetails['native_currency'] ?? null,
+
+            'status' => 'pending',
+        ]);
 
         return [
             'platform_fee_usd' => $platformFeeUsd,

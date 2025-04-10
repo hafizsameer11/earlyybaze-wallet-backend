@@ -10,6 +10,7 @@ use App\Models\WalletCurrency;
 use App\Services\FeeService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class FeeController extends Controller
 {
@@ -70,7 +71,8 @@ class FeeController extends Controller
 
                 $request->methode ?? null,
                 $masterWalletAddress ?? null,
-                $request->to ?? null
+                $request->to ?? null,
+                Auth::user()->id
             );
             return ResponseHelper::success($fee, 'Fee calculated successfully', 200);
         } catch (Exception $e) {
