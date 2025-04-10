@@ -64,10 +64,10 @@ class SwapTransactionRepository
             $user = Auth::user();
 
             // Virtual accounts
-            $adminVirtualAccount = VirtualAccount::where('user_id', $admin->id)
-                ->where('currency', $currency)
-                ->where('blockchain', $network)
-                ->firstOrFail();
+            // $adminVirtualAccount = VirtualAccount::where('user_id', $admin->id)
+            //     ->where('currency', $currency)
+            //     ->where('blockchain', $network)
+            //     ->firstOrFail();
 
             $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
                 ->where('currency', $currency)
@@ -84,8 +84,8 @@ class SwapTransactionRepository
             $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
             $userVirtualAccount->save();
 
-            $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $totalToDeduct, 8);
-            $adminVirtualAccount->save();
+            // $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $totalToDeduct, 8);
+            // $adminVirtualAccount->save();
 
             $userAccount = UserAccount::where('user_id', $user->id)->first();
             if ($userAccount) {
