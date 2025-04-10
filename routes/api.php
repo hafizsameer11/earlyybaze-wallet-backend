@@ -149,9 +149,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
+        Route::get('/get-ngn-exchange-rate', [ExchangeRateController::class, 'getNgNexchangeRate']);
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
-    Route::post('/fee/calculate-fee',[FeeController::class,'calculateFee']);
+    Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
     Route::post('wallet/swap', [TransactionController::class, 'swap']);
