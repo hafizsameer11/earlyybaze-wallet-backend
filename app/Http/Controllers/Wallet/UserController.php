@@ -120,7 +120,7 @@ class UserController extends Controller
     public function allwalletCurrenciesforUser(Request $request)
     {
         try {
-            $isBuy = $request->isBuy;
+            $isBuy = $request->all();
             Log::info('Is Buy: ' . $isBuy);
             if (!$isBuy) {
                 $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
