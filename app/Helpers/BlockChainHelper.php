@@ -500,7 +500,7 @@ class BlockChainHelper
 
         return $tx;
     }
-    public static function estimateGasFee(string $from, string $to, string $amount, string $currency = 'ETH')
+    public static function estimateGasFee(string $from, string $to, string $amount, string $currency, $chain = 'ETH')
     {
         $apiKey = config('tatum.api_key');
         $baseUrl = 'https://api.tatum.io/v4';
@@ -509,15 +509,17 @@ class BlockChainHelper
         $payload = [
             'from' => $from,
             'to' => $to,
-            'chain' => 'ETH',
+            'chain' => $chain,
         ];
 
         $currency = strtoupper($currency);
 
-        if (in_array($currency, ['USDT', 'USDC'])) {
+        if (in_array($currency, ['USDT', 'USDC', 'USDT_BSC', 'USDC_BSC'])) {
             $contractAddresses = [
                 'USDT' => '0xdAC17F958D2ee523a2206206994597C13D831ec7',
                 'USDC' => '0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48',
+                'USDT_BSC' => '0x55d398326f99059fF775485246999027B3197955',
+                'USDC_BSC' => '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
             ];
 
             if (!isset($contractAddresses[$currency])) {

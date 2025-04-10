@@ -26,7 +26,7 @@ class ExchangeRateController extends Controller
     public function store(ExchangeRequest $request)
     {
         try {
-            $exchangeRate = $this->exchangeRateService->create($request->all());
+            $exchangeRate = $this->exchangeRateService->create($request->validated());
             return    ResponseHelper::success($exchangeRate, 'Exchange rate created successfully', 201);
         } catch (\Exception $e) {
             return   ResponseHelper::error($e->getMessage(), 500);
@@ -44,7 +44,7 @@ class ExchangeRateController extends Controller
     public function update(ExchangeRequest $request, $id)
     {
         try {
-            $exchangeRate = $this->exchangeRateService->update($request->all(), $id);
+            $exchangeRate = $this->exchangeRateService->update($request->validated(), $id);
             return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

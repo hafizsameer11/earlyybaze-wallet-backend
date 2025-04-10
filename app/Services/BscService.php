@@ -65,7 +65,6 @@ class BscService
             'amount' => (string) $bufferedAmount,
             'currency' => 'BNB',
         ];
-
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
             ->post(config('tatum.base_url') . '/bsc/transaction', $payload);
 
