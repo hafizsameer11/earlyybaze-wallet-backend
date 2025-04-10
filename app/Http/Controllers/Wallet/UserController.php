@@ -117,10 +117,10 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
-    public function allwalletCurrenciesforUser(Request $request)
+    public function allwalletCurrenciesforUser($isBuy)
     {
         try {
-            $isBuy = $request->all();
+            // $isBuy = $request->all();
             Log::info('Is Buy: ' . $isBuy);
             if (!$isBuy) {
                 $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
