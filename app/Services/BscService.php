@@ -13,19 +13,8 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class EthereumService
+class BscService
 {
-    // use BlockChainHelper;
-
-    /**
-     * Transfer asset from user's virtual account to master wallet.
-     *
-     * @param $virtualAccount
-     * @param $amount
-     * @return array
-     * @throws \Exception
-     */
-
     public function transferToMasterWallet($virtualAccount, $amount)
     {
         $user = $virtualAccount->user;
@@ -35,83 +24,51 @@ class EthereumService
         $fromAddress = $deposit->address;
         $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
-        $masterWallet = MasterWallet::where('blockchain', 'ethereum')->firstOrFail();
+        $masterWallet = MasterWallet::where('blockchain', 'BSC')->firstOrFail();
         $toAddress = $masterWallet->address;
 
-        // 1. Estimate gas
-        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'bsc');
         $originalGasLimit = $gasEstimation['gasLimit'];
-        $minGasPrice = 10000000000; // 10 Gwei
-        $gasPrice = max((int)$gasEstimation['gasPrice'], $minGasPrice);
+        $minGasPrice = 1000000000;
+        $gasPrice = max((int) $gasEstimation['gasPrice'], $minGasPrice);
+        $bufferedGasLimit = ceil($originalGasLimit * 1.3);
 
+        $requiredGasWei = bcmul((string) $gasPrice, (string) $bufferedGasLimit);
+        $requiredGasBNB = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
 
+        $bnbBalance = BlockChainHelper::checkAddressBalance($fromAddress, 'bsc')['balance'];
+        $bnbBalanceFormatted = number_format((float)$bnbBalance, 18, '.', '');
+        $requiredGasFormatted = number_format((float)$requiredGasBNB, 18, '.', '');
 
-        // Apply a 10% buffer to gas limit
-        $bufferedGasLimit = ceil($originalGasLimit * 1.3); // Round up
-
-        $requiredGasWei = bcmul((string)$gasPrice, (string)$bufferedGasLimit);
-        $requiredGasEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
-
-        // 2. Check ETH balance of user address
-        $ethBalance = BlockChainHelper::checkAddressBalance($fromAddress, 'ethereum');
-        $ethBalance = $ethBalance['balance'];
-
-        // Normalize both values to 18 decimals
-        $ethBalanceFormatted = number_format((float)$ethBalance, 18, '.', '');
-        $requiredGasEthFormatted = number_format((float)$requiredGasEth, 18, '.', '');
-
-        Log::info('Gas Check Debug', [
-            'ethBalance' => $ethBalanceFormatted,
-            'requiredGasEth' => $requiredGasEthFormatted,
-            'bufferedGasLimit' => $bufferedGasLimit,
-            'gasPrice' => $gasPrice
-        ]);
-
-        if (bccomp($ethBalanceFormatted, $requiredGasEthFormatted, 18) < 0) {
-            Log::info("ETH balance is insufficient. Initiating gas top-up.");
-
-            // 3. Top-up gas if insufficient
-            $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEthFormatted);
+        if (bccomp($bnbBalanceFormatted, $requiredGasFormatted, 18) < 0) {
+            $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasFormatted);
             $txDetails = $this->getTransactionDetailsWithPolling($tx['txId']);
-            Log::info('Gas top-up transaction details', [
-                'txId' => $tx['txId'],
-                'txDetails' => $txDetails,
-            ]);
 
             if (!($txDetails['status'] ?? false)) {
                 throw new \Exception("Gas top-up failed. Cannot proceed.");
             }
-            $this->logActualGasFee($user->id, $tx['txId'], 'ETH', 'gas-topup');
-        } else {
-            Log::info("ETH balance is sufficient. Proceeding with asset transfer.");
+
+            $this->logActualGasFee($user->id, $tx['txId'], 'BNB', 'gas-topup');
         }
 
         return $this->executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet);
     }
 
-
-
-    public function topUpUserForGas($masterWallet, $toAddress, $requiredGasEth)
+    public function topUpUserForGas($masterWallet, $toAddress, $requiredGasBNB)
     {
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
-        Log::info('Top-up for gas initiated', [
-            'fromPrivateKey' => $fromPrivateKey,
-            'toAddress' => $toAddress,
-            'requiredGasEth' => $requiredGasEth,
-            'masterWallet' => $masterWallet,
-        ]);
-        $bufferedAmount = bcadd($requiredGasEth, '0.0002', 18);
+        $bufferedAmount = bcadd($requiredGasBNB, '0.0002', 18);
 
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
             'amount' => (string) $bufferedAmount,
-            'currency' => 'ETH',
+            'currency' => 'BNB',
         ];
 
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-            ->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-        Log::info('Top-up response: for address ' . $toAddress, ['response' => $response->json()]);
+            ->post(config('tatum.base_url') . '/bsc/transaction', $payload);
+
         if ($response->failed()) {
             throw new \Exception("Top-up failed: " . $response->body());
         }
@@ -123,12 +80,10 @@ class EthereumService
     {
         for ($i = 0; $i < $maxRetries; $i++) {
             $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-                ->get(config('tatum.base_url') . "/ethereum/transaction/{$txHash}");
+                ->get(config('tatum.base_url') . "/bsc/transaction/{$txHash}");
 
             if ($response->ok()) {
                 $data = $response->json();
-
-                // If status true or false, return immediately
                 if (isset($data['status'])) {
                     return $data;
                 }
@@ -143,7 +98,7 @@ class EthereumService
     public function getTransactionDetails($txHash)
     {
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-            ->get(config('tatum.base_url') . "/ethereum/transaction/{$txHash}");
+            ->get(config('tatum.base_url') . "/bsc/transaction/{$txHash}");
 
         if ($response->failed()) {
             throw new \Exception("Failed to fetch tx details: " . $response->body());
@@ -154,9 +109,9 @@ class EthereumService
 
     public function executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet)
     {
-        $gasfee = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);
-        $gasLimit = (int) $gasfee['gasLimit'] + 70000;
-        $gasPriceGwei = (string) max(1, intval(ceil(intval($gasfee['gasPrice']) / 1e9)));
+        $gasFee = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'bsc');
+        $gasLimit = (int)$gasFee['gasLimit'] + 70000;
+        $gasPriceGwei = (string) max(1, intval(ceil(intval($gasFee['gasPrice']) / 1e9)));
 
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
@@ -164,15 +119,14 @@ class EthereumService
             'amount' => (string) $amount,
             'currency' => $currency,
             'fee' => [
-                'gasLimit' => (string) $gasLimit,
-                'gasPrice' => $gasPriceGwei
+                'gasLimit' => (string)$gasLimit,
+                'gasPrice' => $gasPriceGwei,
             ]
         ];
 
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-            ->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-        //log response
-        Log::info('Transfer response: for address ' . $toAddress, ['response' => $response->json()]);
+            ->post(config('tatum.base_url') . '/bsc/transaction', $payload);
+
         if ($response->failed()) {
             throw new \Exception("Transfer failed: " . $response->body());
         }
@@ -183,7 +137,7 @@ class EthereumService
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
-            'blockchain' => 'ethereum',
+            'blockchain' => 'bsc',
             'currency' => $currency,
             'to_address' => $toAddress,
             'amount' => $amount,
@@ -204,35 +158,34 @@ class EthereumService
 
         if ($gasUsed && $gasPrice) {
             $feeWei = bcmul($gasUsed, $gasPrice);
-            $feeEth = bcdiv($feeWei, bcpow('10', '18'), 18);
+            $feeBnb = bcdiv($feeWei, bcpow('10', '18'), 18);
 
             GasFeeLog::create([
                 'user_id' => $userId,
-                'blockchain' => 'ethereum',
-                'estimated_fee' => $feeEth,
+                'blockchain' => 'bsc',
+                'estimated_fee' => $feeBnb,
                 'fee_currency' => $currency,
                 'tx_type' => $type,
                 'tx_hash' => $txHash,
             ]);
         }
     }
-    public function transferToExternalAddress($user, string $toAddress, string $amount, string $currency = 'ETH', array $fee = [])
-    {
-        $blockchain = 'ETHEREUM';
-        $currency = strtoupper($currency);
-        $feeAmount = 0; // Placeholder if you're calculating this dynamically later
 
-        // 1. Get user's virtual account ID
+    public function transferToExternalAddress($user, string $toAddress, string $amount, string $currency = 'BNB', array $fee = [])
+    {
+        $blockchain = 'BSC';
+        $currency = strtoupper($currency);
+        $feeAmount = 0;
+
         $ledgerAccountId = $user->virtualAccounts()
             ->where('blockchain', $blockchain)
             ->where('currency', $currency)
             ->value('account_id');
 
         if (!$ledgerAccountId) {
-            throw new \Exception("User ledger account not found for $currency on $blockchain.");
+            throw new \Exception("User ledger account not found.");
         }
 
-        // 2. Initiate offchain withdrawal (reserve funds in Tatum ledger)
         $withdrawalResponse = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
@@ -249,7 +202,6 @@ class EthereumService
 
         $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
 
-        // 3. Decrypt master wallet to broadcast transaction
         $masterWallet = MasterWallet::where('blockchain', $blockchain)->firstOrFail();
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
 
@@ -267,13 +219,11 @@ class EthereumService
             ];
         }
 
-        // 4. Broadcast transaction
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
+        ])->post(config('tatum.base_url') . '/bsc/transaction', $payload);
 
         if ($response->failed()) {
-            // Rollback reserved ledger funds
             if ($withdrawalId) {
                 Http::withHeaders(['x-api-key' => config('tatum.api_key')])
                     ->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
@@ -283,14 +233,12 @@ class EthereumService
 
         $txHash = $response->json()['txId'] ?? null;
 
-        // 5. Mark withdrawal as complete
         if ($withdrawalId && $txHash) {
             Http::withHeaders([
                 'x-api-key' => config('tatum.api_key'),
             ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
         }
 
-        // 6. Create ledger & master wallet logs
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
@@ -318,107 +266,88 @@ class EthereumService
             'total' => $amount,
         ];
     }
-    public function getEthereumMasterBalances()
+
+    public function getBscMasterBalances()
     {
-        $masterWallet = MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+        $masterWallet = MasterWallet::where('blockchain', 'BSC')->firstOrFail();
         $address = $masterWallet->address;
 
-        // Get all ERC-20 tokens configured for Ethereum
-        $tokens = WalletCurrency::where('blockchain', 'ETHEREUM')
+        $tokens = WalletCurrency::where('blockchain', 'BSC')
             ->where('is_token', true)
             ->get();
-        $ethResponse = Http::withHeaders([
-            'x-api-key' => config('tatum.api_key'),
-        ])->get(config('tatum.base_url') . "/ethereum/account/balance/{$address}");
 
-        if ($ethResponse->failed()) {
-            throw new \Exception("Failed to fetch ETH balance: " . $ethResponse->body());
+        $bnbResponse = Http::withHeaders([
+            'x-api-key' => config('tatum.api_key'),
+        ])->get(config('tatum.base_url') . "/bsc/account/balance/{$address}");
+
+        if ($bnbResponse->failed()) {
+            throw new \Exception("Failed to fetch BNB balance: " . $bnbResponse->body());
         }
 
-        $ethBalance = $ethResponse->json()['balance'] ?? '0';
+        $bnbBalance = $bnbResponse->json()['balance'] ?? '0';
 
-        // 2. Get ERC-20 token balances
         $tokenBalances = [];
 
         foreach ($tokens as $token) {
-            Log::info('Fetching token balance for ' . $token->currency);
-            $payload = ['chain' => 'ETH'];
-            $tokenResponse = Http::withHeaders([
-                'x-api-key' => config('tatum.api_key'),
-            ])->get(config('tatum.base_url') . "/blockchain/token/balance/ETH/{$token->contract_address}/{$address}");
+            $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
+                ->get(config('tatum.base_url') . "/blockchain/token/balance/BSC/{$token->contract_address}/{$address}");
 
-            if ($tokenResponse->ok()) {
-                $balance = $tokenResponse->json()['balance'] ?? '0';
-                $tokenBalances[$token->currency] = $balance;
-            } else {
-                $tokenBalances[$token->currency] = 'Error: ' . $tokenResponse->status();
-            }
+            $tokenBalances[$token->currency] = $response->ok()
+                ? $response->json()['balance'] ?? '0'
+                : 'Error: ' . $response->status();
         }
 
         return [
             'address' => $address,
-            'eth_balance' => $ethBalance,
+            'bnb_balance' => $bnbBalance,
             'token_balances' => $tokenBalances,
         ];
     }
 
-    public function transferFromMasterToUserETH(string $toAddress, string $amount, string $currency, ?array $fee = null)
+    public function transferFromMasterToUserBSC(string $toAddress, string $amount, string $currency, ?array $fee = null)
     {
         $currency = strtoupper($currency);
 
-        // 1. Get master wallet
-        $masterWallet = MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
+        $masterWallet = MasterWallet::where('blockchain', 'BSC')->firstOrFail();
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
         $fromAddress = $masterWallet->address;
 
-        // 2. Validate WalletCurrency
         $walletCurrency = WalletCurrency::where([
-            'blockchain' => 'ETHEREUM',
+            'blockchain' => 'BSC',
             'currency' => $currency,
         ])->firstOrFail();
 
-        // 3. Estimate gas fee
-        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'bsc');
         $originalGasLimit = $gasEstimation['gasLimit'];
-        $minGasPrice = 1000000000; // 1 Gwei
+        $minGasPrice = 1000000000;
         $gasPrice = max((int) $gasEstimation['gasPrice'], $minGasPrice);
-        $bufferedGasLimit = ceil($originalGasLimit * 1.3); // Apply 30% buffer
+        $bufferedGasLimit = ceil($originalGasLimit * 1.3);
 
         $requiredGasWei = bcmul((string)$gasPrice, (string)$bufferedGasLimit);
-        $requiredGasEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+        $requiredGasBNB = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
 
-        Log::info('Gas estimation for transfer from master to user', [
+        Log::info('Gas estimation for BSC transfer', [
             'from' => $fromAddress,
             'to' => $toAddress,
             'currency' => $currency,
-            'originalGasLimit' => $originalGasLimit,
             'bufferedGasLimit' => $bufferedGasLimit,
             'gasPrice' => $gasPrice,
-            'requiredGasWei' => $requiredGasWei,
-            'requiredGasEth' => $requiredGasEth,
+            'requiredGasBNB' => $requiredGasBNB,
         ]);
 
-        // 4. Build payload
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
-            'amount' => (string) $amount,
+            'amount' => (string)$amount,
             'currency' => $currency,
             'fee' => [
-                'gasLimit' => (string) ($fee['gasLimit'] ?? $bufferedGasLimit),
-                'gasPrice' => (string) ($fee['gasPrice'] ?? $gasPrice),
+                'gasLimit' => (string)($fee['gasLimit'] ?? $bufferedGasLimit),
+                'gasPrice' => (string)($fee['gasPrice'] ?? $gasPrice),
             ]
         ];
 
-        // 5. Call the Tatum API
-        $response = Http::withHeaders([
-            'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-
-        // 6. Log response
-        Log::info('Transfer response: for address ' . $toAddress, [
-            'response' => $response->json(),
-        ]);
+        $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
+            ->post(config('tatum.base_url') . '/bsc/transaction', $payload);
 
         if ($response->failed()) {
             throw new \Exception("Transfer failed: " . $response->body());
@@ -430,7 +359,7 @@ class EthereumService
             'to' => $toAddress,
             'amount' => $amount,
             'currency' => $currency,
-            'estimatedGasEth' => $requiredGasEth,
+            'estimatedGasBNB' => $requiredGasBNB,
         ];
     }
 }
