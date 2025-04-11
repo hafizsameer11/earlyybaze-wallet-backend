@@ -7,6 +7,7 @@ use App\Models\DepositAddress;
 use App\Models\ExchangeRate;
 use App\Models\MasterWallet;
 use App\Models\VirtualAccount;
+use App\Models\WalletCurrency;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -68,7 +69,7 @@ class ExchangeRateRepository
     }
     public function calculateExchangeRate($currency, $amount, $type = null, $to = null)
     {
-        Log::info("data received",[
+        Log::info("data received", [
             'currency' => $currency,
             'amount' => $amount,
             'type' => $type,
@@ -88,13 +89,9 @@ class ExchangeRateRepository
             if ($isEmail) {
                 $from = Auth::user()->email;
             } else {
-                $virtualAccount = VirtualAccount::where('user_id', Auth::user()->id)->where('currency', $currency)->first();
-                if ($virtualAccount) {
-                    $from = MasterWallet::where('currency', $currency)->first();
-                    $from = $from->address;
-                } else {
-                    throw new \Exception('Virtual account not found');
-                }
+                $walletCurrency = WalletCurrency::where('currency', $currency)->first();
+                $from = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
+                $from = $from->address;
                 // $from=
             }
 
