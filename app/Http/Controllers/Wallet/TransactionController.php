@@ -34,7 +34,7 @@ class TransactionController extends Controller
     {
         try {
             $transaction="";
-            Log::info("Internal Transafer request",$request->validated());
+            Log::info("Internal Transafer request",$request->all());
             // $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
             // if (isset($transaction['success']) &&  $transaction['success'] == false) {
 
