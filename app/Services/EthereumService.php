@@ -216,7 +216,7 @@ class EthereumService
     }
     public function transferToExternalAddress($user, string $toAddress, string $amount, string $currency = 'ETH', array $fee = [])
     {
-        $blockchain = 'ETHEREUM';
+        $blockchain = 'ethereum';
         $currency = strtoupper($currency);
 
         // 1. Decrypt master wallet

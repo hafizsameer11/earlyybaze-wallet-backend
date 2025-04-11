@@ -84,7 +84,7 @@ class TransactionSendRepository
             $network = $data['network'];
             $email = $data['email'];
             $amount = $data['amount'];
-
+            $sendingType = $data['sending_type'];
             $receiver = User::where('email', $email)->first();
             if (!$receiver) {
                 return ['success' => false, 'error' => 'Receiver not found'];

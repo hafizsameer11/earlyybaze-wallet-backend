@@ -24,7 +24,13 @@ class TransactionSend extends Model
         'blockchain',
         'user_id',
         'receiver_id',
-        'transaction_id'
+        'transaction_id',
+        'original_amount',
+        'amount_after_fee',
+        'network_fee',
+        'platform_fee',
+        'fee_summary',
+        'fee_actual_transaction'
     ];
     public function user()
     {
