@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\BlockChainHelper;
 use App\Helpers\ExchangeFeeHelper;
 use App\Models\FailedMasterTransfer;
+use App\Models\MasterWallet;
 use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
@@ -31,7 +32,12 @@ class WebhookController extends Controller
     public function webhook(Request $request)
     {
         Log::info($request->all());
-
+        $from = $request->from;
+        $masterwallet = MasterWallet::where('address', $from)->first();
+        if ($masterwallet) {
+            Log::info('Master wallet found webhook  is ignored because that is a topup', ['address' => $from]);
+            return response()->json(['message' => 'Webhook received'], 200);
+        }
         // Early exit if reference already exists
         if (WebhookResponse::where('reference', $request->reference)->exists()) {
             return response()->json(['message' => 'Duplicate reference. Webhook ignored.'], 200);
