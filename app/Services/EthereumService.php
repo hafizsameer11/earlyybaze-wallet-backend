@@ -242,7 +242,8 @@ class EthereumService
         // 4. Calculate gas fee in ETH
         $requiredGasWei = bcmul((string) $gasPrice, (string) $gasLimit);
         $gasFeeEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
-    
+        $amount = number_format((float) $amount, 4, '.', '');
+
         // 5. Prepare the payload for blockchain transaction
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
