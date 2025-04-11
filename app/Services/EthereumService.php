@@ -124,11 +124,9 @@ class EthereumService
         for ($i = 0; $i < $maxRetries; $i++) {
             $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
                 ->get(config('tatum.base_url') . "/ethereum/transaction/{$txHash}");
-            Log::info('Transaction details response',$response->json());
+            Log::info('Transaction details response', $response->json());
             if ($response->ok()) {
                 $data = $response->json();
-
-
                 if (isset($data['status'])) {
                     return $data;
                 }
