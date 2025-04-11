@@ -47,7 +47,7 @@ class TransactionController extends Controller
             } else {
                 $user = Auth::user();
                 if ($validated['network'] == 'ethereum') {
-                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee']);
+                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee'], $validated['currency']);
                     Log::info('External Transfer Transaction', $transaction);
                     $senderTransaction = $this->transactionService->create([
                         'type' => 'send',
@@ -78,7 +78,7 @@ class TransactionController extends Controller
                         'platform_fee' => $validated['fee_summary']['platform_fee_usd'],
                         'network_fee' => $validated['fee_summary']['network_fee_usd'],
                         'fee_summary' => json_encode($validated['fee_summary']),
-                        'fee_actual_transaction'=>$transaction['fee']
+                        'fee_actual_transaction' => $transaction['fee']
                     ]);
 
                     // Record receiver transaction
@@ -86,11 +86,12 @@ class TransactionController extends Controller
                 }
             }
 
-            $transaction['transaction_id']=$senderTransaction->id;
-            $transaction['refference']=$transaction['txHash'];
-            $transaction['amount']=$validated['fee_summary']['amount_after_fee'];
-            $transacton['currency']=$validated['currency'];
-            Log:info('Transaction Sendiind datya to backend', $transaction);
+            $transaction['transaction_id'] = $senderTransaction->id;
+            $transaction['refference'] = $transaction['txHash'];
+            $transaction['amount'] = $validated['fee_summary']['amount_after_fee'];
+            $transacton['currency'] = $validated['currency'];
+            Log:
+            info('Transaction Sendiind datya to backend', $transaction);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             Log::error("Error in Internal Transfer: " . $e->getMessage());
