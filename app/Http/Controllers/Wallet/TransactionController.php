@@ -47,7 +47,7 @@ class TransactionController extends Controller
             } else {
                 $user = Auth::user();
                 if ($validated['network'] == 'ethereum') {
-                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['amount_after_fee']);
+                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee']);
                     Log::info('External Transfer Transaction', $transaction);
                     $senderTransaction = $this->transactionService->create([
                         'type' => 'send',
@@ -67,7 +67,7 @@ class TransactionController extends Controller
                         'user_id' => $user->id,
 
                         'receiver_address' => $validated['email'],
-                        'amount' => $validated['amount_after_fee'],
+                        'amount' => $validated['fee_summary']['amount_after_fee'],
                         'currency' => $validated['currency'],
                         'tx_id' => $transaction['txHash'],
                         'status' => 'completed',
@@ -88,7 +88,7 @@ class TransactionController extends Controller
 
             $transaction['transaction_id']=$senderTransaction->id;
             $transaction['refference']=$transaction['txHash'];
-            $transaction['amount']=$validated['amount_after_fee'];
+            $transaction['amount']=$validated['fee_summary']['amount_after_fee'];
             $transacton['currency']=$validated['currency'];
             Log:info('Transaction Sendiind datya to backend', $transaction);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
