@@ -73,7 +73,7 @@ class WebhookController extends Controller
             Log::info("cirtual account", ['account' => $account]);
             $blockChain = $account->blockchain;
             $tx= null;
-            if ($blockChain === 'ethereum') {
+            if ($blockChain === 'Ethereum') {
                 $tx =  $this->EthService->transferToMasterWallet($account, $request->amount);
             }
             Log::info('Transfer to master wallet initiated', ['tx' => $tx]);
