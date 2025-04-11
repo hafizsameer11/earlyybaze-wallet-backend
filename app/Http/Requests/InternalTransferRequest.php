@@ -25,7 +25,7 @@ class InternalTransferRequest extends FormRequest
         return [
             'currency' => 'required|string',
             'network' => 'required|string',
-            'email' => 'nullable|email',
+            'email' => 'nullable',
             'address' => 'nullable|string',
             'amount' => 'required|numeric',
 
