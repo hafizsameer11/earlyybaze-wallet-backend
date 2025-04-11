@@ -63,6 +63,6 @@ class ExchangeRateService
     }
     public function calculateExchangeRate($currency, $amount, $type = null,$to=null)
     {
-        return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type);
+        return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type,$to);
     }
 }
