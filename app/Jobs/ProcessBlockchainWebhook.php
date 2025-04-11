@@ -80,7 +80,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
 
         // Optional balance update (depending on your flow)
         $account->available_balance += $amount;
-        // $account->save();
+        $account->save();
 
         $exchangeRate = ExchangeFeeHelper::caclulateExchangeRate($amount, $currency);
         $amountUsd = $exchangeRate['amount_usd'];
