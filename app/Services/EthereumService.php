@@ -124,17 +124,17 @@ class EthereumService
         for ($i = 0; $i < $maxRetries; $i++) {
             $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
                 ->get(config('tatum.base_url') . "/ethereum/transaction/{$txHash}");
-
+            Log::info('Transaction details response',$response->json());
             if ($response->ok()) {
                 $data = $response->json();
 
-                // If status true or false, return immediately
+
                 if (isset($data['status'])) {
                     return $data;
                 }
             }
 
-            sleep($delaySeconds);
+            // sleep($delaySeconds);
         }
 
         throw new \Exception("Transaction not confirmed within timeout.");
