@@ -17,6 +17,7 @@ use App\Services\TransactionSendService;
 use App\Services\transactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
@@ -33,7 +34,7 @@ class TransactionController extends Controller
     {
         try {
             $transaction="";
-            Log::info("Internal Transafer request",request->validated());
+            Log::info("Internal Transafer request",$request->validated());
             // $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
             // if (isset($transaction['success']) &&  $transaction['success'] == false) {
 
