@@ -8,6 +8,7 @@ use App\Models\ExchangeRate;
 use App\Models\MasterWallet;
 use App\Models\VirtualAccount;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ExchangeRateRepository
 {
@@ -67,6 +68,12 @@ class ExchangeRateRepository
     }
     public function calculateExchangeRate($currency, $amount, $type = null, $to = null)
     {
+        Log::info("data received",[
+            'currency' => $currency,
+            'amount' => $amount,
+            'type' => $type,
+            'to' => $to
+        ]);
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
         if (!$exchangeRate) {
             throw new \Exception('Exchange rate not found');
@@ -76,7 +83,7 @@ class ExchangeRateRepository
         $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8);
 
         $feeSummary = null;
-        if ($type === 'send' && $to) {
+        if ($type == 'send' && $to) {
             $isEmail = filter_var($to, FILTER_VALIDATE_EMAIL);
             if ($isEmail) {
                 $from = Auth::user()->email;
