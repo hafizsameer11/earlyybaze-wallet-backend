@@ -95,8 +95,7 @@ Route::prefix('auth')->group(function () {
 
 });
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
-Route::post('/user/verify-pin', [UserController::class, 'ver
-ifyPin']);
+Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
