@@ -132,7 +132,7 @@ class EthereumService
                 }
             }
 
-            // sleep($delaySeconds);
+            sleep($delaySeconds);
         }
 
         throw new \Exception("Transaction not confirmed within timeout.");
