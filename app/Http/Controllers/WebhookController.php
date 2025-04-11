@@ -70,7 +70,9 @@ class WebhookController extends Controller
 
         // Trigger transfer to master wallet
         try {
+            Log::info("cirtual account", ['account' => $account]);
             $blockChain = $account->blockchain;
+            $tx= null;
             if ($blockChain === 'ethereum') {
                 $tx =  $this->EthService->transferToMasterWallet($account, $request->amount);
             }
