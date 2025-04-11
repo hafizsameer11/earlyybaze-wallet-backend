@@ -21,21 +21,21 @@ class InternalTransferRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-{
-    return [
-        'currency' => 'required|string',
-        'network' => 'required|string',
-        'email' => 'required|email',
-        'amount' => 'required|numeric',
+    {
+        return [
+            'currency' => 'required|string',
+            'network' => 'required|string',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'amount' => 'required|numeric',
 
-        // Optional nested fee summary validation (when type === send)
-        'fee_summary' => 'nullable|array',
-        'fee_summary.platform_fee_usd' => 'required_with:fee_summary|numeric',
-        'fee_summary.network_fee_usd' => 'required_with:fee_summary|numeric',
-        'fee_summary.total_fee_usd' => 'required_with:fee_summary|numeric',
-        'fee_summary.amount_after_fee' => 'required_with:fee_summary|numeric',
-    ];
-}
+            'fee_summary' => 'nullable|array',
+            'fee_summary.platform_fee_usd' => 'required_with:fee_summary|numeric',
+            'fee_summary.network_fee_usd' => 'required_with:fee_summary|numeric',
+            'fee_summary.total_fee_usd' => 'required_with:fee_summary|numeric',
+            'fee_summary.amount_after_fee' => 'required_with:fee_summary|numeric',
+        ];
+    }
 
     public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
