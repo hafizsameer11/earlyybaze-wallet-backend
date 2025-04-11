@@ -218,43 +218,48 @@ class EthereumService
     {
         $blockchain = 'ethereum';
         $currency = strtoupper($currency);
-
+    
         // 1. Decrypt master wallet
         $masterWallet = MasterWallet::where('blockchain', $blockchain)->firstOrFail();
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
         $fromAddress = $masterWallet->address;
-
-        // 2. Estimate gas fee
+    
+        // 2. Estimate gas fee properly
         $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'ETH');
-        $gasLimit = $fee['gasLimit'] ?? ceil($gasEstimation['gasLimit'] * 1.3);
-        $gasPrice = $fee['gasPrice'] ?? $gasEstimation['gasPrice'];
-        $gasFeeEth = bcdiv(bcmul((string) $gasPrice, (string) $gasLimit), bcpow('10', '18'), 18); // In ETH
-
-        // Optional: You can deduct gasFeeEth here from master if you’re tracking master balance
-
-        // 3. Broadcast transaction
+    
+        $originalGasLimit = (int) ($gasEstimation['gasLimit'] ?? 21000);
+        $estimatedGasPrice = (int) ($gasEstimation['gasPrice'] ?? 10000000000); // default to 10 gwei
+        $minGasPrice = 10000000000; // 10 Gwei
+        $gasPrice = isset($fee['gasPrice']) ? (int) $fee['gasPrice'] : max($estimatedGasPrice, $minGasPrice);
+        $gasLimit = isset($fee['gasLimit']) ? (int) $fee['gasLimit'] : (int) ceil($originalGasLimit * 1.3); // 30% buffer
+    
+        // 3. Calculate gas fee in ETH
+        $requiredGasWei = bcmul((string) $gasPrice, (string) $gasLimit);
+        $gasFeeEth = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+    
+        // 4. Broadcast transaction
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
             'amount' => (string)$amount,
             'currency' => $currency,
             'fee' => [
-                'gasLimit' => (string)$gasLimit,
-                'gasPrice' => (string)$gasPrice,
+                'gasLimit' => (string) $gasLimit,
+                'gasPrice' => (string) $gasPrice,
             ]
         ];
-
+    
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
-
+    
         if ($response->failed()) {
             throw new \Exception("Blockchain transaction failed: " . $response->body());
         }
-
+    
         $txHash = $response->json()['txId'] ?? null;
-
-        // 4. Log Master Wallet Transaction
+    
+        // 5. Log Master Wallet Transaction
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
@@ -265,8 +270,8 @@ class EthereumService
             'fee' => $gasFeeEth,
             'tx_hash' => $txHash,
         ]);
-
-        // 5. Update Ledger
+    
+        // 6. Update Ledger
         Ledger::create([
             'user_id' => $user->id,
             'type' => 'withdrawal',
@@ -275,7 +280,7 @@ class EthereumService
             'amount' => $amount,
             'tx_hash' => $txHash,
         ]);
-
+    
         return [
             'txHash' => $txHash,
             'sent' => $amount,
@@ -283,6 +288,7 @@ class EthereumService
             'total' => $amount,
         ];
     }
+    
 
     public function getEthereumMasterBalances()
     {
