@@ -249,10 +249,7 @@ class EthereumService
             'to' => $toAddress,
             'amount' => (string) $amount,
             'currency' => $currency,
-            'fee' => [
-                'gasLimit' => (string) $gasLimit,
-                'gasPrice' => (string) $gasPrice,
-            ]
+            
         ];
     
         // 6. Send transaction using Tatum API
