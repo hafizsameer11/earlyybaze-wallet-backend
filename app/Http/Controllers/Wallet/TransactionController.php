@@ -33,18 +33,31 @@ class TransactionController extends Controller
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
         try {
-            $transaction="";
-            Log::info("Internal Transafer request",$request->all());
-            // $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
-            // if (isset($transaction['success']) &&  $transaction['success'] == false) {
-
-            //     return ResponseHelper::error($transaction['error'], 500);
-            // }
-            return   ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
+            Log::info("Internal Transfer request", $request->validated());
+    
+            $validated = $request->validated();
+    
+            // ✅ Determine sending type (email vs address)
+            $sendingType = filter_var($validated['email'], FILTER_VALIDATE_EMAIL) ? 'internal' : 'external';
+    
+            // 🔹 You can now use $sendingType for branching or logging
+            Log::info("Detected Sending Type: $sendingType");
+    
+            // 🔁 Example of passing to service:
+            // $transaction = $this->transactionSendService->sendInternalTransaction(array_merge($validated, ['sending_type' => $sendingType]));
+    
+            $transaction = [
+                'sending_type' => $sendingType,
+                'data' => $validated,
+            ];
+    
+            return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
+    
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    
     public function getSendTransactionforUser()
     {
         try {
