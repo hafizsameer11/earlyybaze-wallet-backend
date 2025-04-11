@@ -274,7 +274,7 @@ class UserService
             throw new Exception('Get wallet currencies failed. ' . $e->getMessage());
         }
     }
-    public function updateUserProfile(array $data,$userId): ?User
+    public function updateUserProfile(array $data, $userId): ?User
     {
         try {
             // $user = Auth::user();

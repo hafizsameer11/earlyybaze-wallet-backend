@@ -102,7 +102,7 @@ class ExchangeRateRepository
                 $isEmail ? null : 'external_transfer',
                 $from,
                 $to,
-                auth()->id() // You may pass user ID dynamically if required
+                auth()->id()
             );
 
             $feeSummary = [

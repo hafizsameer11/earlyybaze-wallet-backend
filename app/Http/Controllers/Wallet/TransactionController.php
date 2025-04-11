@@ -32,11 +32,13 @@ class TransactionController extends Controller
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
         try {
-            $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
-            if (isset($transaction['success']) &&  $transaction['success'] == false) {
+            $transaction="";
+            Log::info("Internal Transafer request",request->validated());
+            // $transaction = $this->transactionSendService->sendInternalTransaction($request->validated());
+            // if (isset($transaction['success']) &&  $transaction['success'] == false) {
 
-                return ResponseHelper::error($transaction['error'], 500);
-            }
+            //     return ResponseHelper::error($transaction['error'], 500);
+            // }
             return   ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
