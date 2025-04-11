@@ -60,7 +60,9 @@ class ExchangeRateController extends Controller
         try {
             $amount = $request->amount;
             $currency = $request->currency;
-            $exchangeRate = $this->exchangeRateService->calculateExchangeRate($currency, $amount);
+            $type = $request->type;
+            $to = $request->to;
+            $exchangeRate = $this->exchangeRateService->calculateExchangeRate($currency, $amount, $type, $to);
             return    ResponseHelper::success($exchangeRate, 'Exchange rate calculated successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

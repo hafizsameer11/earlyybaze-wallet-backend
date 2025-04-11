@@ -218,77 +218,43 @@ class EthereumService
     {
         $blockchain = 'ETHEREUM';
         $currency = strtoupper($currency);
-        $feeAmount = 0; // Placeholder if you're calculating this dynamically later
 
-        // 1. Get user's virtual account ID
-        $ledgerAccountId = $user->virtualAccounts()
-            ->where('blockchain', $blockchain)
-            ->where('currency', $currency)
-            ->value('account_id');
-
-        if (!$ledgerAccountId) {
-            throw new \Exception("User ledger account not found for $currency on $blockchain.");
-        }
-
-        // 2. Initiate offchain withdrawal (reserve funds in Tatum ledger)
-        $withdrawalResponse = Http::withHeaders([
-            'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
-            'senderAccountId' => $ledgerAccountId,
-            'address' => $toAddress,
-            'amount' => (string)$amount,
-            'fee' => (string)$feeAmount,
-            'attr' => 'Withdrawal to external wallet',
-        ]);
-
-        if ($withdrawalResponse->failed()) {
-            throw new \Exception("Ledger withdrawal failed: " . $withdrawalResponse->body());
-        }
-
-        $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
-
-        // 3. Decrypt master wallet to broadcast transaction
+        // 1. Decrypt master wallet
         $masterWallet = MasterWallet::where('blockchain', $blockchain)->firstOrFail();
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
+        $fromAddress = $masterWallet->address;
 
+        // 2. Estimate gas fee
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'ETH');
+        $gasLimit = $fee['gasLimit'] ?? ceil($gasEstimation['gasLimit'] * 1.3);
+        $gasPrice = $fee['gasPrice'] ?? $gasEstimation['gasPrice'];
+        $gasFeeEth = bcdiv(bcmul((string) $gasPrice, (string) $gasLimit), bcpow('10', '18'), 18); // In ETH
+
+        // Optional: You can deduct gasFeeEth here from master if you’re tracking master balance
+
+        // 3. Broadcast transaction
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
             'amount' => (string)$amount,
             'currency' => $currency,
+            'fee' => [
+                'gasLimit' => (string)$gasLimit,
+                'gasPrice' => (string)$gasPrice,
+            ]
         ];
 
-        if (!empty($fee)) {
-            $payload['fee'] = [
-                'gasLimit' => (string)$fee['gasLimit'],
-                'gasPrice' => (string)$fee['gasPrice'],
-            ];
-        }
-
-        // 4. Broadcast transaction
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/ethereum/transaction', $payload);
 
         if ($response->failed()) {
-            // Rollback reserved ledger funds
-            if ($withdrawalId) {
-                Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-                    ->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
-            }
             throw new \Exception("Blockchain transaction failed: " . $response->body());
         }
 
         $txHash = $response->json()['txId'] ?? null;
 
-        // 5. Mark withdrawal as complete
-        if ($withdrawalId && $txHash) {
-            Http::withHeaders([
-                'x-api-key' => config('tatum.api_key'),
-            ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
-        }
-
-        // 6. Create ledger & master wallet logs
+        // 4. Log Master Wallet Transaction
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
@@ -296,10 +262,11 @@ class EthereumService
             'currency' => $currency,
             'to_address' => $toAddress,
             'amount' => $amount,
-            'fee' => $feeAmount,
+            'fee' => $gasFeeEth,
             'tx_hash' => $txHash,
         ]);
 
+        // 5. Update Ledger
         Ledger::create([
             'user_id' => $user->id,
             'type' => 'withdrawal',
@@ -312,10 +279,11 @@ class EthereumService
         return [
             'txHash' => $txHash,
             'sent' => $amount,
-            'fee' => $feeAmount,
+            'fee' => $gasFeeEth,
             'total' => $amount,
         ];
     }
+
     public function getEthereumMasterBalances()
     {
         $masterWallet = MasterWallet::where('blockchain', 'ETHEREUM')->firstOrFail();
