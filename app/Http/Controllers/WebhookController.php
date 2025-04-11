@@ -13,6 +13,7 @@ use App\Services\EthereumService;
 use App\Services\transactionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
@@ -68,11 +69,19 @@ class WebhookController extends Controller
             'index'              => $request->index,
         ]);
 
+        $lockKey = 'webhook_lock_' . $request->reference;
+
+        $lock = Cache::lock($lockKey, 30); // 30 seconds
+
+        if (!$lock->get()) {
+            // Another process is already handling this webhook
+            return response()->json(['message' => 'Webhook already processing.'], 200);
+        }
         // Trigger transfer to master wallet
         try {
             Log::info("cirtual account", ['account' => $account]);
             $blockChain = $account->blockchain;
-            $tx= null;
+            $tx = null;
             if (strtolower($blockChain) == 'ethereum') {
                 $tx =  $this->EthService->transferToMasterWallet($account, $request->amount);
             }
