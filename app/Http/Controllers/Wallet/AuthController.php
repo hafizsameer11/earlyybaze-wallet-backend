@@ -49,7 +49,7 @@ class AuthController extends Controller
             $userd = $user['user'];
 
             //check if users virtual accounts have been created if not than show a messae to use with error that pleae try again after 5-10 minutes
-            if (count($userd->virtual_accounts) <= 7) {
+            if (count($userd['virtual_accounts']) <= 7) {
                 return ResponseHelper::error('Please try again after 5-10 minutes', 401);
             }
             Log::info('User Logged In:', [
