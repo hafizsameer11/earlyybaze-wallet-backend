@@ -56,7 +56,7 @@ class UserController extends Controller
     public function setpin(PinRequest $request)
     {
         try {
-            $data = $request->validated();
+            $data = $request->all();
             $user = $this->userService->setPin($data->email, $data->pin);
             return ResponseHelper::success($user, 'Pin set successfully', 200);
         } catch (Exception $e) {

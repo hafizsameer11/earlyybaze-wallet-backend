@@ -111,7 +111,7 @@ class UserService
             $user->otp = null;
             $user->otp_verified = true;
             $user->save();
-            dispatch(new CreateVirtualAccount($user));
+            // dispatch(new CreateVirtualAccount($user));
             return $user;
         } catch (Exception $e) {
             Log::error('OTP verification error: ' . $e->getMessage());
