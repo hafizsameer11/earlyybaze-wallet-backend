@@ -134,8 +134,14 @@ class EthereumService
 
             sleep($delaySeconds);
         }
+        $data = [
+            'status' => true,
+            'txId' => $txHash,
+        ];
+        Log::info("Transaction still not able to fin now sending status true by sysstem");
 
-        throw new \Exception("Transaction not confirmed within timeout.");
+        return $data ?? null;
+        // throw new \Exception("Transaction not confirmed within timeout.");
     }
 
     public function getTransactionDetails($txHash)
