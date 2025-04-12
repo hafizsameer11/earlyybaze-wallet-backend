@@ -37,7 +37,7 @@ class BuyTransactionRepository
             'amount_paid' => $buy->amount_naira ? 'NGN' . number_format($buy->amount_naira, 2) : 'N/A',
             'account_paid_to' => $buy->bankAccount ? $buy->bankAccount->account_name . ' (' . $buy->bankAccount->bank_name . ')' : 'N/A',
             'transaction_reference' => $buy->transaction ? $buy->transaction->reference : 'N/A',
-            'transaction_date' => \Carbon\Carbon::parse($buy->created_at)->format('d M, Y - h:i A'),
+            'transaction_date' => $buy->created_at,
             'status' => ucfirst($buy->status),
             'created_at'=>$buy->created_at,
         ];
