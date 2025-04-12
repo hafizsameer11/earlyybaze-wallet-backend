@@ -119,7 +119,7 @@ class EthereumService
         return $response->json();
     }
 
-    public function getTransactionDetailsWithPolling($txHash, $maxRetries = 5, $delaySeconds = 10)
+    public function getTransactionDetailsWithPolling($txHash, $maxRetries = 5, $delaySeconds = 40)
     {
         for ($i = 0; $i < $maxRetries; $i++) {
             $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
