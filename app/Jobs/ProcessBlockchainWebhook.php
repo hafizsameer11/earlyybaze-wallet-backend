@@ -27,7 +27,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
      * Create a new job instance.
      */
 
-     protected $data;
+    protected $data;
 
     protected $transactionRepository;
     protected $EthService;
@@ -147,7 +147,6 @@ class ProcessBlockchainWebhook implements ShouldQueue
                 'amount_usd'         => $amountUsd,
                 'status'             => 'completed',
             ]);
-
         } catch (\Exception $e) {
             FailedMasterTransfer::create([
                 'virtual_account_id' => $account->id,

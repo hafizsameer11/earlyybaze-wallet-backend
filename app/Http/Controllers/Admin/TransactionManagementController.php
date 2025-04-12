@@ -27,7 +27,7 @@ class TransactionManagementController extends Controller
     public function getWithdrawRequests()
     {
         try {
-            $withdrawRequests=WithdrawRequest::orderBy('created_at','desc')->get();
+            $withdrawRequests = WithdrawRequest::orderBy('created_at', 'desc')->get();
             return ResponseHelper::success($withdrawRequests, 'Withdraw Requests fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

@@ -44,34 +44,62 @@ class TransactionSendRepository
     }
     public function findByTransactionId($transactionId, $type = "send")
     {
-        if ($type == "send") {
-            $r = "receiver_address";
-        } else {
-            $r = "sender_address";
-        }
-        $transaction = TransactionSend::where('transaction_id', $transactionId)->with('transaction')->first();
+        if ($type === "send") {
+            $transaction = TransactionSend::where('transaction_id', $transactionId)
+                ->with('transaction') // Assuming `transaction()` is the polymorphic relationship
+                ->first();
 
-        $walletCurrency = WalletCurrency::where('currency', $transaction->currency)->first();
-        $tranaction = [
-            'id' => $transaction->id,
-            'transaction_id' => $transaction->transaction_id,
-            'transaction_type' => $transaction->transaction_type,
-            'currency' => $transaction->currency,
-            'symbol' => $walletCurrency->symbol,
-            'tx_id' => $transaction->tx_id,
-            'block_hash' => $transaction->block_hash,
-            'gas_fee' => $transaction->gas_fee,
-            $r => $transaction->receiver_virtual_account_id,
-            'status' => $transaction->status,
-            'amount' => $transaction->amount,
-            'amount_usd' => $transaction->transaction->amount_usd,
-            'created_at' => $transaction->created_at
-        ];
-        if (!$transaction) {
-            throw new \Exception('Transaction not found');
+            if (!$transaction) {
+                throw new \Exception('Transaction not found');
+            }
+
+            $walletCurrency = WalletCurrency::where('currency', $transaction->currency)->first();
+
+            return [
+                'id' => $transaction->id,
+                'transaction_id' => $transaction->transaction_id,
+                'transaction_type' => $transaction->transaction_type,
+                'currency' => $transaction->currency,
+                'symbol' => $walletCurrency->symbol ?? 'default.png',
+                'tx_id' => $transaction->tx_id,
+                'block_hash' => $transaction->block_hash,
+                'gas_fee' => $transaction->gas_fee,
+                'receiver_address' => $transaction->receiver_virtual_account_id,
+                'status' => $transaction->status,
+                'amount' => $transaction->amount,
+                'amount_usd' => $transaction->transaction->amount_usd ?? '0.00',
+                'created_at' => $transaction->created_at,
+            ];
         }
-        return $tranaction;
+
+        // Handle receive transaction
+        $receiveTransaction = \App\Models\ReceiveTransaction::where('transaction_id', $transactionId)
+            ->with('transaction') // If you created a relation, else skip this
+            ->first();
+
+        if (!$receiveTransaction) {
+            throw new \Exception('Receive transaction not found');
+        }
+
+        $walletCurrency = WalletCurrency::where('currency', $receiveTransaction->currency)->first();
+
+        return [
+            'id' => $receiveTransaction->id,
+            'transaction_id' => $receiveTransaction->transaction_id,
+            'transaction_type' => $receiveTransaction->transaction_type,
+            'currency' => $receiveTransaction->currency,
+            'symbol' => $walletCurrency->symbol ?? 'default.png',
+            'tx_id' => $receiveTransaction->tx_id,
+            'block_hash' => null, // Optional: You can include if you're saving it in your model
+            'gas_fee' => null, // Optional: Include actual gas if recorded
+            'sender_address' => $receiveTransaction->sender_address,
+            'status' => $receiveTransaction->status,
+            'amount' => $receiveTransaction->amount,
+            'amount_usd' => $receiveTransaction->amount_usd,
+            'created_at' => $receiveTransaction->created_at,
+        ];
     }
+
 
     public function create(array $data)
     {
