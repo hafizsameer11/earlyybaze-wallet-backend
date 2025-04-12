@@ -61,7 +61,7 @@ class TransactionController extends Controller
                     ]);
 
                     TransactionSend::create([
-                        'transaction_type' => 'internal',
+                        'transaction_type' => 'external',
 
                         'sender_address' => null,
                         'user_id' => $user->id,
@@ -82,16 +82,16 @@ class TransactionController extends Controller
                     ]);
 
                     // Record receiver transaction
-
+                    $transaction['refference'] = $transaction['txHash'];
+                    $transaction['amount'] = $validated['fee_summary']['amount_after_fee'];
+                    $transacton['currency'] = $validated['currency'];
+                    $transaction['transaction_id'] = $senderTransaction->id;
                 }
             }
 
-            $transaction['transaction_id'] = $senderTransaction->id;
-            $transaction['refference'] = $transaction['txHash'];
-            $transaction['amount'] = $validated['fee_summary']['amount_after_fee'];
-            $transacton['currency'] = $validated['currency'];
-            Log:
-            info('Transaction Sendiind datya to backend', $transaction);
+
+
+            Log::info('Transaction Sendiind datya to backend', $transaction);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             Log::error("Error in Internal Transfer: " . $e->getMessage());

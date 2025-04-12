@@ -48,7 +48,10 @@ class AuthController extends Controller
             $user = $this->userService->login($request->validated());
             $userd = $user['user'];
 
-
+            //check if users virtual accounts have been created if not than show a messae to use with error that pleae try again after 5-10 minutes
+            // if (count($userd->virtual_accounts) == 0) {
+                return ResponseHelper::error('Please try again after 5-10 minutes', 401);
+            // }
             Log::info('User Logged In:', [
                 'user' => $user,
                 'request_headers' => request()->headers->all()

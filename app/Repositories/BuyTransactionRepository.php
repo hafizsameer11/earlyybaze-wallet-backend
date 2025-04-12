@@ -39,7 +39,7 @@ class BuyTransactionRepository
             'transaction_reference' => $buy->transaction ? $buy->transaction->reference : 'N/A',
             'transaction_date' => $buy->created_at,
             'status' => ucfirst($buy->status),
-            'created_at'=>$buy->created_at,
+            'created_at' => $buy->created_at,
         ];
         return $formattedResponse;
         //   return $buy;
