@@ -71,7 +71,7 @@ class EthereumService
             Log::info("ETH balance is insufficient. Initiating gas top-up.");
 
             // 3. Top-up gas if insufficient
-            $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEthFormatted);
+            $tx = $this->topUpUserForGas($masterWallet, $fromAddress, $requiredGasEthFormatted, $currency);
             $txDetails = $this->getTransactionDetailsWithPolling($tx['txId']);
             Log::info('Gas top-up transaction details', [
                 'txId' => $tx['txId'],
@@ -91,8 +91,9 @@ class EthereumService
 
 
 
-    public function topUpUserForGas($masterWallet, $toAddress, $requiredGasEth)
+    public function topUpUserForGas($masterWallet, $toAddress, $requiredGasEth, $currency)
     {
+
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
         Log::info('Top-up for gas initiated', [
             'fromPrivateKey' => $fromPrivateKey,
@@ -100,13 +101,20 @@ class EthereumService
             'requiredGasEth' => $requiredGasEth,
             'masterWallet' => $masterWallet,
         ]);
+        $fromAddress = $masterWallet->address;
         $bufferedAmount = bcadd($requiredGasEth, '0.0002', 18);
-
+        $gasfee = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $bufferedAmount, $currency);
+        $gasLimit = (int) $gasfee['gasLimit'] + 70000;
+        $gasPriceGwei = (string) max(1, intval(ceil(intval($gasfee['gasPrice']) / 1e9)));
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
             'amount' => (string) $bufferedAmount,
             'currency' => 'ETH',
+            'fee' => [
+                'gasLimit' => (string) $gasLimit,
+                'gasPrice' => $gasPriceGwei
+            ]
         ];
 
         $response = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
