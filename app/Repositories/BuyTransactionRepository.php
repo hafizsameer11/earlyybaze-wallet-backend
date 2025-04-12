@@ -39,6 +39,7 @@ class BuyTransactionRepository
             'transaction_reference' => $buy->transaction ? $buy->transaction->reference : 'N/A',
             'transaction_date' => \Carbon\Carbon::parse($buy->created_at)->format('d M, Y - h:i A'),
             'status' => ucfirst($buy->status),
+            'created_at'=>$buy->created_at,
         ];
         return $formattedResponse;
         //   return $buy;
