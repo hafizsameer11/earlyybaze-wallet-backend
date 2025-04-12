@@ -12,6 +12,7 @@ use App\Services\transactionService;
 use App\Services\WithdrawRequestService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TransactionManagementController extends Controller
 {
@@ -57,6 +58,7 @@ class TransactionManagementController extends Controller
     public function getSingleInternalReceiveTransaction($id)
     {
         try {
+            Log::info('Fetching single internal receive transaction', ['id' => $id]);
             $transaction = $this->transactionSendService->findByTransactionId($id, $type = "receive");
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
         } catch (\Exception $e) {
