@@ -103,6 +103,15 @@ class TransactionManagementController extends Controller
         }
     }
     public function getSingleReceiveTransaction($id) {}
+    public function getAllBuyRequest()
+    {
+        try {
+            $buyRequests = $this->buyTransactionService->getAllBuyRequest();
+            return ResponseHelper::success($buyRequests, 'Buy Requests fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     // public function getSingleBuyTransaction($id){}
 
 }

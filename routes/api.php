@@ -223,6 +223,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'ReferalPaymentController@destroy']);
             Route::get('/withdraw-requests', [TransactionManagementController::class, 'getWithdrawRequests']);
+
+            Route::get('/get-all-buy-request', [TransactionManagementController::class, 'getAllBuyRequest']);
         });
         Route::prefix('withdrawRequest')->group(function (): void {
             Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);

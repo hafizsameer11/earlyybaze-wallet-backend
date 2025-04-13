@@ -17,6 +17,11 @@ class BuyTransactionRepository
     {
         $this->transactionService = $transactionService;
     }
+    public function getAllBuyRequests()
+    {
+        $buyRequests = BuyTransaction::with('transaction', 'bankAccount')->orderBy('created_at', 'desc')->get();
+        return $buyRequests;
+    }
     public function all()
     {
         // Add logic to fetch all data

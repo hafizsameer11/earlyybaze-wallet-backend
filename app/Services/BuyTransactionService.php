@@ -68,4 +68,11 @@ public function findByTransactionId($transactionId){
             throw new \Exception($e->getMessage());
         }
     }
+    public function getAllBuyRequest(){
+        try{
+            return $this->BuyTransactionRepository->getAllBuyRequests();
+        }catch(\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }
