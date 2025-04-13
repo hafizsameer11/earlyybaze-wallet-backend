@@ -12,8 +12,15 @@ class transactionRepository
         $totalTransactions = Transaction::count();
         $totalWallets = VirtualAccount::count();
 
-        $transactions = Transaction::with('user')->orderBy('created_at', 'desc')->get();
-        return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
+        $transactions = Transaction::with([
+            'user',
+            'sendtransaction',
+            'recievetransaction',
+            'buytransaction',
+            'swaptransaction',
+            'withdraw_transaction.withdraw_request',
+        ])->orderBy('created_at', 'desc')->get();
+                return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
     }
 
     public function find($id)
