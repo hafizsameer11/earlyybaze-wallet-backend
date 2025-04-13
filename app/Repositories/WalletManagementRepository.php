@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\ExchangeRate;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class WalletManagementRepository
 {
@@ -89,7 +90,8 @@ class WalletManagementRepository
 
                 $balance = (string) $account->available_balance;
                 $rate = (string) optional($exchangeRate)->rate_usd;
-
+                Log::info("Exchange Rate", ["currency" => $account->currency, "rate" => $rate]);
+                Log::info("Account Balance", ["balance" => $balance]);
                 if (is_numeric($balance) && is_numeric($rate)) {
                     $amountUsd = bcmul($balance, $rate, 8);
                     $totalFundsUsd = bcadd($totalFundsUsd, $amountUsd, 8);
