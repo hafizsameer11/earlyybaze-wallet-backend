@@ -70,7 +70,18 @@ class Transaction extends Model
             case 'swap':
                 return $this->swaptransaction;
             case 'withdrawTransaction':
-                return $this->withdraw_transaction?->load('withdraw_request');
+                $withdraw = $this->withdraw_transaction;
+
+                if ($withdraw && $withdraw->withdraw_request) {
+                    $withdrawRequest = $withdraw->withdraw_request->load('bankAccount');
+                    // Merge withdraw_transaction + withdraw_request (excluding nested object)
+                    return array_merge(
+                        $withdraw->toArray(),
+                        $withdrawRequest->toArray()
+                    );
+                }
+
+                return $withdraw;
             default:
                 return null;
         }
