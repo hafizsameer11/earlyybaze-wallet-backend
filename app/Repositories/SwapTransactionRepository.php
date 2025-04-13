@@ -113,7 +113,6 @@ class SwapTransactionRepository
             $swapTransaction = SwapTransaction::create($data);
 
             return $swapTransaction;
-
         } catch (Exception $e) {
             Log::error("Swap Failed: " . $e->getMessage());
             throw new Exception($e->getMessage());
@@ -122,13 +121,13 @@ class SwapTransactionRepository
 
     public function singleSwapTransaction($id)
     {
-        $swap= SwapTransaction::where('transaction_id', $id)->first();
+        $swap = SwapTransaction::where('transaction_id', $id)->first();
         //add currency symbol with it
         if (!$swap) {
             throw new Exception('Transaction not found.');
         }
-        $currencySymbol=WalletCurrency::where('currency', $swap->currency)->first();
-        $swap->symbol=$currencySymbol->symbol;
+        $currencySymbol = WalletCurrency::where('currency', $swap->currency)->first();
+        $swap->symbol = $currencySymbol->symbol;
         return $swap;
     }
 }
