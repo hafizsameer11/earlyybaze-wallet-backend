@@ -66,7 +66,7 @@ class Transaction extends Model
             case 'receive':
                 return $this->recievetransaction;
             case 'buy':
-                return $this->buytransaction;
+                return $this->buytransaction->load('bankAccount');
             case 'swap':
                 return $this->swaptransaction;
             case 'withdrawTransaction':
