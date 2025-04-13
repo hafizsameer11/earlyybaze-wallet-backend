@@ -225,6 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/withdraw-requests', [TransactionManagementController::class, 'getWithdrawRequests']);
 
             Route::get('/get-all-buy-request', [TransactionManagementController::class, 'getAllBuyRequest']);
+            Route::post('/update-buy-transaction', [TransactionManagementController::class, 'updateBuyTransaction']);
         });
         Route::prefix('withdrawRequest')->group(function (): void {
             Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);

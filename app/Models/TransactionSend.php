@@ -30,7 +30,8 @@ class TransactionSend extends Model
         'network_fee',
         'platform_fee',
         'fee_summary',
-        'fee_actual_transaction'
+        'fee_actual_transaction',
+        'rejection_reason'
     ];
     public function user()
     {

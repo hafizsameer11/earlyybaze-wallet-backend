@@ -113,5 +113,13 @@ class TransactionManagementController extends Controller
         }
     }
     // public function getSingleBuyTransaction($id){}
-
+    public function updateBuyTransaction(Request $request, $id)
+    {
+        try {
+            $transaction = $this->buyTransactionService->update($id, $request->all());
+            return ResponseHelper::success($transaction, 'Transaction updated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

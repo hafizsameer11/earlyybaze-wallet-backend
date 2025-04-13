@@ -98,7 +98,18 @@ class BuyTransactionRepository
 
     public function update($id, array $data)
     {
-        // Add logic to update data
+        // Aupdate statius and add rejection_reason
+        $buyTransaction = BuyTransaction::find($id);
+        if (!$buyTransaction) {
+            throw new \Exception('Buy Transaction not found');
+        }
+        if (isset($data['status'])) {
+            $buyTransaction->update(['status' => $data['status']]);
+        }
+        if (isset($data['rejection_reason'])) {
+            $buyTransaction->update(['rejection_reason' => $data['rejection_reason']]);
+        }
+        return $buyTransaction;
     }
 
     public function delete($id)
