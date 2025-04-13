@@ -56,7 +56,7 @@ class MasterWalletController extends Controller
                 'message' => 'No master wallet found'
             ], 404);
         }
-        $symbol = WalletCurrency::where('currency', 'ethereum')->first();
+        $symbol = WalletCurrency::where('currency', 'ETH')->first();
 
 
         $symbol = asset('storage/' . $symbol->symbol);
