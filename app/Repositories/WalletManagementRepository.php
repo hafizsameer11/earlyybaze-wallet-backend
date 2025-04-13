@@ -80,14 +80,18 @@ class WalletManagementRepository
 
         // Table Data
         $tableData = $users->map(function ($user) {
-            $totalFundsUsd = 0;
+            $totalFundsUsd = "0";
 
             foreach ($user->virtualAccounts as $account) {
-                $exchangeRate = getExchangeRate($account->currency);
+                $exchangeRate = ExchangeRate::where('currency', $account->currency)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
 
-                // If exchange rate exists, convert balance to USD
-                if ($exchangeRate) {
-                    $amountUsd = bcmul($account->available_balance, $exchangeRate->rate_usd, 8);
+                $balance = (string) $account->available_balance;
+                $rate = (string) optional($exchangeRate)->rate_usd;
+
+                if (is_numeric($balance) && is_numeric($rate)) {
+                    $amountUsd = bcmul($balance, $rate, 8);
                     $totalFundsUsd = bcadd($totalFundsUsd, $amountUsd, 8);
                 }
             }
@@ -97,7 +101,7 @@ class WalletManagementRepository
                 "name" => $user->name,
                 "profileimg" => "/storage/" . $user->profile_picture,
                 "walletCount" => $user->virtualAccounts->count(),
-                "totalFunds" => number_format($totalFundsUsd, 2), // Display in USD
+                "totalFunds" => number_format((float) $totalFundsUsd, 2),
                 "mostActive" => optional($user->virtualAccounts->sortByDesc('available_balance')->first())->currency ?? "N/A",
                 "status" => $user->is_active ? "online" : "offline",
             ];
