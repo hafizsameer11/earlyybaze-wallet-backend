@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'amount',
@@ -22,35 +23,41 @@ class Transaction extends Model
         'fee',
         'fee_usd'
     ];
+
+    protected $appends = ['details'];
+
+    // ✅ Correct relationships using hasOne
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function sendtransaction()
     {
-        return $this->belongsTo(TransactionSend::class);
+        return $this->hasOne(TransactionSend::class, 'transaction_id', 'id');
     }
+
     public function recievetransaction()
     {
-        return $this->belongsTo(ReceiveTransaction::class);
+        return $this->hasOne(ReceiveTransaction::class, 'transaction_id', 'id');
     }
+
     public function buytransaction()
     {
-        return $this->belongsTo(BuyTransaction::class);
+        return $this->hasOne(BuyTransaction::class, 'transaction_id', 'id');
     }
+
     public function swaptransaction()
     {
-        return $this->belongsTo(SwapTransaction::class);
+        return $this->hasOne(SwapTransaction::class, 'transaction_id', 'id');
     }
+
     public function withdraw_transaction()
     {
-        return $this->hasOne(WithdrawTransaction::class, 'transaction_id');
+        return $this->hasOne(WithdrawTransaction::class, 'transaction_id', 'id');
     }
 
-
-
-    protected $appends = ['details'];
-
+    // ✅ Clean details accessor
     public function getDetailsAttribute()
     {
         switch ($this->type) {
