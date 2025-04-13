@@ -20,7 +20,7 @@ class BuyTransactionRepository
     }
     public function getAllBuyRequests()
     {
-        $buyRequests = BuyTransaction::with('transaction', 'bankAccount')->orderBy('created_at', 'desc')->get();
+        $buyRequests = BuyTransaction::with('transaction', 'bankAccount','user')->orderBy('created_at', 'desc')->get();
         return $buyRequests;
     }
     public function all()
