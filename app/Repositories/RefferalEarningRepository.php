@@ -44,6 +44,10 @@ class RefferalEarningRepository
             'created_at' => $refUser->created_at,
             'image' => $refUser->profile_picture,
             'refferalCount' => $refferalCount,
+            'totalEarning'=>'0',
+            'totalWithdrawls'=>'0',
+            'noOfReferrals'=>$refferalCount,
+            'totalTradesCompletedByReferrals'=>'0',
         ];
     });
 
