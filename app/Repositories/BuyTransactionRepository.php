@@ -9,6 +9,7 @@ use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use App\Services\transactionService;
+use Illuminate\Support\Facades\Log;
 
 class BuyTransactionRepository
 {
@@ -61,10 +62,11 @@ class BuyTransactionRepository
     public function create(array $data)
     {
         $refference = 'EarlyBaze' . time();
+        Log::info('Buy Transaction', $data);
         try {
             $transaction = $this->transactionService->create([
                 'type' => 'buy',
-                'amount' => $data['amount_coint'] ?? 0,
+                'amount' => $data['amount_coin'] ?? 0,
                 'amount_usd' => $data['amount_usd'] ?? 0,
                 'currency' => $data['currency'] ?? null,
                 'network' => $data['network'] ?? null,
@@ -108,6 +110,14 @@ class BuyTransactionRepository
         }
         if (isset($data['rejection_reason'])) {
             $buyTransaction->update(['rejection_reason' => $data['rejection_reason']]);
+        }
+        $user_id = $buyTransaction->user_id;
+        $virtualAccount = VirtualAccount::where('user_id', $user_id)->where('currency', $buyTransaction->currency)->orderBy('created_at', 'desc')->first();
+        if ($virtualAccount) {
+            $virtualAccount->update([
+                'available_balance' => $virtualAccount->available_balance + $buyTransaction->amount_coin,
+                'account_balance' => $virtualAccount->account_balance + $buyTransaction->amount_coin,
+            ]);
         }
         return $buyTransaction;
     }
