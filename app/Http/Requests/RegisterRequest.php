@@ -29,7 +29,8 @@ class RegisterRequest extends FormRequest
             'password' => 'required',
             'phone' => 'required|unique:users,phone',
             'invite_code' => 'nullable',
-            'profile_picture' => 'nullable'
+            'profile_picture' => 'nullable',
+            'role'=>'required'
         ];
     }
 
