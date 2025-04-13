@@ -7,6 +7,7 @@ use App\Models\WalletCurrency;
 use App\Services\EthereumService;
 use App\Services\MasterWalletService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class MasterWalletController extends Controller
 {
@@ -44,33 +45,39 @@ class MasterWalletController extends Controller
         $balance = $this->EthService->getEthereumMasterBalances();
         return response()->json($balance, 200);
     }
+    // use Illuminate\Support\Arr;
+
     public function getMasterWalletDetails()
     {
         $totalWallets = MasterWallet::where('blockchain', 'ethereum')->count();
-
-        $masterWallet = MasterWallet::where('blockchain', 'ethereum')->orderBy('created_at', 'desc')->first();
-
+    
+        $masterWallet = MasterWallet::where('blockchain', 'ethereum')
+            ->orderBy('created_at', 'desc')
+            ->first();
+    
         if (!$masterWallet) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No master wallet found'
             ], 404);
         }
+    
+        // Add symbol path
         $symbol = WalletCurrency::where('currency', 'ETH')->first();
-
-
-        $symbol = asset('storage/' . $symbol->symbol);
-
-        $masterWallet->symbol = $symbol;
-        // Get balances (ETH + tokens)
+        $symbolPath = $symbol ? asset('storage/' . $symbol->symbol) : null;
+        $masterWallet->symbol = $symbolPath;
+    
+        // Fetch ETH and ERC-20 balances
         $balanceDetails = $this->EthService->getEthereumMasterBalances();
-
-        // Merge into master wallet object
-        $mergedWallet = array_merge(
-            $masterWallet->toArray(),
-            $balanceDetails
-        );
-
+    
+        // Exclude sensitive data
+        $cleanWallet = Arr::except($masterWallet->toArray(), [
+            'private_key', 'mnemonic', 'xpub', 'response'
+        ]);
+    
+        // Merge in balances
+        $mergedWallet = array_merge($cleanWallet, $balanceDetails);
+    
         return response()->json([
             'status' => 'success',
             'message' => 'Ethereum master wallet details fetched',
@@ -80,4 +87,5 @@ class MasterWalletController extends Controller
             ]
         ]);
     }
+    
 }
