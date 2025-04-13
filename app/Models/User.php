@@ -28,7 +28,8 @@ class User extends Authenticatable
         'invite_code',
         'user_code',
         'profile_picture',
-        'role'
+        'role',
+        'kyc_status'
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\KycRequest;
 use App\Models\Kyc;
+use App\Models\User;
 use App\Services\KycService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,7 +53,15 @@ class KycController extends Controller
             return ResponseHelper::error('Kyc not found', 404);
         }
         $kyc->status = $status;
+        //check if status is rejected than also add rejection reason
+        if ($status == 'rejected') {
+            $kyc->rejection_reason = $request->rejection_reason;
+        }
         $kyc->save();
+        $userId = $kyc->user_id;
+        $user = User::find($userId);
+        $user->kyc_status = $status;
+        $user->save();
         return ResponseHelper::success($kyc, 'Kyc updated successfully', 200);
     }
 }

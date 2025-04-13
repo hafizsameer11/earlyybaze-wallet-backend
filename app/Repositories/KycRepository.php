@@ -81,7 +81,20 @@ class KycRepository
     }
     public function update($id, array $data)
     {
-        // Add logic to update data
+        $kyc = Kyc::find($id);
+        if (!$kyc) {
+            throw new \Exception('KYC not found');
+        }
+        $status = $data['status'] ?? null;
+        if ($status) {
+            //check if status is rejected than add rejection_reason
+            if ($status == 'rejected') {
+                $data['rejection_reason'] = $data['rejection_reason'] ?? null;
+            }
+            $kyc->update(['status' => $status]);
+        }
+        // $kyc->update($data);
+        return $kyc;
     }
 
     public function delete($id)
