@@ -77,7 +77,16 @@ class WalletManagementRepository
             return ExchangeRate::where('currency', $currency)
                 ->orderBy('created_at', 'desc')
                 ->first();
+        }function convertScientificToDecimal($number, $precision = 18)
+        {
+            if (stripos($number, 'e') === false) {
+                return $number; // Already a normal number
+            }
+
+            $float = floatval($number); // convert to float
+            return number_format($float, $precision, '.', '');
         }
+
 
         // Table Data
         $tableData = $users->map(function ($user) {
@@ -88,7 +97,7 @@ class WalletManagementRepository
                     ->orderBy('created_at', 'desc')
                     ->first();
 
-                $balance = (string) $account->available_balance;
+                    $balance = convertScientificToDecimal((string) $account->available_balance);
                 $rate = (string) optional($exchangeRate)->rate_usd;
                 Log::info("Exchange Rate", ["currency" => $account->currency, "rate" => $rate]);
                 Log::info("Account Balance", ["balance" => $balance]);
@@ -113,4 +122,5 @@ class WalletManagementRepository
             "tableData" => $tableData
         ];
     }
+
 }
