@@ -306,6 +306,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('master-wallet')->group(function () {
             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
+            Route::get('/get-master-wallets',[MasterWalletController::class, 'getMasterWalletDetails']);
         });
     });
 });
