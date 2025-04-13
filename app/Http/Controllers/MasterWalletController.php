@@ -75,8 +75,8 @@ class MasterWalletController extends Controller
             'status' => 'success',
             'message' => 'Ethereum master wallet details fetched',
             'data' => [
-                'totalWallets' => [$totalWallets],
-                'wallet' => $mergedWallet
+                'totalWallets' => $totalWallets,
+                'wallet' => [$mergedWallet]
             ]
         ]);
     }
