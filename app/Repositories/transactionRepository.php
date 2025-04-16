@@ -96,7 +96,7 @@ class transactionRepository
         $transactions = $transactions->map(function ($transaction) {
             $transactionIcon = TransactionIcon::where('type', $transaction->type)->first();
             //just add icon with transaction object
-            $transaction->icon = $transactionIcon;
+            $transaction->icon = $transactionIcon->icon;
             return $transaction;
         });
         return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
