@@ -103,6 +103,7 @@ class UserRepository
                     'price' => $account->walletCurrency->price,
                     'symbol' => $account->walletCurrency->symbol,
                     'naira_price' => $account->walletCurrency->naira_price,
+                    'name'=> $account->walletCurrency->name
 
                 ]
             ];
