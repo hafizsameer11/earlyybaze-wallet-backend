@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\BuyTransaction;
 use App\Models\ExchangeRate;
 use App\Models\Transaction;
+use App\Models\TransactionIcon;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
@@ -153,6 +154,10 @@ class BuyTransactionRepository
             $symbol = '';
             if ($currency) {
                 $symbol = $currency->symbol;
+            }
+            $transactionIcon = TransactionIcon::where('type', $transaction->type)->first();
+            if ($transactionIcon) {
+                $symbol = $transactionIcon->icon;
             }
             return [
                 'id' => (int)$transaction->id,
