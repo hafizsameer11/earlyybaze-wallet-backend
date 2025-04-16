@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Transaction;
+use App\Models\TransactionIcon;
 use App\Models\VirtualAccount;
 use Illuminate\Support\Facades\DB;
 
@@ -92,6 +93,12 @@ class transactionRepository
         $totalTransactions = Transaction::where('user_id', $user_id)->where('currency', $currency)->count();
         $totalWallets = VirtualAccount::where('user_id', $user_id)->count();
         $transactions = Transaction::where('user_id', $user_id)->where('currency', $currency)->with('user')->get();
+        $transactions = $transactions->map(function ($transaction) {
+            $transactionIcon = TransactionIcon::where('type', $transaction->type)->first();
+            //just add icon with transaction object
+            $transaction->icon = $transactionIcon;
+            return $transaction;
+        });
         return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
     }
     public function create(array $data)
