@@ -101,7 +101,8 @@ class UserRepository
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
                     'symbol' => $account->walletCurrency->symbol,
-                    'naira_price' => $account->walletCurrency->naira_price
+                    'naira_price' => $account->walletCurrency->naira_price,
+                    'name'=> $account->walletCurrency->name
                 ]
             ];
         });
@@ -232,5 +233,5 @@ class UserRepository
         $users = User::whereNot('role', 'user')->get();
         return $users;
     }
-    // public function 
+    // public function
 }

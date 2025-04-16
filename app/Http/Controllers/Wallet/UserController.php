@@ -57,7 +57,7 @@ class UserController extends Controller
     {
         try {
             $data = $request->validated();
-            $email=$data['email'];
+            $email = $data['email'];
             Log::info("data $email");
             $user = $this->userService->setPin($data['email'], $data['pin']);
             return ResponseHelper::success($user, 'Pin set successfully', 200);

@@ -14,7 +14,7 @@ class UserAccountRepository
     }
     public function getUserBalance($id)
     {
-        $userAccount= UserAccount::where('user_id', $id)->first();
+        $userAccount = UserAccount::where('user_id', $id)->first();
         return $userAccount;
     }
 
