@@ -41,8 +41,8 @@ class UserAccountRepository
         });
         // return $userAccount;
         return [
-            'userBalance'=>$userAccount,
-            'userVirtualAccounts'=>$userVirtualAccounts
+            'userBalance' => $userAccount,
+            'userVirtualAccounts' => $userVirtualAccounts
         ];
     }
 

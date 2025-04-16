@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
+use App\Http\Controllers\Api\TransactionIconController;
 use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
@@ -306,8 +307,14 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('master-wallet')->group(function () {
             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
-            Route::get('/get-master-wallets',[MasterWalletController::class, 'getMasterWalletDetails']);
+            Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
         });
     });
+});
+Route::prefix('transaction-icons')->group(function () {
+    Route::get('/', [TransactionIconController::class, 'index']);
+    Route::post('/', [TransactionIconController::class, 'store']);
+    Route::get('/{id}', [TransactionIconController::class, 'show']);
+    Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
 });
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
