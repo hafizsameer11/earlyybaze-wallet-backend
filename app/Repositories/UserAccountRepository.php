@@ -39,7 +39,11 @@ class UserAccountRepository
                 ]
             ];
         });
-        return $userAccount;
+        // return $userAccount;
+        return [
+            'userBalance'=>$userAccount,
+            'userVirtualAccounts'=>$userVirtualAccounts
+        ];
     }
 
     public function create(array $data)
