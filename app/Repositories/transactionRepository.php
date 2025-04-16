@@ -91,7 +91,7 @@ class transactionRepository
     {
         $totalTransactions = Transaction::where('user_id', $user_id)->where('currency', $currency)->count();
         $totalWallets = VirtualAccount::where('user_id', $user_id)->count();
-        $transactions = Transaction::where('user_id', $user_id)->with('user')->get();
+        $transactions = Transaction::where('user_id', $user_id)->where('currency', $currency)->with('user')->get();
         return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
     }
     public function create(array $data)
