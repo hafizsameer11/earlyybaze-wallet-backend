@@ -129,7 +129,7 @@ class BuyTransactionRepository
     }
     public function getUserAssetTransactions($userId)
     {
-        $virtualAccounts = VirtualAccount::where('user_id', $userId)->where('account_balance', '>', 0)->with('walletCurrency', 'depositAddresses')->get();
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             $exchangeRate = ExchangeRate::where('currency', $account->currency)->orderBy('created_at', 'desc')->first();
