@@ -30,7 +30,7 @@ class RegisterRequest extends FormRequest
             'phone' => 'required|unique:users,phone',
             'invite_code' => 'nullable',
             'profile_picture' => 'nullable',
-            'role'=>'required'
+            'role'=>'nullable'
         ];
     }
 
