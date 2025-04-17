@@ -38,10 +38,15 @@ class transactionRepository
         $totalWallets = VirtualAccount::where('user_id', $user_id)->count();
 
         // Transaction list
-        $transactions = Transaction::where('user_id', $user_id)
-            ->with('user')
-            ->latest()
-            ->get();
+        $transactions = Transaction::where('user_id', $user_id)->
+        with([
+            'user',
+            'sendtransaction',
+            'recievetransaction',
+            'buytransaction',
+            'swaptransaction',
+            'withdraw_transaction.withdraw_request',
+        ])->orderBy('created_at', 'desc')->get();
 
         // Graphical Data (monthly grouped by type)
         $rawStats = DB::table('transactions')
