@@ -142,6 +142,7 @@ class BuyTransactionRepository
                 'name' => $account->currency,
                 'symbol' => $account->walletCurrency->symbol,
                 'icon' => $account->walletCurrency->icon,
+                'network' => $account->network,
                 'balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
                 'price' => $price,
