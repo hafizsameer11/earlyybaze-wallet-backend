@@ -167,6 +167,7 @@ class BuyTransactionRepository
                 'balance' => $transaction->amount,
                 'created_at' => $transaction->created_at,
                 'type' => $transaction->type,
+                'status' => $transaction->status,
             ];
         });
         return  [
