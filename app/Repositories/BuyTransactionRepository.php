@@ -133,6 +133,7 @@ class BuyTransactionRepository
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             $exchangeRate = ExchangeRate::where('currency', $account->currency)->orderBy('created_at', 'desc')->first();
+            // $walletCurrency=WalletCurrency::where('currency', $account->currency)->first();
             $price = '';
             if ($exchangeRate) {
                 $price = "1 $account->currency = $exchangeRate->rate_usd USD";
@@ -142,7 +143,7 @@ class BuyTransactionRepository
                 'name' => $account->currency,
                 'symbol' => $account->walletCurrency->symbol,
                 'icon' => $account->walletCurrency->icon,
-                'network' => $account->network,
+                'network' => $account->walletCurrency->network,
                 'balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
                 'price' => $price,
