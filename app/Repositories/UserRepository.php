@@ -224,7 +224,8 @@ class UserRepository
             'updated_at' => $user->updated_at,
             'img' => asset('storage/' . $user->profile_picture),
             'total_amount_in_dollar' => $user->userAccount->crypto_balance,
-            'total_amount_in_naira' => $user->userAccount->naira_balance
+            'total_amount_in_naira' => $user->userAccount->naira_balance,
+            'kyc_status' => $user->kyc_status
         ];
         // });
         return $user;
