@@ -319,9 +319,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/minimum-trades', [MinimumTradeController::class, 'store']);       // Create
         Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
         Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'destroy']); // Delete
-    });
-    Route::prefix('reports')->group(function () {
-        Route::get('/get-all', [ReportController::class, 'index']);
+        Route::prefix('reports')->group(function () {
+            Route::get('/get-all', [ReportController::class, 'index']);
+        });
     });
 });
 Route::prefix('transaction-icons')->group(function () {
