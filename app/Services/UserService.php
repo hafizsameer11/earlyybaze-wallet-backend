@@ -322,4 +322,22 @@ class UserService
             throw new Exception('Get non users failed. ' . $e->getMessage());
         }
     }
+    public function getUserBalances()
+    {
+        try {
+            return $this->userRepository->getUserBalances();
+        } catch (Exception $e) {
+            Log::error('Get user balances error: ' . $e->getMessage());
+            throw new Exception('Get user balances failed. ' . $e->getMessage());
+        }
+    }
+    public function getBalanceByCurrency($currencyId)
+    {
+        try {
+            return $this->userRepository->getBalanceByCurrency($currencyId);
+        } catch (Exception $e) {
+            Log::error('Get balance by currency error: ' . $e->getMessage());
+            throw new Exception('Get balance by currency failed. ' . $e->getMessage());
+        }
+    }
 }

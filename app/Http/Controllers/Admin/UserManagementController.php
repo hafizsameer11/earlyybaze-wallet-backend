@@ -131,4 +131,23 @@ class UserManagementController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function getUserBalances()
+    {
+        try {
+            $data = $this->userService->getUserBalances();
+            return ResponseHelper::success($data, 'User balances fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+
+    public function getBalanceByCurrency($currencyId)
+    {
+        try {
+            $data = $this->userService->getBalanceByCurrency($currencyId);
+            return ResponseHelper::success($data, 'User balances fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

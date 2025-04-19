@@ -236,5 +236,26 @@ class UserRepository
         $users = User::whereNot('role', 'user')->get();
         return $users;
     }
+    public function getUserBalances()
+    {
+        $balances = VirtualAccount::with('walletCurrency')
+            ->selectRaw('currency_id, SUM(available_balance) as total_balance')
+            ->groupBy('currency_id')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'currency' => $item->walletCurrency, // full related WalletCurrency object
+                    'total_balance' => $item->total_balance,
+                ];
+            });
+        return $balances;
+    }
+
+    public function getBalanceByCurrency($currencyId)
+    {
+        $balance = VirtualAccount::where('currency_id', $currencyId)->with('user')->orderBy('created_at', 'desc')->get();
+        return $balance;
+    }
+
     // public function
 }
