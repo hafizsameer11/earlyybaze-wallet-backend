@@ -311,11 +311,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
             Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
         });
-        Route::get('/minimum-trades', [MinimumTradeController::class, 'getAll']);        // Get all
-        Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'getOne']);   // Get single
-        Route::post('/minimum-trades', [MinimumTradeController::class, 'create']);       // Create
+        Route::get('/minimum-trades', [MinimumTradeController::class, 'index']);        // Get all
+        Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'show']);   // Get single
+        Route::post('/minimum-trades', [MinimumTradeController::class, 'store']);       // Create
         Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
-        Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'delete']); // Delete
+        Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'destroy']); // Delete
     });
 });
 Route::prefix('transaction-icons')->group(function () {
