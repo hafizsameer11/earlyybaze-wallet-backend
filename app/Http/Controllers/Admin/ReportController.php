@@ -44,7 +44,7 @@ class ReportController extends Controller
             $totalBuyTransactions = Transaction::where('type', 'buy')->whereBetween('created_at', [$from, $to])->count();
             $totalReceiveTransactions = Transaction::where('type', 'receive')->whereBetween('created_at', [$from, $to])->count();
             $totalSendTransactions = Transaction::where('type', 'send')->whereBetween('created_at', [$from, $to])->sum('amount_usd');
-            $totalWithdrawals = WithdrawRequest::where('status', 'completed')->whereBetween('created_at', [$from, $to])->count();
+            $totalWithdrawals = WithdrawRequest::where('status', 'approved')->whereBetween('created_at', [$from, $to])->count();
 
             $highestTrader = Transaction::select('user_id', DB::raw('SUM(amount_usd) as total'))
                 ->where('status', 'completed')
