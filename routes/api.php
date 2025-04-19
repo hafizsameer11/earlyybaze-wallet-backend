@@ -177,7 +177,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('blockchain')->group(function () {
         Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
-        Route::post('/manual-transform-to-master-wallet', [BlockChainController::class, 'manualTransformToMasterWalts']);
+        Route::post('/manual-transform-to-master-wallet', action: [BlockChainController::class, 'manualTransformToMasterWalts']);
         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToE xternalAddress']);
     });
@@ -323,8 +323,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-all', [ReportController::class, 'index']);
         });
         Route::prefix('user-balances')->group(function () {
-            Route::get('/get-all',[UserManagementController::class, 'getUserBalances']);
-            Route::get('/get-by-currency/{currencyId}',[UserManagementController::class, 'getBalanceByCurrency']);
+            Route::get('/get-all', [UserManagementController::class, 'getUserBalances']);
+            Route::get('/get-by-currency/{currencyId}', [UserManagementController::class, 'getBalanceByCurrency']);
         });
     });
 });

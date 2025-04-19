@@ -828,7 +828,7 @@ class BlockChainHelper
 
         if ($currency === 'USDT_TRON') {
             $payload['tokenAddress'] = $contractAddress;
-            $payload['feeLimit'] = 100000000; // 100 TRX for safety margin
+            // $payload['feeLimit'] = 100000000; // 100 TRX for safety margin
         }
 
         $txResponse = Http::withHeaders([
