@@ -11,6 +11,7 @@ use App\Services\BankAccountService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
@@ -19,6 +20,40 @@ class UserManagementController extends Controller
     {
         $this->userService = $userService;
         $this->bankAccountService = $bankAccountService;
+    }
+
+
+
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        DB::transaction(function () use ($user) {
+            // Append timestamp to avoid unique constraint issues
+            $timestamp = now()->timestamp;
+
+            // Update email before soft-deleting
+            $user->email = $user->email . '-deleted-' . $timestamp;
+            $user->save();
+
+            // Perform soft delete
+            $user->delete();
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User soft deleted and email updated',
+        ]);
+    }
+    public function blockUser($id)
+    {
+        $user = User::findOrFail($id);
+        $user->is_active = false;
+        $user->save();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User blocked',
+        ]);
     }
     public function getUserManagementData()
     {

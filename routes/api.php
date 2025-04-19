@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\PayoutRuleController;
 use App\Http\Controllers\Admin\RefferalManagementController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
@@ -195,6 +196,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
         Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
+        Route::get('/user-management/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
+        Route::get('/user-management/block-user/{id}', [UserManagementController::class, 'blockUser']);
         Route::post('/create-user', [UserManagementController::class, 'createUser']);
         //banners
         Route::get('/banners', [InAppBannerController::class, 'index']);
@@ -316,6 +319,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/minimum-trades', [MinimumTradeController::class, 'store']);       // Create
         Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
         Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'destroy']); // Delete
+    });
+    Route::prefix('reports')->group(function () {
+        Route::get('/get-all', [ReportController::class, 'index']);
     });
 });
 Route::prefix('transaction-icons')->group(function () {
