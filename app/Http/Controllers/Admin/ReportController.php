@@ -27,7 +27,7 @@ class ReportController extends Controller
             $totalUsers = User::whereBetween('created_at', [$from, $to])->count();
             $activeUsers = User::where('is_active', true)->whereBetween('created_at', [$from, $to])->count();
             $newUsers = $totalUsers;
-            $payingUsers = User::whereHas('transactions', fn ($q) => $q->whereBetween('created_at', [$from, $to]))->count();
+            $payingUsers = User::whereHas('transactions', fn($q) => $q->whereBetween('created_at', [$from, $to]))->count();
             $deletedUsers = User::onlyTrashed()->whereBetween('deleted_at', [$from, $to])->count();
 
             // placeholder static data
