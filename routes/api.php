@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\TradeLimitController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
+use App\Http\Controllers\Api\MinimumTradeController;
 use App\Http\Controllers\Api\TransactionIconController;
 use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\ExchangeRateController;
@@ -193,7 +194,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
-        Route::post('/user-management/create-bank/{userId}',[UserManagementController::class, 'createBankAccount']);
+        Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
         Route::post('/create-user', [UserManagementController::class, 'createUser']);
         //banners
         Route::get('/banners', [InAppBannerController::class, 'index']);
@@ -310,6 +311,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
             Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
         });
+        Route::get('/minimum-trades', [MinimumTradeController::class, 'getAll']);        // Get all
+        Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'getOne']);   // Get single
+        Route::post('/minimum-trades', [MinimumTradeController::class, 'create']);       // Create
+        Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
+        Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'delete']); // Delete
     });
 });
 Route::prefix('transaction-icons')->group(function () {
