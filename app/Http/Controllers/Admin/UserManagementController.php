@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BankAccountRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use App\Services\BankAccountService;
@@ -82,6 +83,15 @@ class UserManagementController extends Controller
         try {
             $user = $this->userService->createUser($request->validated());
             return ResponseHelper::success($user, 'User created successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function createBankAccount(BankAccountRequest $request, $userId)
+    {
+        try {
+            $data = $this->bankAccountService->createBankAccount($request->validated(), $userId);
+            return ResponseHelper::success($data, 'Bank account created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

@@ -77,4 +77,14 @@ class BankAccountService
             throw new Exception('Bank account deletion failed.' . $e->getMessage());
         }
     }
+    public function createBankAccount($data, $userId)
+    {
+        try {
+            $data['user_id'] = $userId;
+            return $this->BankAccountRepository->create($data);
+        } catch (Exception $e) {
+            Log::error('Bank account creation error: ' . $e->getMessage());
+            throw new Exception('Bank account creation failed.');
+        }
+    }
 }

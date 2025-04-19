@@ -89,7 +89,7 @@ class UserRepository
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             return [
                 'id' => $account->id,
-                'name'=> $account->walletCurrency->name,
+                'name' => $account->walletCurrency->name,
                 'currency' => $account->currency,
                 'blockchain' => $account->blockchain,
                 'currency_id' => $account->currency_id,
@@ -103,7 +103,7 @@ class UserRepository
                     'price' => $account->walletCurrency->price,
                     'symbol' => $account->walletCurrency->symbol,
                     'naira_price' => $account->walletCurrency->naira_price,
-                    'name'=> $account->walletCurrency->name
+                    'name' => $account->walletCurrency->name
 
                 ]
             ];
