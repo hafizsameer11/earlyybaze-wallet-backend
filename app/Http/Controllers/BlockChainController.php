@@ -28,7 +28,7 @@ class BlockChainController extends Controller
             $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
             $masterWalletAddress = $masterWallet->address;
             $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
-            if ($blockchain == 'bsc') {
+            if ($blockchain == 'bsc' || $blockchain=="BSC") {
                 $transferToMasterWallet = $this->bscService->transferToMasterWallet($virtualAccount, $amount);
             } else {
                 $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
