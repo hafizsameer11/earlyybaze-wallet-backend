@@ -48,14 +48,15 @@ class UserManagementController extends Controller
     public function blockUser($id)
     {
         $user = User::findOrFail($id);
-        $user->is_active = false;
+        $user->is_active = !$user->is_active; // Toggle the value
         $user->save();
+
         return response()->json([
             'status' => 'success',
-            'message' => 'User blocked',
+            'message' => $user->is_active ? 'User unblocked' : 'User blocked',
         ]);
     }
-    public function getUserManagementData()
+        public function getUserManagementData()
     {
         try {
             $data = $this->userService->getUserManagementData();
