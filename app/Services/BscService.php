@@ -249,14 +249,14 @@ class BscService
             'tx_hash' => $txHash,
         ]);
 
-        Ledger::create([
-            'user_id' => $user->id,
-            'type' => 'withdrawal',
-            'blockchain' => $blockchain,
-            'currency' => $currency,
-            'amount' => $amount,
-            'tx_hash' => $txHash,
-        ]);
+        // Ledger::create([
+        //     'user_id' => $user->id,
+        //     'type' => 'withdrawal',
+        //     'blockchain' => $blockchain,
+        //     'currency' => $currency,
+        //     'amount' => $amount,
+        //     'tx_hash' => $txHash,
+        // ]);
 
         return [
             'txHash' => $txHash,
