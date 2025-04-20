@@ -23,7 +23,7 @@ class LitecoinService
         $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->firstOrFail();
         $toAddress = $masterWallet->address;
 
-        $feeInfo = $this->estimateFee($fromAddress, $toAddress, $amount);
+        $feeInfo = $this->estimateFee();
         $feeLtc = $feeInfo['feeLtc'];
         $adjustedAmount = bcsub($amount, $feeLtc, 8);
 
