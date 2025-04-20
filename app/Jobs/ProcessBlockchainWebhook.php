@@ -60,12 +60,14 @@ class ProcessBlockchainWebhook implements ShouldQueue
         Log::info('🔁 Processing Webhook:', $data);
 
         $from = $data['from'] ?? null;
-        if (!$from) return;
+        // if (!$from) return;
 
-        $masterwallet = MasterWallet::where('address', $from)->first();
-        if ($masterwallet) {
-            Log::info('🚫 Master wallet found. Webhook is a top-up and ignored.', ['address' => $from]);
-            return;
+        if ($from) {
+            $masterwallet = MasterWallet::where('address', $from)->first();
+            if ($masterwallet) {
+                Log::info('🚫 Master wallet found. Webhook is a top-up and ignored.', ['address' => $from]);
+                return;
+            }
         }
 
         // Early exit if reference already exists
@@ -107,7 +109,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'tx_id'              => $data['txId'],
             'block_height'       => $data['blockHeight'],
             'block_hash'         => $data['blockHash'],
-            'from_address'       => $data['from'],
+            'from_address'       => $data['from'] ?? 'not provided',
             'to_address'         => $data['to'],
             'transaction_date'   => Carbon::createFromTimestampMs($data['date']),
             'index'              => $data['index'],
