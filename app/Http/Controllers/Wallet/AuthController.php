@@ -26,7 +26,8 @@ class AuthController extends Controller
         $this->notificationService = $notificationService;
     }
     public function sendNotification($userId){
-        $this->notificationService->sendToUserById($userId,'Notification Title','Notification Body');
+     $notification=   $this->notificationService->sendToUserById($userId,'Notification Title','Notification Body');
+     return $notification;
     }
     public function register(RegisterRequest $request)
     {
