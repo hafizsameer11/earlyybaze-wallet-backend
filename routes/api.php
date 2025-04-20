@@ -278,6 +278,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/update/{id}', [RoleController::class, 'update']);
             Route::delete('/delete/{id}', [RoleController::class, 'destroy']);
             Route::get('/{id}/permissions', [RoleController::class, 'getRoleModulePermissions']);
+            Route::get('/{name}/permissions', [RoleController::class, 'getRoleModuleByName']);
             Route::post('/{id}/modules', [RoleController::class, 'assignModules']);
         });
 

@@ -69,4 +69,21 @@ class RoleController extends Controller
             'modules' => $allModules->pluck('name', 'id')
         ]);
     }
+    public function getRoleModuleByName($name)
+    {
+        $role = Role::with('modules')->where('name', $name)->firstOrFail();
+        $allModules = Module::all();
+
+        $permissions = [];
+        foreach ($allModules as $module) {
+            $permissions[$module->id] = $role->modules->contains($module->id);
+        }
+
+        return response()->json([
+            'role_id' => $role->id,
+            'role_name' => $role->name,
+            'permissions' => $permissions,
+            'modules' => $allModules->pluck('name', 'id')
+        ]);
+    }
 }

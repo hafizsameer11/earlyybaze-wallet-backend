@@ -9,7 +9,12 @@ use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
+use App\Services\Blockchain\BitcoinService;
+use App\Services\Blockchain\LitecoinService;
+use App\Services\BscService;
 use App\Services\EthereumService;
+use App\Services\SolanaService;
+use App\Services\TronTransferService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,17 +35,23 @@ class ProcessBlockchainWebhook implements ShouldQueue
     protected $data;
 
     protected $transactionRepository;
-    protected $EthService;
+    protected $EthService, $BscService, $BitcoinService, $SolanaService, $LitecoinService, $TronTransferService;
 
     public function __construct(array $data)
     {
         $this->data = $data;
     }
 
-    public function handle(transactionRepository $transactionRepository, EthereumService $EthService)
+    public function handle(transactionRepository $transactionRepository, EthereumService $EthService, TronTransferService $TronTransferService, BscService $BscService, BitcoinService $BitcoinService, SolanaService $SolanaService, LitecoinService $LitecoinService)
     {
         $this->transactionRepository = $transactionRepository;
         $this->EthService = $EthService;
+        $this->BscService = $BscService;
+        $this->BitcoinService = $BitcoinService;
+        $this->SolanaService = $SolanaService;
+        $this->LitecoinService = $LitecoinService;
+        $this->TronTransferService = $TronTransferService;
+
 
         $data = $this->data;
 
@@ -117,10 +128,20 @@ class ProcessBlockchainWebhook implements ShouldQueue
 
             if ($blockChain === 'ethereum') {
                 $tx = $this->EthService->transferToMasterWallet($account, $amount);
+            } elseif ($blockChain === 'bsc') {
+                $tx = $this->BscService->transferToMasterWallet($account, $amount);
+            } elseif ($blockChain === 'solana') {
+                $tx = $this->SolanaService->transferToMasterWallet($account, $amount);
+            } elseif ($blockChain === 'litecoin') {
+                $tx = $this->LitecoinService->transferToMasterWallet($account, $amount);
+            } elseif ($blockChain === 'tron') {
+                $tx = $this->TronTransferService->transferTronToMasterWalletWithAutoFeeHandling($account, $amount);
+            } elseif ($blockChain === 'bitcoin') {
+                $tx = $this->BitcoinService->transferToMasterWallet($account, $amount);
+            } else {
+                Log::error('🚨 Unsupported blockchain:', ['blockchain' => $blockChain]);
             }
-
             Log::info('✅ Transfer to master wallet initiated', ['tx' => $tx]);
-
             $transaction = $this->transactionRepository->create(data: [
                 'type' => 'receive',
                 'amount' => $amount,
