@@ -30,6 +30,7 @@ class NotificationService
             Log::warning("User or FCM token not found for userId: $userId");
             return ['status' => 'error', 'message' => 'User or FCM token not found'];
         }
+        Log::info("User fcm token $user->fcmToken");
         //conver userId to string
         $stringUserId = (string) $userId;
         try {
