@@ -9,6 +9,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\OtpVerificationRequst;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\ResetPasswordRequest;
+use App\Services\NotificationService;
 use App\Services\ResetPasswordService;
 use App\Services\UserService;
 use Illuminate\Http\Request;
@@ -17,11 +18,12 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     protected $userService;
-    protected $resetPasswordService;
-    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService)
+    protected $resetPasswordService,$notificationService;
+    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService)
     {
         $this->userService = $userService;
         $this->resetPasswordService = $resetPasswordService;
+        $this->notificationService = $notificationService;
     }
     public function register(RegisterRequest $request)
     {
@@ -62,7 +64,7 @@ class AuthController extends Controller
                 'assets' => $user['virtual_accounts'],
                 'token' => $user['token']
             ];
-
+            $this->notificationService->sendToUserById($userd->id, 'Login Notification', 'You logged in successfully');
             return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
