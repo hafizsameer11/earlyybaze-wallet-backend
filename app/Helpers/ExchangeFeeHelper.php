@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\ExchangeRate;
 use App\Models\Fee;
 use App\Models\TransactionFee;
+use Illuminate\Support\Facades\Http;
 
 class ExchangeFeeHelper
 {
@@ -49,25 +50,45 @@ class ExchangeFeeHelper
 
         // 2. Estimate blockchain fee if external transfer
         if ($methode === 'external_transfer') {
-            $fromAddress = $from ?? '0x0000000000000000000000000000000000000000';
-            $toAddress = $to ?? '0x0000000000000000000000000000000000000001';
-
-            $chain = 'ETH';
+            $chain = 'ETH'; // default
             if (str_contains($currency, '_BSC')) {
                 $chain = 'BSC';
-            } elseif ($currency === 'TRON') {
+            } elseif ($currency === 'TRON' || str_contains($currency, '_TRON')) {
                 $chain = 'TRON';
             }
 
-            $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, $chain);
+            if (in_array($currency, ['BTC', 'LTC'])) {
+                // Use /v3/blockchain/fee/{chain}
+                $chain=strtoupper($currency);
+                $feeResponse = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
+                    ->get(config('tatum.base_url') . '/blockchain/fee/' . strtolower($currency));
 
-            $gasPrice = $gasEstimation['gasPrice'];
-            $gasLimit = $gasEstimation['gasLimit'];
+                if ($feeResponse->failed()) {
+                    throw new \Exception("Failed to fetch $currency network fee: " . $feeResponse->body());
+                }
 
-            $gasCostWei = bcmul((string) $gasPrice, (string) $gasLimit);
-            $nativeGasFee = bcdiv($gasCostWei, bcpow('10', 18), 8);
+                $feeData = $feeResponse->json();
+                $vsize = 250; // Estimated transaction size in bytes
+                $feePerByte = $feeData['medium'] ?? 20; // fallback
+                $networkFeeCoin = bcmul((string) $vsize, (string) $feePerByte); // satoshis
+                $nativeGasFee = bcdiv($networkFeeCoin, bcpow('10', 8), 8); // convert to BTC/LTC
 
-            $nativeCurrency = $chain;
+                $nativeCurrency = $currency;
+            } else {
+                // EVM-based logic (ETH, BSC, TRON)
+                $fromAddress = $from ?? '0x0000000000000000000000000000000000000000';
+                $toAddress = $to ?? '0x0000000000000000000000000000000000000001';
+
+                $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, $chain);
+                $gasPrice = $gasEstimation['gasPrice'];
+                $gasLimit = $gasEstimation['gasLimit'];
+
+                $gasCostWei = bcmul((string)$gasPrice, (string)$gasLimit);
+                $nativeGasFee = bcdiv($gasCostWei, bcpow('10', 18), 8); // ETH or BSC units
+
+                $nativeCurrency = $chain;
+            }
+
             $nativeExchange = ExchangeRate::where('currency', $nativeCurrency)->first();
             if (!$nativeExchange) {
                 throw new \Exception("Exchange rate not found for native currency $nativeCurrency.");
@@ -80,8 +101,8 @@ class ExchangeFeeHelper
                 'native_currency' => $nativeCurrency,
                 'native_fee' => $nativeGasFee,
                 'native_fee_doubled' => bcmul($nativeGasFee, '2', 8),
-                'gas_limit' => $gasLimit,
-                'gas_price' => $gasPrice,
+                'gas_limit' => $vsize ?? $gasLimit ?? null,
+                'gas_price' => $feePerByte ?? $gasPrice ?? null,
             ];
         }
 
@@ -89,8 +110,9 @@ class ExchangeFeeHelper
         $totalFeeUsd = bcadd($platformFeeUsd, $blockchainFeeUsd, 8);
         $totalFeeCurrency = bcdiv($totalFeeUsd, $exchangeRate->rate_usd, 8);
         $totalFeeNaira = bcmul($totalFeeUsd, $nairaExchangeRate->rate, 8);
+
         TransactionFee::create([
-            'user_id' => $userId, // or pass user ID as parameter
+            'user_id' => $userId,
             'transaction_type' => $type,
             'currency' => $currency,
             'amount' => $amount,
@@ -109,6 +131,7 @@ class ExchangeFeeHelper
 
             'status' => 'pending',
         ]);
+
         return [
             'platform_fee_usd' => $platformFeeUsd,
             'blockchain_fee_usd' => $blockchainFeeUsd,

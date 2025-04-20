@@ -92,19 +92,20 @@ class LitecoinService
         $payload = [
             'fromAddress' => [
                 [
-                    'address' => $fromAddress
+                    'address' => $fromAddress,
+                    'privateKey' => $fromPrivateKey // ✅ Move the key here!
                 ]
             ],
             'to' => [
                 [
                     'address' => $toAddress,
-                    'value' => (float) $adjustedAmount
+                    'value' => (float) $adjustedAmount // ✅ Must be a positive float with max 8 decimals
                 ]
             ],
-            'fee' => (float) $feeLtc,
-            'changeAddress' => $fromAddress,
-            'fromPrivateKey' => [$fromPrivateKey]
+            'fee' => (float) $feeLtc, // ✅ Must be a positive float, e.g. 0.00002434
+            'changeAddress' => $fromAddress // ✅ Required when fee is set manually
         ];
+
 
 
         $response = Http::withHeaders([

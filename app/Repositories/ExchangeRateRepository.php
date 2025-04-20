@@ -94,6 +94,7 @@ class ExchangeRateRepository
                 $from = $from->address;
                 // $from=
             }
+            Log::info("Calcuting for currency $currency");
 
             $fee = ExchangeFeeHelper::caclulateFee(
                 $amount,
