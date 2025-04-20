@@ -182,20 +182,24 @@ class BscService
 
         // 2. Estimate gas fee
         $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'BSC');
-
         $originalGasLimit = (int) ($gasEstimation['gasLimit'] ?? 21000);
-        $estimatedGasPrice = (int) ($gasEstimation['gasPrice'] ?? 1000000000); // 1 Gwei default
+        $estimatedGasPriceWei = (int) ($gasEstimation['gasPrice'] ?? 1000000000); // default 1 Gwei
 
-        // 3. Apply buffer and minimum gas price logic
+        // Convert to Gwei for API
+        $estimatedGasPriceGwei = (int) bcdiv((string) $estimatedGasPriceWei, bcpow('10', '9'), 0);
+
+        // 3. Apply buffer and gas logic
         $gasLimit = isset($fee['gasLimit']) ? (int) $fee['gasLimit'] : $originalGasLimit + 70000;
-        $gasPrice = isset($fee['gasPrice']) ? (int) $fee['gasPrice'] : max($estimatedGasPrice, 1000000000);
+        $gasPriceGwei = isset($fee['gasPrice']) ? (int) $fee['gasPrice'] : max($estimatedGasPriceGwei, 1);
 
-        // 4. Calculate gas fee in BNB
-        $requiredGasWei = bcmul((string) $gasPrice, (string) $gasLimit);
+        // Convert back to Wei for fee calc
+        $gasPriceWei = bcmul((string) $gasPriceGwei, bcpow('10', '9'));
+        $requiredGasWei = bcmul((string) $gasPriceWei, (string) $gasLimit);
         $gasFeeBnb = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+
         $amount = number_format((float) $amount, 4, '.', '');
 
-        // 5. Prepare the payload for transaction
+        // 4. Prepare and send blockchain transaction
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
@@ -203,11 +207,10 @@ class BscService
             'currency' => $currency,
             'fee' => [
                 'gasLimit' => (string) $gasLimit,
-                'gasPrice' => (string) $gasPrice,
+                'gasPrice' => (string) $gasPriceGwei, // Gwei for API
             ]
         ];
 
-        // 6. Broadcast transaction
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/bsc/transaction', $payload);
@@ -218,7 +221,7 @@ class BscService
 
         $txHash = $response->json()['txId'] ?? null;
 
-        // 7. Log master wallet transaction
+        // 5. Save transaction logs
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
@@ -230,7 +233,6 @@ class BscService
             'tx_hash' => $txHash,
         ]);
 
-        // 8. Create ledger record
         Ledger::create([
             'user_id' => $user->id,
             'type' => 'withdrawal',
@@ -247,6 +249,7 @@ class BscService
             'total' => $amount,
         ];
     }
+
 
 
     public function getBscMasterBalances()
