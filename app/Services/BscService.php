@@ -27,7 +27,7 @@ class BscService
         $masterWallet = MasterWallet::where('blockchain', 'BSC')->firstOrFail();
         $toAddress = $masterWallet->address;
 
-        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'bsc');
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'BSC');
         $originalGasLimit = $gasEstimation['gasLimit'];
         $minGasPrice = 1000000000;
         $gasPrice = max((int) $gasEstimation['gasPrice'], $minGasPrice);
