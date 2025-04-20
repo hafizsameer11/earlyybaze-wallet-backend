@@ -17,7 +17,7 @@ class FirebaseNotificationService
 
     public function __construct()
     {
-        $this->fcmUrl = 'https://fcm.googleapis.com/v1/projects/tipsterx-9ff4f/messages:send';
+        $this->fcmUrl = 'https://fcm.googleapis.com/v1/projects/earlybazewallet-d6ff3/messages:send';
         $this->credentialsPath = storage_path('app/json/earlybaze.json'); // Path to your Service Account key
         $this->projectId = 'earlybazewallet-d6ff3'; // Ensure you set this in your config/services.php
     }
