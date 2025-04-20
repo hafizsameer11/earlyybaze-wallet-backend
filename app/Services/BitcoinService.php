@@ -23,7 +23,7 @@ class BitcoinService
         $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->firstOrFail();
         $toAddress = $masterWallet->address;
 
-        $feeInfo = $this->estimateFee($fromAddress, $toAddress, $amount);
+        $feeInfo = $this->estimateFee();
         $feeBtc = $feeInfo['feeBtc'];
         $adjustedAmount = bcsub($amount, $feeBtc, 8);
 
@@ -79,7 +79,7 @@ class BitcoinService
         $fromAddress = $masterWallet->address;
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
 
-        $feeInfo = $this->estimateFee($fromAddress, $toAddress, $amount);
+        $feeInfo = $this->estimateFee();
         $feeBtc = $feeInfo['feeBtc'];
         $adjustedAmount = bcsub($amount, $feeBtc, 8);
 
@@ -129,31 +129,26 @@ class BitcoinService
         return $txHash;
     }
 
-    public function estimateFee(string $fromAddress, string $toAddress, string $amount): array
+    public function estimateFee(string $chain = 'BTC'): array
     {
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/blockchain/estimate', [
-            'from' => $fromAddress,
-            'to' => $toAddress,
-            'amount' => $amount,
-            'chain' => 'BTC'
-        ]);
+        ])->get(config('tatum.base_url') . "/blockchain/fee/{$chain}");
 
         if ($response->failed()) {
-            throw new \Exception("BTC Fee Estimation Failed: " . $response->body());
+            throw new \Exception("{$chain} Fee Estimation Failed: " . $response->body());
         }
 
         $data = $response->json();
-
-        $vsize = $data['gasLimit'] ?? 250;
-        $feePerByte = $data['gasPrice'] ?? 20;
-        $feeBtc = bcdiv(bcmul((string)$vsize, (string)$feePerByte), bcpow('10', 8), 8);
+        $vsize = 250; // average size in bytes
+        $feePerByte = $data['medium']; // or 'medium' / 'slow' depending on urgency
+        $feeTotal = bcmul((string)$feePerByte, (string)$vsize); // in satoshis
+        $feeLtc = bcdiv($feeTotal, bcpow('10', 8), 8); // Convert to LTC
 
         return [
             'vsize' => $vsize,
             'feePerByte' => $feePerByte,
-            'feeBtc' => $feeBtc
+            'feeBtc' => $feeLtc
         ];
     }
 }
