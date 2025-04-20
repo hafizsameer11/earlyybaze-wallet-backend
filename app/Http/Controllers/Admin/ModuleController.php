@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ModuleController extends Controller
 {
@@ -15,7 +16,12 @@ class ModuleController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['name' => 'required']);
+       $validatedData=Validator::make($request->all(), [
+           'name' => 'required',
+       ]);
+       if ($validatedData->fails()) {
+           return response()->json(['errors' => $validatedData->errors()]);
+       }
 
         $module = Module::create(['name' => $request->name]);
         return response()->json(['message' => 'Module created', 'module' => $module]);
