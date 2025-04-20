@@ -64,7 +64,7 @@ class AuthController extends Controller
                 'assets' => $user['virtual_accounts'],
                 'token' => $user['token']
             ];
-            $this->notificationService->sendToUserById($userd->id, 'Login Notification', 'You logged in successfully');
+            $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
             return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
