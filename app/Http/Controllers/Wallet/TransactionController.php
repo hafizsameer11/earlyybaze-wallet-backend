@@ -72,7 +72,7 @@ class TransactionController extends Controller
                     $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
                 }
 
-                Log::info('External Transfer Transaction', $transaction);
+                Log::info("Transaction created",[$transaction] );
                 $senderTransaction = $this->transactionService->create([
                     'type' => 'send',
                     'amount' => $validated['amount'],
