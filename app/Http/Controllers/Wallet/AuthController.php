@@ -25,6 +25,9 @@ class AuthController extends Controller
         $this->resetPasswordService = $resetPasswordService;
         $this->notificationService = $notificationService;
     }
+    public function sendNotification($userId){
+        $this->notificationService->sendToUserById($userId,'Notification Title','Notification Body');
+    }
     public function register(RegisterRequest $request)
     {
         try {

@@ -23,6 +23,7 @@ class UserController extends Controller
         $this->userService = $userService;
         $this->userAccountService = $userAccountService;
     }
+    // public fnct
     public function getUserDetails()
     {
         try {
