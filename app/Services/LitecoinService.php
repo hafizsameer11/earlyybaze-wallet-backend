@@ -129,26 +129,21 @@ class LitecoinService
         return $txHash;
     }
 
-    public function estimateFee(string $fromAddress, string $toAddress, string $amount): array
+    public function estimateFee(string $chain = 'LTC'): array
     {
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/blockchain/estimate', [
-            'from' => $fromAddress,
-            'to' => $toAddress,
-            'amount' => $amount,
-            'chain' => 'LTC'
-        ]);
+        ])->get(config('tatum.base_url') . "/blockchain/fee/{$chain}");
 
         if ($response->failed()) {
-            throw new \Exception("LTC Fee Estimation Failed: " . $response->body());
+            throw new \Exception("{$chain} Fee Estimation Failed: " . $response->body());
         }
 
         $data = $response->json();
-
-        $vsize = $data['gasLimit'] ?? 250;
-        $feePerByte = $data['gasPrice'] ?? 20;
-        $feeLtc = bcdiv(bcmul((string)$vsize, (string)$feePerByte), bcpow('10', 8), 8);
+        $vsize = 250; // average size in bytes
+        $feePerByte = $data['medium']; // or 'medium' / 'slow' depending on urgency
+        $feeTotal = bcmul((string)$feePerByte, (string)$vsize); // in satoshis
+        $feeLtc = bcdiv($feeTotal, bcpow('10', 8), 8); // Convert to LTC
 
         return [
             'vsize' => $vsize,
