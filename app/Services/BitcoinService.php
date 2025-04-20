@@ -28,16 +28,16 @@ class BitcoinService
         $adjustedAmount = bcsub($amount, $feeBtc, 8);
 
         $payload = [
-            'fromAddress' => [$fromAddress],
+            'fromAddress' => [[
+                'address' => $fromAddress,
+                'privateKey' => $fromPrivateKey,
+            ]],
             'to' => [[
                 'address' => $toAddress,
-                'value' => $adjustedAmount
+                'value' => (float) number_format($adjustedAmount, 8, '.', '')
             ]],
-            'fee' => [
-                'gasLimit' => $feeInfo['vsize'],
-                'gasPrice' => $feeInfo['feePerByte']
-            ],
-            'fromPrivateKey' => [$fromPrivateKey]
+            'fee' => number_format($feeBtc, 8, '.', ''),
+            'changeAddress' => $fromAddress,
         ];
 
         $response = Http::withHeaders([
@@ -84,16 +84,21 @@ class BitcoinService
         $adjustedAmount = bcsub($amount, $feeBtc, 8);
 
         $payload = [
-            'fromAddress' => [$fromAddress],
-            'to' => [[
-                'address' => $toAddress,
-                'value' => $adjustedAmount
-            ]],
-            'fee' => [
-                'gasLimit' => $feeInfo['vsize'],
-                'gasPrice' => $feeInfo['feePerByte']
+            'fromAddress' => [
+                [
+                    'address' => $fromAddress,
+                    'privateKey' => $fromPrivateKey // ✅ Move the key here!
+                ]
             ],
-            'fromPrivateKey' => [$fromPrivateKey]
+            'to' => [
+                [
+                    'address' => $toAddress,
+                    'value' => (float) $adjustedAmount // ✅ Must be a positive float with max 8 decimals
+                ]
+            ],
+            'fee' => number_format((float) $feeBtc, 8, '.', ''), // ✅ convert to string with max 8 decimals
+
+            'changeAddress' => $fromAddress // ✅ Required when fee is set manually
         ];
 
         $response = Http::withHeaders([
