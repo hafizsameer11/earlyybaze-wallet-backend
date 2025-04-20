@@ -212,7 +212,7 @@ class UserRepository
     }
     public function userDetails($userId)
     {
-        $user = User::where('id', $userId)->with('userAccount')->first();
+        $user = User::where('id', $userId)->with('userAccount', 'userActivity')->first();
         // $user = $user->map(function ($user) {
         $user = [
             'id' => $user->id,
@@ -225,7 +225,8 @@ class UserRepository
             'img' => asset('storage/' . $user->profile_picture),
             'total_amount_in_dollar' => $user->userAccount->crypto_balance,
             'total_amount_in_naira' => $user->userAccount->naira_balance,
-            'kyc_status' => $user->kyc_status
+            'kyc_status' => $user->kyc_status,
+            'user_activity' => $user->userActivity
         ];
         // });
         return $user;
