@@ -16,6 +16,7 @@ class ModuleController extends Controller
     public function store(Request $request)
     {
         $request->validate(['name' => 'required']);
+
         $module = Module::create(['name' => $request->name]);
         return response()->json(['message' => 'Module created', 'module' => $module]);
     }
