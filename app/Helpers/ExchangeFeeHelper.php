@@ -59,9 +59,10 @@ class ExchangeFeeHelper
 
             if (in_array($currency, ['BTC', 'LTC'])) {
                 // Use /v3/blockchain/fee/{chain}
+                $currency=strtoupper($currency);
                 $chain=strtoupper($currency);
                 $feeResponse = Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-                    ->get(config('tatum.base_url') . '/blockchain/fee/' . strtolower($currency));
+                    ->get(config('tatum.base_url') . '/blockchain/fee/' . $currency);
 
                 if ($feeResponse->failed()) {
                     throw new \Exception("Failed to fetch $currency network fee: " . $feeResponse->body());
