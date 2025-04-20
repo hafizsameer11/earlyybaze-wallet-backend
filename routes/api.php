@@ -335,4 +335,5 @@ Route::prefix('transaction-icons')->group(function () {
     Route::get('/{id}', [TransactionIconController::class, 'show']);
     Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
 });
+Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);

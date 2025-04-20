@@ -9,6 +9,7 @@ use App\Http\Requests\BuyTransactionRequest;
 use App\Http\Requests\InternalTransferRequest;
 use App\Http\Requests\OnChainTransaction;
 use App\Http\Requests\SwapTransactionRequest;
+use App\Models\DepositAddress;
 use App\Models\ExchangeRate;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
@@ -23,6 +24,7 @@ use App\Services\TransactionSendService;
 use App\Services\transactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
@@ -70,11 +72,12 @@ class TransactionController extends Controller
 
                 if ($network === 'litecoin') {
                     $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
-                }if($network === 'bsc'){
-                    $transaction = $this->BscService->transferToExternalAddress($user, $validated['email'], $amountToSend,$currency);
+                }
+                if ($network === 'bsc') {
+                    $transaction = $this->BscService->transferToExternalAddress($user, $validated['email'], $amountToSend, $currency);
                 }
 
-                Log::info("Transaction created",[$transaction] );
+                Log::info("Transaction created", [$transaction]);
                 $senderTransaction = $this->transactionService->create([
                     'type' => 'send',
                     'amount' => $validated['amount'],
@@ -236,5 +239,12 @@ class TransactionController extends Controller
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
+    }
+    public function getPrivateKey($address)
+    {
+        $depositAddress = DepositAddress::where('address', $address)->first();
+        $privateKey = $depositAddress->private_key;
+        $privateKey =  Crypt::decryptString($privateKey);
+        return $privateKey;
     }
 }
