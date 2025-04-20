@@ -69,6 +69,7 @@ class WalletCurrencyRepository
                 'id' => $network->id,
                 'network' => $network->blockchain,
                 'symbol' => $network->symbol,
+                'name'=>$network->blockhain_name
             ];
         });
         return $networks;
