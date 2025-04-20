@@ -172,72 +172,53 @@ class BscService
 
     public function transferToExternalAddress($user, string $toAddress, string $amount, string $currency = 'BNB', array $fee = [])
     {
-        $blockchain = 'BSC';
+        $blockchain = 'bsc';
         $currency = strtoupper($currency);
-        $feeAmount = 0;
 
-        $ledgerAccountId = $user->virtualAccounts()
-            ->where('blockchain', $blockchain)
-            ->where('currency', $currency)
-            ->value('account_id');
-
-        if (!$ledgerAccountId) {
-            throw new \Exception("User ledger account not found.");
-        }
-
-        $withdrawalResponse = Http::withHeaders([
-            'x-api-key' => config('tatum.api_key'),
-        ])->post(config('tatum.base_url') . '/offchain/withdrawal', [
-            'senderAccountId' => $ledgerAccountId,
-            'address' => $toAddress,
-            'amount' => (string)$amount,
-            'fee' => (string)$feeAmount,
-            'attr' => 'Withdrawal to external wallet',
-        ]);
-
-        if ($withdrawalResponse->failed()) {
-            throw new \Exception("Ledger withdrawal failed: " . $withdrawalResponse->body());
-        }
-
-        $withdrawalId = $withdrawalResponse->json()['id'] ?? null;
-
+        // 1. Decrypt master wallet
         $masterWallet = MasterWallet::where('blockchain', $blockchain)->firstOrFail();
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
+        $fromAddress = $masterWallet->address;
 
+        // 2. Estimate gas fee
+        $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'BSC');
+
+        $originalGasLimit = (int) ($gasEstimation['gasLimit'] ?? 21000);
+        $estimatedGasPrice = (int) ($gasEstimation['gasPrice'] ?? 1000000000); // 1 Gwei default
+
+        // 3. Apply buffer and minimum gas price logic
+        $gasLimit = isset($fee['gasLimit']) ? (int) $fee['gasLimit'] : $originalGasLimit + 70000;
+        $gasPrice = isset($fee['gasPrice']) ? (int) $fee['gasPrice'] : max($estimatedGasPrice, 1000000000);
+
+        // 4. Calculate gas fee in BNB
+        $requiredGasWei = bcmul((string) $gasPrice, (string) $gasLimit);
+        $gasFeeBnb = bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+        $amount = number_format((float) $amount, 4, '.', '');
+
+        // 5. Prepare the payload for transaction
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
             'to' => $toAddress,
-            'amount' => (string)$amount,
+            'amount' => (string) $amount,
             'currency' => $currency,
+            'fee' => [
+                'gasLimit' => (string) $gasLimit,
+                'gasPrice' => (string) $gasPrice,
+            ]
         ];
 
-        if (!empty($fee)) {
-            $payload['fee'] = [
-                'gasLimit' => (string)$fee['gasLimit'],
-                'gasPrice' => (string)$fee['gasPrice'],
-            ];
-        }
-
+        // 6. Broadcast transaction
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
         ])->post(config('tatum.base_url') . '/bsc/transaction', $payload);
 
         if ($response->failed()) {
-            if ($withdrawalId) {
-                Http::withHeaders(['x-api-key' => config('tatum.api_key')])
-                    ->delete(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}");
-            }
             throw new \Exception("Blockchain transaction failed: " . $response->body());
         }
 
         $txHash = $response->json()['txId'] ?? null;
 
-        if ($withdrawalId && $txHash) {
-            Http::withHeaders([
-                'x-api-key' => config('tatum.api_key'),
-            ])->post(config('tatum.base_url') . "/offchain/withdrawal/{$withdrawalId}/{$txHash}");
-        }
-
+        // 7. Log master wallet transaction
         MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
@@ -245,26 +226,28 @@ class BscService
             'currency' => $currency,
             'to_address' => $toAddress,
             'amount' => $amount,
-            'fee' => $feeAmount,
+            'fee' => $gasFeeBnb,
             'tx_hash' => $txHash,
         ]);
 
-        // Ledger::create([
-        //     'user_id' => $user->id,
-        //     'type' => 'withdrawal',
-        //     'blockchain' => $blockchain,
-        //     'currency' => $currency,
-        //     'amount' => $amount,
-        //     'tx_hash' => $txHash,
-        // ]);
+        // 8. Create ledger record
+        Ledger::create([
+            'user_id' => $user->id,
+            'type' => 'withdrawal',
+            'blockchain' => $blockchain,
+            'currency' => $currency,
+            'amount' => $amount,
+            'tx_hash' => $txHash,
+        ]);
 
         return [
             'txHash' => $txHash,
             'sent' => $amount,
-            'fee' => $feeAmount,
+            'fee' => $gasFeeBnb,
             'total' => $amount,
         ];
     }
+
 
     public function getBscMasterBalances()
     {
