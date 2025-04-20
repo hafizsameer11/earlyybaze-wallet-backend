@@ -108,7 +108,7 @@ class BscService
 
     public function executeAssetTransfer($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet)
     {
-        $gasFee = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'bsc');
+        $gasFee = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency, 'BSC');
         $gasLimit = (int)$gasFee['gasLimit'] + 70000;
         $gasPriceGwei = (string) max(1, intval(ceil(intval($gasFee['gasPrice']) / 1e9)));
 
