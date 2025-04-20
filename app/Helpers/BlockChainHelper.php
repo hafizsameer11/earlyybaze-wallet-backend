@@ -505,7 +505,9 @@ class BlockChainHelper
         $apiKey = config('tatum.api_key');
         $baseUrl = 'https://api.tatum.io/v4';
         $endpoint = '/blockchainOperations/gas';
-
+        // if($chain=="bsc" || $chain =="BSC"){
+        //     $chain=strtoupper
+        // }
         $payload = [
             'from' => $from,
             'to' => $to,
