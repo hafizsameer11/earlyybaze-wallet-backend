@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 class BlockChainController extends Controller
 {
     protected $bscService;
-    public function __construct( BscService $bscService)
+    public function __construct(BscService $bscService)
     {
         $this->bscService = $bscService;
     }
@@ -28,7 +28,11 @@ class BlockChainController extends Controller
             $masterWallet = MasterWallet::where('blockchain', $blockchain)->first();
             $masterWalletAddress = $masterWallet->address;
             $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
-            $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
+            if ($blockchain == 'bsc') {
+                $transferToMasterWallet = $this->bscService->transferToMasterWallet($virtualAccount, $amount);
+            } else {
+                $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
+            }
 
             $afterbalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
             return response()->json([
