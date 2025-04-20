@@ -85,22 +85,27 @@ class LitecoinService
         $fromAddress = $masterWallet->address;
         $fromPrivateKey = Crypt::decrypt($masterWallet->private_key);
 
-        $feeInfo = $this->estimateFee($fromAddress, $toAddress, $amount);
+        $feeInfo = $this->estimateFee();
         $feeLtc = $feeInfo['feeLtc'];
         $adjustedAmount = bcsub($amount, $feeLtc, 8);
 
         $payload = [
-            'fromAddress' => [$fromAddress],
-            'to' => [[
-                'address' => $toAddress,
-                'value' => $adjustedAmount
-            ]],
-            'fee' => [
-                'gasLimit' => $feeInfo['vsize'],
-                'gasPrice' => $feeInfo['feePerByte']
+            'fromAddress' => [
+                [
+                    'address' => $fromAddress
+                ]
             ],
+            'to' => [
+                [
+                    'address' => $toAddress,
+                    'value' => (float) $adjustedAmount
+                ]
+            ],
+            'fee' => (float) $feeLtc,
+            'changeAddress' => $fromAddress,
             'fromPrivateKey' => [$fromPrivateKey]
         ];
+
 
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),

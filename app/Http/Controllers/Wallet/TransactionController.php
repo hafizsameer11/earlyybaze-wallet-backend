@@ -12,8 +12,11 @@ use App\Http\Requests\SwapTransactionRequest;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\TransactionSend;
+use App\Services\BitcoinService;
+use App\Services\BscService;
 use App\Services\BuyTransactionService;
 use App\Services\EthereumService;
+use App\Services\LitecoinService;
 use App\Services\SwapTransactionService;
 use App\Services\TransactionSendService;
 use App\Services\transactionService;
@@ -23,15 +26,18 @@ use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
-    protected $transactionSendService, $transactionService, $swapTransactionService, $buyTransactionService, $EthService;
+    protected $transactionSendService, $transactionService, $swapTransactionService, $buyTransactionService, $EthService, $LitecoinService, $BscService, $BitcoinService;
 
-    public function __construct(TransactionSendService $transactionSendService, transactionService $transactionService, SwapTransactionService $swapTransactionService, BuyTransactionService $buyTransactionService, EthereumService $EthService)
+    public function __construct(TransactionSendService $transactionSendService, transactionService $transactionService, SwapTransactionService $swapTransactionService, BuyTransactionService $buyTransactionService, EthereumService $EthService, LitecoinService $LitecoinService, BscService $BscService, BitcoinService $BitcoinService)
     {
         $this->transactionSendService = $transactionSendService;
         $this->transactionService = $transactionService;
         $this->swapTransactionService = $swapTransactionService;
         $this->buyTransactionService = $buyTransactionService;
         $this->EthService = $EthService;
+        $this->LitecoinService = $LitecoinService;
+        $this->BscService = $BscService;
+        $this->BitcoinService = $BitcoinService;
     }
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
@@ -48,45 +54,48 @@ class TransactionController extends Controller
                 $user = Auth::user();
                 if ($validated['network'] == 'ethereum') {
                     $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee'], $validated['currency']);
-                    Log::info('External Transfer Transaction', $transaction);
-                    $senderTransaction = $this->transactionService->create([
-                        'type' => 'send',
-                        'amount' => $validated['amount'],
-                        'currency' => $validated['currency'],
-                        'status' => 'completed',
-                        'network' => $validated['network'],
-                        'reference' => $transaction['txHash'],
-                        'user_id' => $user->id,
-                        'amount_usd' => $validated['amount']
-                    ]);
 
-                    TransactionSend::create([
-                        'transaction_type' => 'external',
-
-                        'sender_address' => null,
-                        'user_id' => $user->id,
-
-                        'receiver_address' => $validated['email'],
-                        'amount' => $validated['fee_summary']['amount_after_fee'],
-                        'currency' => $validated['currency'],
-                        'tx_id' => $transaction['txHash'],
-                        'status' => 'completed',
-                        'blockchain' => $validated['network'],
-                        'transaction_id' => $senderTransaction->id,
-                        'original_amount' => $validated['amount'],
-                        'amount_after_fee' => $validated['fee_summary']['amount_after_fee'],
-                        'platform_fee' => $validated['fee_summary']['platform_fee_usd'],
-                        'network_fee' => $validated['fee_summary']['network_fee_usd'],
-                        'fee_summary' => json_encode($validated['fee_summary']),
-                        'fee_actual_transaction' => $transaction['fee']
-                    ]);
-
-                    // Record receiver transaction
-                    $transaction['refference'] = $transaction['txHash'];
-                    $transaction['amount'] = $validated['fee_summary']['amount_after_fee'];
-                    $transacton['currency'] = $validated['currency'];
-                    $transaction['transaction_id'] = $senderTransaction->id;
+                }if($validated['network'] == 'litecoin'){
+                    $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee']);
                 }
+                Log::info('External Transfer Transaction', $transaction);
+                $senderTransaction = $this->transactionService->create([
+                    'type' => 'send',
+                    'amount' => $validated['amount'],
+                    'currency' => $validated['currency'],
+                    'status' => 'completed',
+                    'network' => $validated['network'],
+                    'reference' => $transaction['txHash'],
+                    'user_id' => $user->id,
+                    'amount_usd' => $validated['amount']
+                ]);
+
+                TransactionSend::create([
+                    'transaction_type' => 'external',
+
+                    'sender_address' => null,
+                    'user_id' => $user->id,
+
+                    'receiver_address' => $validated['email'],
+                    'amount' => $validated['fee_summary']['amount_after_fee'],
+                    'currency' => $validated['currency'],
+                    'tx_id' => $transaction['txHash'],
+                    'status' => 'completed',
+                    'blockchain' => $validated['network'],
+                    'transaction_id' => $senderTransaction->id,
+                    'original_amount' => $validated['amount'],
+                    'amount_after_fee' => $validated['fee_summary']['amount_after_fee'],
+                    'platform_fee' => $validated['fee_summary']['platform_fee_usd'],
+                    'network_fee' => $validated['fee_summary']['network_fee_usd'],
+                    'fee_summary' => json_encode($validated['fee_summary']),
+                    'fee_actual_transaction' => $transaction['fee']
+                ]);
+
+                // Record receiver transaction
+                $transaction['refference'] = $transaction['txHash'];
+                $transaction['amount'] = $validated['fee_summary']['amount_after_fee'];
+                $transacton['currency'] = $validated['currency'];
+                $transaction['transaction_id'] = $senderTransaction->id;
             }
 
 
