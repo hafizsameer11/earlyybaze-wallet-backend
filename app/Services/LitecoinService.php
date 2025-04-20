@@ -139,7 +139,12 @@ class LitecoinService
             'tx_hash' => $txHash,
         ]);
 
-        return $txHash;
+        return [
+            'txHash' => $txHash,
+            'sent' => $adjustedAmount,
+            'fee' => $feeLtc,
+            'total' => $amount,
+        ];
     }
 
     public function estimateFee(string $chain = 'LTC'): array
