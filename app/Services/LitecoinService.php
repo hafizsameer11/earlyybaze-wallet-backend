@@ -17,27 +17,32 @@ class LitecoinService
 
     public function transferToMasterWallet(VirtualAccount $virtualAccount, string $amount)
     {
-        $fromAddress = DepositAddress::where('virtual_account_id', $virtualAccount->id)->value('address');
-        $fromPrivateKey = Crypt::decryptString(DepositAddress::where('virtual_account_id', $virtualAccount->id)->value('private_key'));
+        $deposit = DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $fromAddress = $deposit->address;
+        $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
         $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->firstOrFail();
         $toAddress = $masterWallet->address;
 
-        $feeInfo = $this->estimateFee();
+        $feeInfo = $this->estimateFee(); // This should use the `/blockchain/fee/LTC` endpoint
         $feeLtc = $feeInfo['feeLtc'];
         $adjustedAmount = bcsub($amount, $feeLtc, 8);
 
+        if (bccomp($adjustedAmount, '0', 8) <= 0) {
+            throw new \Exception("Adjusted amount is too low after subtracting fees.");
+        }
+
         $payload = [
-            'fromAddress' => [$fromAddress],
+            'fromAddress' => [[
+                'address' => $fromAddress,
+                'privateKey' => $fromPrivateKey,
+            ]],
             'to' => [[
                 'address' => $toAddress,
-                'value' => $adjustedAmount
+                'value' => (float) number_format($adjustedAmount, 8, '.', '')
             ]],
-            'fee' => [
-                'gasLimit' => $feeInfo['vsize'],
-                'gasPrice' => $feeInfo['feePerByte']
-            ],
-            'fromPrivateKey' => [$fromPrivateKey]
+            'fee' => number_format($feeLtc, 8, '.', ''),
+            'changeAddress' => $fromAddress,
         ];
 
         $response = Http::withHeaders([
@@ -72,6 +77,7 @@ class LitecoinService
 
         return $txHash;
     }
+
 
     public function transferToExternalAddress($user, string $toAddress, string $amount)
     {
