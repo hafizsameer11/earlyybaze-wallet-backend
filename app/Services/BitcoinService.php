@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Blockchain;
+namespace App\Services;
 
 use App\Models\MasterWallet;
 use App\Models\VirtualAccount;
