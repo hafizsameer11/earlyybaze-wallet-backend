@@ -13,7 +13,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\User;
 class UserController extends Controller
 {
     protected $userService;
@@ -148,5 +148,16 @@ class UserController extends Controller
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
+    }
+    public function setFcmToken(Request $request)
+    {
+        $userId = Auth::user()->id;
+        Log::info("FC token set: " . $request->fcmToken);
+        $fcmToken = $request->fcmToken;
+
+        $user = User::where('id', $userId)->first();
+        $user->fcmToken = $fcmToken;
+        $user->save();
+        return response()->json(['status' => 'success', 'message' => 'FCM token set successfully'], 200);
     }
 }
