@@ -70,6 +70,8 @@ class TransactionController extends Controller
 
                 if ($network === 'litecoin') {
                     $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
+                }if($network === 'bsc'){
+                    $transaction = $this->BscService->transferToExternalAddress($user, $validated['email'], $amountToSend);
                 }
 
                 Log::info("Transaction created",[$transaction] );
