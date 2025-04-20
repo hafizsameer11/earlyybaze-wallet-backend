@@ -102,7 +102,8 @@ class LitecoinService
                     'value' => (float) $adjustedAmount // ✅ Must be a positive float with max 8 decimals
                 ]
             ],
-            'fee' => (float) $feeLtc, // ✅ Must be a positive float, e.g. 0.00002434
+            'fee' => number_format((float) $feeLtc, 8, '.', ''), // ✅ convert to string with max 8 decimals
+
             'changeAddress' => $fromAddress // ✅ Required when fee is set manually
         ];
 

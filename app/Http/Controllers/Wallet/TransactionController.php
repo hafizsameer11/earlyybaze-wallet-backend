@@ -9,6 +9,7 @@ use App\Http\Requests\BuyTransactionRequest;
 use App\Http\Requests\InternalTransferRequest;
 use App\Http\Requests\OnChainTransaction;
 use App\Http\Requests\SwapTransactionRequest;
+use App\Models\ExchangeRate;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\TransactionSend;
@@ -52,12 +53,25 @@ class TransactionController extends Controller
                 $transaction = $this->transactionSendService->sendInternalTransaction(array_merge($validated, ['sending_type' => $sendingType]));
             } else {
                 $user = Auth::user();
-                if ($validated['network'] == 'ethereum') {
-                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee'], $validated['currency']);
+                $currency = strtoupper($validated['currency']);
+                $network = strtolower($validated['network']);
 
-                }if($validated['network'] == 'litecoin'){
-                    $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $validated['fee_summary']['amount_after_fee']);
+                // Convert amount_after_fee (USD) to actual currency amount using exchange rate
+                $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+                if (!$exchangeRate) {
+                    throw new \Exception("Exchange rate not found for {$currency}");
                 }
+
+                $amountToSend = bcdiv($validated['fee_summary']['amount_after_fee'], $exchangeRate->rate_usd, 8);
+
+                if ($network === 'ethereum') {
+                    $transaction = $this->EthService->transferToExternalAddress($user, $validated['email'], $amountToSend, $currency);
+                }
+
+                if ($network === 'litecoin') {
+                    $transaction = $this->LitecoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
+                }
+
                 Log::info('External Transfer Transaction', $transaction);
                 $senderTransaction = $this->transactionService->create([
                     'type' => 'send',
