@@ -130,8 +130,8 @@ Route::middleware('auth:sanctum')->group(function () {
     //routes for selecting currency with wallet
     Route::get('/user/wallet-currencies', [UserController::class, 'walletCurrenciesforUser']); //wallet currencies for user that have balance and associated virtual account
     Route::get('/user/all-wallet-currencies/{isBuy}', [UserController::class, 'allwalletCurrenciesforUser']); //wallet currencies for user that have balance and associated virtual account
-    Route::get('/user/networks/{currency_id}', [WalletCurrencyController::class, 'getNetworks']); //get networks for a currency
-    Route::get('/user/deposit-address/{currency}/{network}', [UserController::class, 'getDepositAddress']); //get deposit address for a currency
+    Route::get('/user/networks/{currency_id}', [WalletCurrencyController::class, 'getNetworks']);
+    Route::get('/user/deposit-address/{currency}/{network}', [UserController::class, 'getDepositAddress']);
     //profile edit and user details routes
     Route::get('/user/details', [UserController::class, 'getUserDetails']);
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
