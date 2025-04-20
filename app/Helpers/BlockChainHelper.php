@@ -464,10 +464,10 @@ class BlockChainHelper
         $user = $virtualAccount->user;
         $currency = strtoupper($virtualAccount->currency); // BNB, USDT_BSC, USDC_BSC
 
-        $deposit = \App\Models\DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
+        $deposit = DepositAddress::where('virtual_account_id', $virtualAccount->id)->firstOrFail();
         $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
-        $masterWallet = \App\Models\MasterWallet::where('blockchain', 'BSC')->firstOrFail();
+        $masterWallet = MasterWallet::where('blockchain', 'BSC')->firstOrFail();
 
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
@@ -487,7 +487,7 @@ class BlockChainHelper
         $tx = $response->json();
         $txHash = $tx['txId'] ?? null;
 
-        \App\Models\MasterWalletTransaction::create([
+        MasterWalletTransaction::create([
             'user_id' => $user->id,
             'master_wallet_id' => $masterWallet->id,
             'blockchain' => 'bsc',
@@ -828,7 +828,7 @@ class BlockChainHelper
 
         if ($currency === 'USDT_TRON') {
             $payload['tokenAddress'] = $contractAddress;
-            $payload['feeLimit'] = 15000000000  ; // 100 TRX for safety margin
+            $payload['feeLimit'] = 15000000000; // 100 TRX for safety margin
         }
 
         $txResponse = Http::withHeaders([

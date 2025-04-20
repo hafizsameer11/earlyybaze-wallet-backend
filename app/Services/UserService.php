@@ -158,7 +158,7 @@ class UserService
             if (!$user) {
                 throw new Exception('User not found.');
             }
-            if ($user->role != 'admin') {
+            if ($user->role =='user') {
                 throw new Exception('User is not an admin.');
             }
             if (!Hash::check($data['password'], $user->password)) {

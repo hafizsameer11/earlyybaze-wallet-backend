@@ -6,12 +6,17 @@ use App\Helpers\BlockChainHelper;
 use App\Models\MasterWallet;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
-
+use App\Services\BscService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BlockChainController extends Controller
 {
+    protected $bscService;
+    public function __construct( BscService $bscService)
+    {
+        $this->bscService = $bscService;
+    }
     public function manualTransformToMasterWalts(Request $request)
     {
         try {
@@ -24,6 +29,7 @@ class BlockChainController extends Controller
             $masterWalletAddress = $masterWallet->address;
             $beforebalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
             $transferToMasterWallet = BlockChainHelper::dispatchTransferToMasterWallet($virtualAccount, $amount);
+
             $afterbalanceOfMasterWallet = BlockChainHelper::checkAddressBalance($masterWalletAddress, $blockchain, $masterWallet->contract_address);
             return response()->json([
                 'beforebalanceOfMasterWallet' => $beforebalanceOfMasterWallet,
