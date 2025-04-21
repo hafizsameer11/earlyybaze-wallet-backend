@@ -14,6 +14,7 @@ use App\Models\ExchangeRate;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\TransactionSend;
+use App\Models\VirtualAccount;
 use App\Services\BitcoinService;
 use App\Services\BscService;
 use App\Services\BuyTransactionService;
@@ -57,6 +58,9 @@ class TransactionController extends Controller
                 $user = Auth::user();
                 $currency = strtoupper($validated['currency']);
                 $network = strtolower($validated['network']);
+                $userAccount=VirtualAccount::where('user_id')->where('currency',$currency)->first();
+                // $depositAddress
+                $deposiAddress=DepositAddress::where('virtual_account-id',$userAccount->id)->first();
 
                 // Convert amount_after_fee (USD) to actual currency amount using exchange rate
                 $exchangeRate = ExchangeRate::where('currency', $currency)->first();
@@ -95,7 +99,7 @@ class TransactionController extends Controller
                 TransactionSend::create([
                     'transaction_type' => 'external',
 
-                    'sender_address' => null,
+                    'sender_address' =>  $deposiAddress->address ?? null,
                     'user_id' => $user->id,
 
                     'receiver_address' => $validated['email'],
