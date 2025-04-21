@@ -3,11 +3,13 @@
 namespace App\Repositories;
 
 use App\Models\DepositAddress;
+use App\Models\ReceiveTransaction;
 use App\Models\TransactionSend;
 use App\Models\User;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use App\Services\ExchangeRateService;
+use App\Services\NotificationService;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Illuminate\Support\Facades\Auth;
@@ -17,12 +19,13 @@ use Illuminate\Support\Str;
 
 class TransactionSendRepository
 {
-    protected $tatumService, $transactionService, $exchangeRateService;
-    public function __construct(TatumService $tatumService, transactionService $transactionService, ExchangeRateService $exchangeRateService)
+    protected $tatumService, $transactionService, $exchangeRateService,$notificationService;
+    public function __construct(TatumService $tatumService, transactionService $transactionService, ExchangeRateService $exchangeRateService,NotificationService $notificationService)
     {
         $this->tatumService = $tatumService;
         $this->transactionService = $transactionService;
         $this->exchangeRateService = $exchangeRateService;
+        $this->notificationService=$notificationService;
     }
     public function getTransactionforUser($user_id, $userType)
     {
@@ -193,24 +196,26 @@ class TransactionSendRepository
                 'network' => $network,
                 'reference' => $reference,
                 'user_id' => $receiver->id,
-                'amount_usd' => $amountUsd
+                'amount_usd' => $amountUsd,
             ]);
 
-            TransactionSend::create([
-                'transaction_type' => 'internal',
-                'sender_virtual_account_id' => $senderAccount->account_id,
-                'receiver_virtual_account_id' => $receiverAccount->account_id,
-                'sender_address' => null,
-                'user_id' => $sender->id,
-                'receiver_id' => $receiver->id,
-                'receiver_address' => $receiverDepositAddress->address ?? null,
-                'amount' => $amount,
-                'currency' => $currency,
-                'tx_id' => $reference,
-                'status' => 'completed',
-                'blockchain' => $network,
-                'transaction_id' => $receiverTransaction->id
+            $noitifcation=$this->notificationService->sendToUserById($receiver->id,"Internal Receive","You have received $amount $currency");
+            // ⬇️ Replace 2nd TransactionSend with ReceiveTransaction
+            ReceiveTransaction::create([
+                'user_id'            => $receiver->id,
+                'virtual_account_id' => $receiverAccount->id,
+                'transaction_id'     => $receiverTransaction->id,
+                'transaction_type'   => 'internal',
+                'sender_address'     => null,
+                'reference'          => $reference,
+                'tx_id'              => $reference,
+                'amount'             => $amount,
+                'currency'           => $currency,
+                'blockchain'         => $receiverAccount->blockchain,
+                'amount_usd'         => $amountUsd,
+                'status'             => 'completed',
             ]);
+
 
             return [
                 'success' => true,
