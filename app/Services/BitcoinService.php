@@ -131,7 +131,12 @@ class BitcoinService
             'tx_hash' => $txHash,
         ]);
 
-        return $txHash;
+        return [
+            'txHash' => $txHash,
+            'sent' => $adjustedAmount,
+            'fee' => $feeBtc,
+            'total' => $amount,
+        ];
     }
 
     public function estimateFee(string $chain = 'BTC'): array

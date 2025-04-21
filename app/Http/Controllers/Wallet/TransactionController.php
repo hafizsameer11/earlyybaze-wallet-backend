@@ -76,6 +76,9 @@ class TransactionController extends Controller
                 if ($network === 'bsc') {
                     $transaction = $this->BscService->transferToExternalAddress($user, $validated['email'], $amountToSend, $currency);
                 }
+                if($network=='bitcoin'){
+                    $transaction=$this->BitcoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
+                }
 
                 Log::info("Transaction created", [$transaction]);
                 $senderTransaction = $this->transactionService->create([
