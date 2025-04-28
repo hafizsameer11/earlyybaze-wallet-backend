@@ -172,6 +172,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']);
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
+    Route::post('/validate-email', [UserController::class, 'validateEmail']);
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {

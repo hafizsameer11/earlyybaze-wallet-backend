@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+
 class UserController extends Controller
 {
     protected $userService;
@@ -160,5 +161,18 @@ class UserController extends Controller
         $user->fcmToken = $fcmToken;
         $user->save();
         return response()->json(['status' => 'success', 'message' => 'FCM token set successfully'], 200);
+    }
+    public function validateEmail(Request $request)
+    {
+        try {
+            $email = $request->email;
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                return ResponseHelper::error('Email already exists', 400);
+            }
+            return ResponseHelper::success($user, 'Email validated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
     }
 }
