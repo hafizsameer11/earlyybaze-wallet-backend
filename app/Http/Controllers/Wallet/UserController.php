@@ -167,6 +167,9 @@ class UserController extends Controller
         try {
             $email = $request->email;
             $user = User::where('email', $email)->first();
+            if(!$user) {
+                return ResponseHelper::error('Email not found', 404);
+            }
             // if ($user) {
             //     return ResponseHelper::error('Email already exists', 400);
             // }
