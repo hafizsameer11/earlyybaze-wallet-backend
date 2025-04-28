@@ -79,7 +79,7 @@ class TransactionManagementController extends Controller
         try {
             $transaction = $this->buyTransactionService->findByTransactionId($id);
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
@@ -89,7 +89,7 @@ class TransactionManagementController extends Controller
 
             $transaction = $this->swapTransactionService->singleSwapTransaction($id);
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }

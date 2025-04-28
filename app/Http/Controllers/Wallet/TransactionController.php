@@ -14,6 +14,7 @@ use App\Models\ExchangeRate;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\TransactionSend;
+use App\Models\UserActivity;
 use App\Models\VirtualAccount;
 use App\Services\BitcoinService;
 use App\Services\BscService;
@@ -190,6 +191,11 @@ class TransactionController extends Controller
         try {
             $user = Auth::user();
             $transaction = $this->swapTransactionService->swap($request->validated());
+            $userActivit=new UserActivity();
+            $userActivit->user_id=$user->id;
+            $data=$request->validated();
+            $userActivit->content="You have successfully swapped {$data['amount']}{$data['currency']}";
+            $userActivit->save();
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

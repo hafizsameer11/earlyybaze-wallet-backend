@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Http\Requests\KycRequest;
+use App\Models\Kyc;
 use App\Models\NairaWallet;
 use App\Models\User;
 use App\Models\UserAccount;
@@ -213,7 +215,7 @@ class UserRepository
     public function userDetails($userId)
     {
         $user = User::where('id', $userId)->with('userAccount', 'userActivity')->first();
-        // $user = $user->map(function ($user) {
+        $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
         $user = [
             'id' => $user->id,
             'name' => $user->name,
@@ -226,9 +228,9 @@ class UserRepository
             'total_amount_in_dollar' => $user->userAccount->crypto_balance,
             'total_amount_in_naira' => $user->userAccount->naira_balance,
             'kyc_status' => $user->kyc_status,
-            'user_activity' => $user->userActivity
+            'user_activity' => $user->userActivity,
+            'kycDetails' => $kycdetails
         ];
-        // });
         return $user;
     }
 
