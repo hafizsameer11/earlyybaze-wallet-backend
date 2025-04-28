@@ -329,6 +329,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-all', [UserManagementController::class, 'getUserBalances']);
             Route::get('/get-by-currency/{currencyId}', [UserManagementController::class, 'getBalanceByCurrency']);
         });
+        Route::prefix('assets')->group(function () {});
     });
 });
 Route::prefix('transaction-icons')->group(function () {

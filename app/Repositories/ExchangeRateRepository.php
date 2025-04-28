@@ -71,17 +71,23 @@ class ExchangeRateRepository
     {
         Log::info("data received", [
             'currency' => $currency,
-            'amount' => $amount,
+            'amount_usd_received' => $amount, // USD now
             'type' => $type,
             'to' => $to
         ]);
+
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
         if (!$exchangeRate) {
             throw new \Exception('Exchange rate not found');
         }
 
-        $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
-        $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8);
+        // Convert USD amount to Coin amount
+        if (bccomp($exchangeRate->rate_usd, '0', 8) == 0) {
+            throw new \Exception('Invalid USD rate');
+        }
+
+        $amountCoin = bcdiv($amount, $exchangeRate->rate_usd, 8); // USD ÷ Rate to get coin
+        $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8); // USD × Naira rate
 
         $feeSummary = null;
         if ($type == 'send' && $to) {
@@ -90,14 +96,13 @@ class ExchangeRateRepository
                 $from = Auth::user()->email;
             } else {
                 $walletCurrency = WalletCurrency::where('currency', $currency)->first();
-                $from = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
-                $from = $from->address;
-                // $from=
+                $fromWallet = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
+                $from = $fromWallet?->address;
             }
-            Log::info("Calcuting for currency $currency");
+            Log::info("Calculating for currency $currency");
 
             $fee = ExchangeFeeHelper::caclulateFee(
-                $amount,
+                $amountCoin, // send coin amount
                 $currency,
                 $type,
                 $isEmail ? null : 'external_transfer',
@@ -110,15 +115,16 @@ class ExchangeRateRepository
                 'platform_fee_usd' => $fee['platform_fee_usd'],
                 'blockchain_fee_usd' => $fee['blockchain_fee_usd'],
                 'total_fee_usd' => $fee['total_fee_usd'],
-                'amount_after_fee' => bcsub($amountUsd, $fee['total_fee_usd'], 8),
+                'amount_after_fee' => bcsub($amount, $fee['total_fee_usd'], 8), // USD - total_fee
             ];
         }
 
         return [
-            'amount' => $amount,
-            'amount_usd' => $amountUsd,
+            'amount' => $amountCoin, // <- now returning COIN amount here
+            'amount_usd' => $amountCoin, // <- original USD amount
             'amount_naira' => $amountNaira,
-            'fee_summary' => $feeSummary // null if not applicable
+            'fee_summary' => $feeSummary, // null if not applicable
         ];
     }
+
 }
