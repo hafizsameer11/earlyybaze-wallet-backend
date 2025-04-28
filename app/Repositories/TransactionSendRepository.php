@@ -19,13 +19,13 @@ use Illuminate\Support\Str;
 
 class TransactionSendRepository
 {
-    protected $tatumService, $transactionService, $exchangeRateService,$notificationService;
-    public function __construct(TatumService $tatumService, transactionService $transactionService, ExchangeRateService $exchangeRateService,NotificationService $notificationService)
+    protected $tatumService, $transactionService, $exchangeRateService, $notificationService;
+    public function __construct(TatumService $tatumService, transactionService $transactionService, ExchangeRateService $exchangeRateService, NotificationService $notificationService)
     {
         $this->tatumService = $tatumService;
         $this->transactionService = $transactionService;
         $this->exchangeRateService = $exchangeRateService;
-        $this->notificationService=$notificationService;
+        $this->notificationService = $notificationService;
     }
     public function getTransactionforUser($user_id, $userType)
     {
@@ -170,12 +170,12 @@ class TransactionSendRepository
                 'user_id' => $sender->id,
                 'amount_usd' => $amountUsd
             ]);
-
+            $senderNotification = $this->notificationService->sendToUserById($sender->id, "Internal Send", "You have sent $amount $currency");
             TransactionSend::create([
                 'transaction_type' => 'internal',
                 'sender_virtual_account_id' => $senderAccount->account_id,
                 'receiver_virtual_account_id' => $receiverAccount->account_id,
-                'sender_address' => null,
+                'sender_address' => $sender->email ?? null,
                 'user_id' => $sender->id,
                 'receiver_id' => $receiver->id,
                 'receiver_address' => $receiverDepositAddress->address ?? null,
@@ -199,14 +199,14 @@ class TransactionSendRepository
                 'amount_usd' => $amountUsd,
             ]);
 
-            $noitifcation=$this->notificationService->sendToUserById($receiver->id,"Internal Receive","You have received $amount $currency");
+            $noitifcation = $this->notificationService->sendToUserById($receiver->id, "Internal Receive", "You have received $amount $currency");
             // ⬇️ Replace 2nd TransactionSend with ReceiveTransaction
             ReceiveTransaction::create([
                 'user_id'            => $receiver->id,
                 'virtual_account_id' => $receiverAccount->id,
                 'transaction_id'     => $receiverTransaction->id,
                 'transaction_type'   => 'internal',
-                'sender_address'     => null,
+                'sender_address'     => $senderAccount->address,
                 'reference'          => $reference,
                 'tx_id'              => $reference,
                 'amount'             => $amount,
