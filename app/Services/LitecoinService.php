@@ -169,4 +169,27 @@ class LitecoinService
             'feeLtc' => $feeLtc
         ];
     }
+    public function getAddressBalance(string $address): float
+{
+    if (empty($address)) {
+        throw new \Exception('Litecoin address cannot be empty.');
+    }
+
+    $response = Http::withHeaders([
+        'x-api-key' => config('tatum.api_key'),
+    ])->get(config('tatum.base_url') . "/litecoin/address/balance/{$address}");
+
+    if ($response->failed()) {
+        throw new \Exception("LTC Address Balance Fetch Failed: " . $response->body());
+    }
+
+    $balance = $response->json()['balance'] ?? null;
+
+    if (is_null($balance)) {
+        throw new \Exception('LTC Address Balance not found in API response.');
+    }
+
+    return (float) $balance;
+}
+
 }

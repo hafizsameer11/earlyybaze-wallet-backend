@@ -315,6 +315,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('master-wallet')->group(function () {
             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
             Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
+            Route::get('/get-master-wallet-balance/{id}', [MasterWalletController::class, 'getMasterWalletBalance']);
         });
         Route::get('/minimum-trades', [MinimumTradeController::class, 'index']);        // Get all
         Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'show']);   // Get single

@@ -161,4 +161,22 @@ class BitcoinService
             'feeBtc' => $feeLtc
         ];
     }
+    public function getAddressBalance(string $address): float
+{
+    $response = Http::withHeaders([
+        'x-api-key' => config('tatum.api_key'),
+    ])->get(config('tatum.base_url') . "/bitcoin/address/balance/{$address}");
+
+    if ($response->failed()) {
+        throw new \Exception("BTC Address Balance Fetch Failed: " . $response->body());
+    }
+
+    $balance = $response->json()['balance'] ?? null;
+
+    if (is_null($balance)) {
+        throw new \Exception('BTC Address Balance not found in API response.');
+    }
+
+    return (float) $balance;
+}
 }
