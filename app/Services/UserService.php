@@ -81,6 +81,7 @@ class UserService
             //     'user_id' => $user->id,
             //     'account_number' => $accountNumber
             // ]);
+            dispatch(new CreateVirtualAccount($user));
             $user->otp_verified = true;
             $user->save();
             return $user;

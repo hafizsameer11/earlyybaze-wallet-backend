@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Helpers\ExchangeFeeHelper;
 use App\Models\FailedMasterTransfer;
 use App\Models\MasterWallet;
+use App\Models\ReceivedAsset;
 use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
@@ -123,6 +124,21 @@ class ProcessBlockchainWebhook implements ShouldQueue
             Log::warning("🔒 Webhook for reference $reference is already being processed.");
             return;
         }
+        ReceivedAsset::create([
+            'account_id'        => $data['accountId'],
+            'subscription_type' => $data['subscriptionType'] ?? null,
+            'amount'            => $amount,
+            'reference'         => $reference,
+            'currency'          => $currency,
+            'tx_id'             => $data['txId'],
+            'from_address'      => $data['from'] ?? 'not provided',
+            'to_address'        => $data['to'] ?? null,
+            'transaction_date'  => Carbon::createFromTimestampMs($data['date']),
+            'status'            => 'inWallet', // default unless you want to pass something dynamic
+            'index'             => $data['index'] ?? null,
+            'user_id'           => $userId,
+        ]);
+
 
         try {
             Log::info('💡 Virtual Account:', ['account' => $account]);
