@@ -49,35 +49,38 @@ class MasterWalletController extends Controller
 
     public function getMasterWalletDetails()
     {
-        $totalWallets = MasterWallet::where('blockchain', 'ethereum')->count();
-    
-        $masterWallet = MasterWallet::where('blockchain', 'ethereum')
-            ->orderBy('created_at', 'desc')
+        $totalWallets = MasterWallet::count();
+
+        $masterWallet = MasterWallet::
+            orderBy('created_at', 'desc')
             ->first();
-    
+
         if (!$masterWallet) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No master wallet found'
             ], 404);
         }
-    
+
         // Add symbol path
         $symbol = WalletCurrency::where('currency', 'ETH')->first();
         $symbolPath = $symbol ? asset('storage/' . $symbol->symbol) : null;
         $masterWallet->symbol = $symbolPath;
-    
+
         // Fetch ETH and ERC-20 balances
         $balanceDetails = $this->EthService->getEthereumMasterBalances();
-    
+
         // Exclude sensitive data
         $cleanWallet = Arr::except($masterWallet->toArray(), [
-            'private_key', 'mnemonic', 'xpub', 'response'
+            'private_key',
+            'mnemonic',
+            'xpub',
+            'response'
         ]);
-    
+
         // Merge in balances
         $mergedWallet = array_merge($cleanWallet, $balanceDetails);
-    
+
         return response()->json([
             'status' => 'success',
             'message' => 'Ethereum master wallet details fetched',
@@ -87,5 +90,4 @@ class MasterWalletController extends Controller
             ]
         ]);
     }
-    
 }
