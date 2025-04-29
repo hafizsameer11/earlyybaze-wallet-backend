@@ -20,8 +20,8 @@ class SupportTicketRepository
 
     public function find($id)
     {
-        $ticket = SupportTicket::where('id', $id)->with('replies','user')->first();
-        $user=User::where('id', $ticket->user_id)->first();
+        $ticket = SupportTicket::where('id', $id)->with('replies', 'user')->first();
+        $user = User::where('id', $ticket->user_id)->first();
         $ticket->user = $user;
         // $ticket->replies;
         if (!$ticket) {
