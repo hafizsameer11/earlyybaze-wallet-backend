@@ -31,7 +31,8 @@ class User extends Authenticatable
         'user_code',
         'profile_picture',
         'role',
-        'kyc_status'
+        'kyc_status',
+        'is_freezen'
     ];
 
     /**

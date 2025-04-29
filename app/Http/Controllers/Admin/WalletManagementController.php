@@ -40,4 +40,7 @@ class WalletManagementController extends Controller
         $virtualAccount->save();
         return ResponseHelper::success($virtualAccount, 'Wallet ' . $freeze . 'd successfully', 200);
     }
+    public function freezeNairaWallet($id){
+        
+    }
 }

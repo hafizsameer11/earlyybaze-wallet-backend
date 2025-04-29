@@ -251,6 +251,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('walletmanagement')->group(function (): void {
             Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
             Route::post('/freeze-wallet/{id}', [WalletManagementController::class, 'freezeWallet']);
+            Route::post('/freeze-naira-wallet/{id}', [WalletManagementController::class, 'freezeNairaWallet']);
         });
         Route::prefix('trade-limits')->group(function () {
             Route::get('/get-all', [TradeLimitController::class, 'index']);
