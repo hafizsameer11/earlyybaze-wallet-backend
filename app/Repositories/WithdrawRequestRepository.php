@@ -76,7 +76,10 @@ class WithdrawRequestRepository
     public function getWithDrawRequestByUserId($userId)
     {
         $withdraq= WithdrawRequest::where('user_id', $userId)->with('bankAccount')->orderBy('created_at', 'desc')->get();
-        $withdraq->type='withdraw';
+       $withdraq=$withdraq->map(function ($withdraw) {
+            $withdraw->type='withdraw';
+            return $withdraw;
+        });
         return $withdraq;
     }
     public function findByTransactionId($transactionId)
