@@ -273,11 +273,12 @@ class UserRepository
 
         $totalBalanceInCoins = 0;
         $totalBalanceInUsd = 0;
+        $totalAccountCount = 0;
 
         // Fetch all exchange rates at once to avoid multiple queries
         $exchangeRates = \App\Models\ExchangeRate::latest('created_at')->get()->keyBy('currency');
 
-        $mappedBalances = $balances->map(function ($item) use (&$totalBalanceInCoins, &$totalBalanceInUsd, $exchangeRates) {
+        $mappedBalances = $balances->map(function ($item) use (&$totalBalanceInCoins, &$totalBalanceInUsd, &$totalAccountCount, $exchangeRates) {
             $exchangeRate = $exchangeRates->get($item->walletCurrency->currency);
 
             $usdBalance = 0;
@@ -288,26 +289,25 @@ class UserRepository
             // Add to grand totals
             $totalBalanceInCoins = bcadd($totalBalanceInCoins, $item->total_balance, 8);
             $totalBalanceInUsd = bcadd($totalBalanceInUsd, $usdBalance, 8);
+            $totalAccountCount += $item->account_count;
 
             return [
                 'currency' => $item->walletCurrency,      // full WalletCurrency object
                 'total_balance' => $item->total_balance,   // total balance in this currency
-                'usd_balance' => $usdBalance,              // total balance in USD for this currency
-                'account_count' => $item->account_count,   // total virtual accounts for this currency
+                'usd_balance' => $usdBalance               // total balance in USD for this currency
+                // No per-item account_count anymore
             ];
         });
 
-        // Now you have:
-        // - $mappedBalances → each currency record
-        // - $totalBalanceInCoins → sum of all coins
-        // - $totalBalanceInUsd → sum of all USD values
-
+        // Final return structure
         return [
             'balances' => $mappedBalances,
             'total_balance_in_coins' => $totalBalanceInCoins,
             'total_balance_in_usd' => $totalBalanceInUsd,
+            'total_account_count' => $totalAccountCount, // ✅ now account count is outside
         ];
     }
+
 
     // public function
 }
