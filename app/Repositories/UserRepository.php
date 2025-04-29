@@ -267,8 +267,28 @@ class UserRepository
 
     public function getBalanceByCurrency($currencyId)
     {
-        $balance = VirtualAccount::where('currency_id', $currencyId)->with('user')->orderBy('created_at', 'desc')->get();
-        return $balance;
+        $balances = VirtualAccount::with('walletCurrency')
+        ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
+        ->groupBy('currency_id')
+        ->get()
+        ->map(function ($item) {
+            $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
+
+            $usdBalance = 0;
+            if ($exchangeRate) {
+                $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
+            }
+
+            return [
+                'currency' => $item->walletCurrency,   // full WalletCurrency object
+                'total_balance' => $item->total_balance, // total available_balance
+                'usd_balance' => $usdBalance,           // converted to USD
+                'account_count' => $item->account_count, // total virtual accounts for this currency
+                'balance_object' => $item               // full balance item (complete object)
+            ];
+        });
+
+    return $balances;
     }
 
     // public function
