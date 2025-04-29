@@ -51,6 +51,7 @@ class TransactionController extends Controller
 
             $validated = $request->validated();
             $sendingType = filter_var($validated['email'], FILTER_VALIDATE_EMAIL) ? 'internal' : 'external';
+            Log::info("Send data", $validated);
             Log::info("Detected Sending Type: $sendingType");
             if ($sendingType == 'internal') {
 
