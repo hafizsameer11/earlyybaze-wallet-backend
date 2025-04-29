@@ -115,6 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-by-type/{type}', [FeeController::class, 'getByType']); // Get fee by type
         Route::get('/get-all', [FeeController::class, 'getAll']); // Get fee by type
 
+        // Route::get('')
+
     });
     Route::post('/set-fcm-token', [UserController::class, 'setFcmToken']);
     Route::post('/withdraw/create', [WithdrawController::class, 'create']);

@@ -34,7 +34,7 @@ class ExchangeRateController extends Controller
     }
     public function update($id,ExchangeRequest $request){
         try {
-            $exchangeRate = $this->exchangeRateService->update($request->validated(), $id);
+            $exchangeRate = $this->exchangeRateService->update( $id,$request->validated());
             return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
         } catch (\Exception $e) {
             return   ResponseHelper::error($e->getMessage(), 500);
