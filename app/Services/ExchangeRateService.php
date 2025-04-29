@@ -51,7 +51,7 @@ class ExchangeRateService
     public function update($id, array $data)
     {
         try {
-            return $this->ExchangeRateRepository->update($id, $data);
+            return $this->ExchangeRateRepository->update( $data,$id);
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
