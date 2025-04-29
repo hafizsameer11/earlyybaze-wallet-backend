@@ -16,7 +16,8 @@ class WithdrawRequest extends Model
         'fee',
         'total',
         'asset',
-        'bank_account_id'
+        'bank_account_id',
+        'send_account'
     ];
     public function user()
     {

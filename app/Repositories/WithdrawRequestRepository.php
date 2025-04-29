@@ -42,6 +42,9 @@ class WithdrawRequestRepository
             throw new \Exception('Withdraw Request not found');
         }
         $status = $data['status'];
+        $send_account = $data['send_account'];
+        $withdraw->send_account = $send_account;
+        // $withdraw->save();
         if ($status == 'approved') {
             $withdraw->status = 'approved';
             $withdraw->save();

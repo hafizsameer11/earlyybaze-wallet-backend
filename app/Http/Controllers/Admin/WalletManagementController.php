@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\VirtualAccount;
 use App\Services\WalletManagementService;
 use Exception;
@@ -40,7 +41,14 @@ class WalletManagementController extends Controller
         $virtualAccount->save();
         return ResponseHelper::success($virtualAccount, 'Wallet ' . $freeze . 'd successfully', 200);
     }
-    public function freezeNairaWallet($id){
-        
+    public function freezeNairaWallet($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return ResponseHelper::error('User not found');
+        }
+        $user->is_freezon = !$user->is_freezon;
+        $user->save();
+        return ResponseHelper::success($user, 'Naira wallet ' . ($user->is_freezon ? 'frozen' : 'unfrozen') . ' successfully', 200);
     }
 }
