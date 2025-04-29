@@ -90,6 +90,7 @@ class UserRepository
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
+            $u=User::where('id',$account->user_id)->first();
             return [
                 'id' => $account->id,
                 'name' => $account->walletCurrency->name,
@@ -102,6 +103,7 @@ class UserRepository
                 'status' => $account->active == true ? 'active' : 'inactive',
                 'nairaWallet' => $userAccount->naira_balance,
                 'freezed' => $account->frozen,
+                'nairaFreeze'=>$u->	is_freezon,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,
