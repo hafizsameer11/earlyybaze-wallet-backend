@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_freezen')->default(false)->after('is_active');
+            $table->boolean('is_freezon')->default(false)->after('is_active');
         });
     }
 

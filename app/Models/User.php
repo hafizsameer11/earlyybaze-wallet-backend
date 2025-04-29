@@ -32,7 +32,7 @@ class User extends Authenticatable
         'profile_picture',
         'role',
         'kyc_status',
-        'is_freezen'
+        'is_freezon'
     ];
 
     /**
