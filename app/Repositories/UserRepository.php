@@ -198,7 +198,7 @@ class UserRepository
     }
     public function getFomatedUsers()
     {
-        $users = User::all();
+        $users = User::with('kyc')->get();
         return $users->map(function ($user) {
             return [
                 'id' => $user->id,
@@ -208,7 +208,8 @@ class UserRepository
                 'status' => $user->is_active,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
-                'img' => asset('storage/' . $user->profile_picture)
+                'img' => asset('storage/' . $user->profile_picture),
+                'kyc'=>$user->kyc
             ];
         });
     }
