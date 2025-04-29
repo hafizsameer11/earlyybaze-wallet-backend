@@ -100,6 +100,7 @@ class UserRepository
                 'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
                 'nairaWallet' => $userAccount->naira_balance,
+                'freezed' => $account->frozen,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
                     'price' => $account->walletCurrency->price,

@@ -250,7 +250,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('walletmanagement')->group(function (): void {
             Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
-            // Route::post('/update-status/{id}', [WalletManagementController::class, 'updateStatus']);
+            Route::post('/freeze-wallet/{id}', [WalletManagementController::class, 'freezeWallet']);
         });
         Route::prefix('trade-limits')->group(function () {
             Route::get('/get-all', [TradeLimitController::class, 'index']);
