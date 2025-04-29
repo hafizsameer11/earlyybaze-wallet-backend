@@ -70,8 +70,9 @@ class TransactionSendRepository
                 'receiver_address' => $transaction->receiver_virtual_account_id,
                 'status' => $transaction->status,
                 'amount' => $transaction->amount,
-                'amount_usd' => $transaction->transaction->amount_usd ?? '0.00',
+                'amount_usd' => $transaction->amount_usd ?? '0.00',
                 'created_at' => $transaction->created_at,
+                'sender_address' => $transaction->sender_address,
             ];
         }
 
