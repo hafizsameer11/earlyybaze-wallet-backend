@@ -144,24 +144,24 @@ class ProcessBlockchainWebhook implements ShouldQueue
             Log::info('💡 Virtual Account:', ['account' => $account]);
 
             $blockChain = strtolower($account->blockchain);
-            $tx = null;
+            // $tx = null;
 
-            if ($blockChain === 'ethereum') {
-                $tx = $this->EthService->transferToMasterWallet($account, $amount);
-            } elseif ($blockChain === 'bsc') {
-                $tx = $this->BscService->transferToMasterWallet($account, $amount);
-            } elseif ($blockChain === 'solana') {
-                $tx = $this->SolanaService->transferToMasterWallet($account, $amount);
-            } elseif ($blockChain === 'litecoin') {
-                $tx = $this->LitecoinService->transferToMasterWallet($account, $amount);
-            } elseif ($blockChain === 'tron') {
-                $tx = $this->TronTransferService->transferTronToMasterWalletWithAutoFeeHandling($account, $amount);
-            } elseif ($blockChain === 'bitcoin') {
-                $tx = $this->BitcoinService->transferToMasterWallet($account, $amount);
-            } else {
-                Log::error('🚨 Unsupported blockchain:', ['blockchain' => $blockChain]);
-            }
-            Log::info('✅ Transfer to master wallet initiated', ['tx' => $tx]);
+            // if ($blockChain === 'ethereum') {
+            //     $tx = $this->EthService->transferToMasterWallet($account, $amount);
+            // } elseif ($blockChain === 'bsc') {
+            //     $tx = $this->BscService->transferToMasterWallet($account, $amount);
+            // } elseif ($blockChain === 'solana') {
+            //     $tx = $this->SolanaService->transferToMasterWallet($account, $amount);
+            // } elseif ($blockChain === 'litecoin') {
+            //     $tx = $this->LitecoinService->transferToMasterWallet($account, $amount);
+            // } elseif ($blockChain === 'tron') {
+            //     $tx = $this->TronTransferService->transferTronToMasterWalletWithAutoFeeHandling($account, $amount);
+            // } elseif ($blockChain === 'bitcoin') {
+            //     $tx = $this->BitcoinService->transferToMasterWallet($account, $amount);
+            // } else {
+            //     Log::error('🚨 Unsupported blockchain:', ['blockchain' => $blockChain]);
+            // }
+            // Log::info('✅ Transfer to master wallet initiated', ['tx' => $tx]);
             $transaction = $this->transactionRepository->create(data: [
                 'type' => 'receive',
                 'amount' => $amount,

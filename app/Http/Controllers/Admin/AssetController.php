@@ -32,6 +32,21 @@ class AssetController extends Controller
         $AdminTransfer->address = $data['address'];
         $AdminTransfer->forAll = $data['forAll'];
         $AdminTransfer->save();
-        return response()->json(['message' => 'Admin transfer created successfully']);
+        return response()->json(['message' => 'Admin transfer created successfully', 'data' => $AdminTransfer]);
+    }
+    public function getAdminTransfer()
+    {
+        $adminTransfers = AdminTransfer::all();
+        return response()->json($adminTransfers);
+    }
+    public function setIndividualTransfer($id, Request $request)
+    {
+        $asset = ReceivedAsset::find($id);
+        if (!$asset) {
+            return response()->json(['message' => 'Asset not found'], 404);
+        }
+        $asset->transfer_address = $request->transfer_address;
+        $asset->save();
+        return response()->json(['message' => 'Transfer address updated successfully', 'data' => $asset]);
     }
 }

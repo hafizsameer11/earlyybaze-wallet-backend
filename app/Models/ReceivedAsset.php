@@ -20,9 +20,11 @@ class ReceivedAsset extends Model
         'transaction_date',
         'status',
         'index',
-        'user_id'
+        'user_id',
+        'transfer_address'
     ];
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 }
