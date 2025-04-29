@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Http\Requests\KycRequest;
+use App\Models\InAppNotification;
 use App\Models\Kyc;
 use App\Models\NairaWallet;
 use App\Models\User;
@@ -218,6 +219,7 @@ class UserRepository
     {
         $user = User::where('id', $userId)->with('userAccount', 'userActivity')->first();
         $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
+        $notifications=InAppNotification::all();
         $user = [
             'id' => $user->id,
             'name' => $user->name,
@@ -231,7 +233,8 @@ class UserRepository
             'total_amount_in_naira' => $user->userAccount->naira_balance,
             'kyc_status' => $user->kyc_status,
             'user_activity' => $user->userActivity,
-            'kycDetails' => $kycdetails
+            'kycDetails' => $kycdetails,
+            'notifcations'=>$notifications
         ];
         return $user;
     }
