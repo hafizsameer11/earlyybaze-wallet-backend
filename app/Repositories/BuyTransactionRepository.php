@@ -9,6 +9,7 @@ use App\Models\TransactionIcon;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use App\Models\WithdrawRequest;
 use App\Services\transactionService;
 use Illuminate\Support\Facades\Log;
 
@@ -149,9 +150,9 @@ class BuyTransactionRepository
                 'price' => $price,
             ];
         });
-        $transactions = Transaction::where('user_id', $userId)->orderBy('created_at', 'desc')->take(4)->get();
+        $transactions = Transaction::where('user_id', $userId)->where('type', '!=', 'withdrawTransaction')->orderBy('created_at', 'desc')->take(4)->get();
         $transactions = $transactions->map(function ($transaction) {
-            //merge all data by just adding symbol of currency
+          
             $currency = WalletCurrency::where('currency', $transaction->currency)->first();
             $symbol = '';
             if ($currency) {
@@ -172,9 +173,35 @@ class BuyTransactionRepository
                 'status' => $transaction->status,
             ];
         });
+        $withdrawRequests = WithdrawRequest::where('user_id', $userId)
+            // ->where('status', '!=', 'withdrawTransaction') // Important: Only ignore if `status` contains `withdrawTransaction`
+            ->orderBy('created_at', 'desc')
+            ->take(4)
+            ->get();
+
+        $withdrawRequests = $withdrawRequests->map(function ($withdraw) {
+            $symbol = 'icons/ngn.png';
+
+            // $currency = WalletCurrency::where('currency', $withdraw->asset)->first();
+            // if ($currency) {
+            //     $symbol = $currency->symbol;
+            // }
+            $currency = 'NGN';
+            return [
+                'id' => (int) $withdraw->id,
+                'name' => $withdraw->asset,
+                'symbol' => $symbol,
+                'icon' => $symbol,
+                'balance' => $withdraw->amount,
+                'created_at' => $withdraw->created_at,
+                'type' => 'withdraw', // You can customize if needed
+                'status' => $withdraw->status,
+            ];
+        });
+        $allTransactions = $transactions->merge($withdrawRequests)->sortByDesc('created_at')->values();
         return  [
             'assets' => $virtualAccounts,
-            'transactions' => $transactions
+            'transactions' => $allTransactions
         ];
     }
 }
