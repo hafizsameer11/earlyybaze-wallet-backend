@@ -242,53 +242,71 @@ class UserRepository
     public function getUserBalances()
     {
         $balances = VirtualAccount::with('walletCurrency')
-        ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
-        ->groupBy('currency_id')
-        ->get()
-        ->map(function ($item) {
-            $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
+            ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
+            ->groupBy('currency_id')
+            ->get()
+            ->map(function ($item) {
+                $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
 
-            $usdBalance = 0;
-            if ($exchangeRate) {
-                $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
-            }
+                $usdBalance = 0;
+                if ($exchangeRate) {
+                    $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
+                }
 
-            return [
-                'currency' => $item->walletCurrency,      // full WalletCurrency object
-                'total_balance' => $item->total_balance,   // total available_balance
-                'usd_balance' => $usdBalance,              // converted to USD
-                'account_count' => $item->account_count    // total virtual accounts for this currency
-            ];
-        });
+                return [
+                    'currency' => $item->walletCurrency,      // full WalletCurrency object
+                    'total_balance' => $item->total_balance,   // total available_balance
+                    'usd_balance' => $usdBalance,              // converted to USD
+                    'account_count' => $item->account_count    // total virtual accounts for this currency
+                ];
+            });
 
-    return $balances;
-
+        return $balances;
     }
 
     public function getBalanceByCurrency($currencyId)
     {
         $balances = VirtualAccount::with('walletCurrency')
-        ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
-        ->groupBy('currency_id')
-        ->get()
-        ->map(function ($item) {
-            $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
+            ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
+            ->groupBy('currency_id')
+            ->get();
+
+        $totalBalanceInCoins = 0;
+        $totalBalanceInUsd = 0;
+
+        // Fetch all exchange rates at once to avoid multiple queries
+        $exchangeRates = \App\Models\ExchangeRate::latest('created_at')->get()->keyBy('currency');
+
+        $mappedBalances = $balances->map(function ($item) use (&$totalBalanceInCoins, &$totalBalanceInUsd, $exchangeRates) {
+            $exchangeRate = $exchangeRates->get($item->walletCurrency->currency);
 
             $usdBalance = 0;
             if ($exchangeRate) {
                 $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
             }
 
+            // Add to grand totals
+            $totalBalanceInCoins = bcadd($totalBalanceInCoins, $item->total_balance, 8);
+            $totalBalanceInUsd = bcadd($totalBalanceInUsd, $usdBalance, 8);
+
             return [
-                'currency' => $item->walletCurrency,   // full WalletCurrency object
-                'total_balance' => $item->total_balance, // total available_balance
-                'usd_balance' => $usdBalance,           // converted to USD
-                'account_count' => $item->account_count, // total virtual accounts for this currency
-                'balance_object' => $item               // full balance item (complete object)
+                'currency' => $item->walletCurrency,      // full WalletCurrency object
+                'total_balance' => $item->total_balance,   // total balance in this currency
+                'usd_balance' => $usdBalance,              // total balance in USD for this currency
+                'account_count' => $item->account_count,   // total virtual accounts for this currency
             ];
         });
 
-    return $balances;
+        // Now you have:
+        // - $mappedBalances → each currency record
+        // - $totalBalanceInCoins → sum of all coins
+        // - $totalBalanceInUsd → sum of all USD values
+
+        return [
+            'balances' => $mappedBalances,
+            'total_balance_in_coins' => $totalBalanceInCoins,
+            'total_balance_in_usd' => $totalBalanceInUsd,
+        ];
     }
 
     // public function
