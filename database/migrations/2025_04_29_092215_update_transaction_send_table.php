@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transaction_sends', function (Blueprint $table) {
-            // $table->float('amount_usd')->after('amount')->nullable();
+               $table->float('amount_usd')->after('amount')->nullable();
             // $table->float('network_fee')->after('amount_usd')->nullable();
         });
     }
