@@ -39,7 +39,7 @@ class WalletManagementRepository
             ->with('virtualAccounts.walletCurrency')
             ->orderBy("id", "desc")
             ->get();
-        $totalNaira=UserAccount::where('user_id', '!=', null)->sum('naira_balance');
+        $totalNaira = UserAccount::where('user_id', '!=', null)->sum('naira_balance');
 
         // Aggregate wallet data
         $totalWallets = $users->sum(fn($user) => $user->virtualAccounts->count()); // Total wallets across all users
@@ -123,7 +123,7 @@ class WalletManagementRepository
         return [
             "cardsData" => $cardsData,
             "tableData" => $tableData,
-            'totalNaira'=> $totalNaira,
+            'totalNaira' => $totalNaira
         ];
     }
 }
