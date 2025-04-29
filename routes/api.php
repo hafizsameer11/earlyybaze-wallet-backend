@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AmlRuleController;
+use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
@@ -330,7 +331,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-all', [UserManagementController::class, 'getUserBalances']);
             Route::get('/get-by-currency/{currencyId}', [UserManagementController::class, 'getBalanceByCurrency']);
         });
-        Route::prefix('assets')->group(function () {});
+        Route::prefix('assets')->group(function () {
+            Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
+        });
     });
 });
 Route::prefix('transaction-icons')->group(function () {

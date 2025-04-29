@@ -8,5 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class AdminTransfer extends Model
 {
     use HasFactory;
-    protected $fillable=['blockchain','currency','address'];
+    protected $fillable = ['blockchain', 'currency', 'address','forAll'];
 }
