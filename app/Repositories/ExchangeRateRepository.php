@@ -46,12 +46,30 @@ class ExchangeRateRepository
         return ExchangeRate::create($data);
     }
 
-    public function update($id, array $data)
+
+    public function update(array $data, $id)
     {
-        $exchangeRate = $this->find($id);
+        $exchangeRate = ExchangeRate::findOrFail($id);
+
+        if (isset($data['rate']) && $data['rate'] != $exchangeRate->rate) {
+         
+            $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
+
+            if (!$nairaExchangeRate) {
+                throw new \Exception('NGN Exchange Rate not found.');
+            }
+
+            $data['rate_usd'] = 1 / $data['rate'];
+            $usdRate = $data['rate_usd'];
+            $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+        }
+
+        // Update the record
         $exchangeRate->update($data);
+
         return $exchangeRate;
     }
+
 
     public function delete($id)
     {
@@ -126,5 +144,4 @@ class ExchangeRateRepository
             'fee_summary' => $feeSummary, // null if not applicable
         ];
     }
-
 }

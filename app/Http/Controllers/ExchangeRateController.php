@@ -32,6 +32,14 @@ class ExchangeRateController extends Controller
             return   ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function update($id,ExchangeRequest $request){
+        try {
+            $exchangeRate = $this->exchangeRateService->update($request->validated(), $id);
+            return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
+        } catch (\Exception $e) {
+            return   ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     public function getNgNexchangeRate()
     {
         $exchangeRate = $this->exchangeRateService->getByCurrency('NGN');
@@ -46,15 +54,15 @@ class ExchangeRateController extends Controller
             return  ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function update(ExchangeRequest $request, $id)
-    {
-        try {
-            $exchangeRate = $this->exchangeRateService->update($request->validated(), $id);
-            return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
-        } catch (\Exception $e) {
-            return ResponseHelper::error($e->getMessage(), 500);
-        }
-    }
+    // public function update(ExchangeRequest $request, $id)
+    // {
+    //     try {
+    //         $exchangeRate = $this->exchangeRateService->update($request->validated(), $id);
+    //         return    ResponseHelper::success($exchangeRate, 'Exchange rate updated successfully', 200);
+    //     } catch (\Exception $e) {
+    //         return ResponseHelper::error($e->getMessage(), 500);
+    //     }
+    // }
     public function calculateExchangeRate(Request $request)
     {
         try {
