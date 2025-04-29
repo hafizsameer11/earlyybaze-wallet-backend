@@ -15,11 +15,12 @@ class WalletManagementController extends Controller
     {
         $this->WalletManagementService = $WalletManagementService;
     }
-    public function getVirtualWalletData(){
-        try{
+    public function getVirtualWalletData()
+    {
+        try {
             $data = $this->WalletManagementService->getVirtualWalletsData();
             return ResponseHelper::success($data);
-        }catch(Exception $e){
+        } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }

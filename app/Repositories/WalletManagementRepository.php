@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\ExchangeRate;
 use App\Models\User;
+use App\Models\UserAccount;
 use Illuminate\Support\Facades\Log;
 
 class WalletManagementRepository
@@ -38,6 +39,7 @@ class WalletManagementRepository
             ->with('virtualAccounts.walletCurrency')
             ->orderBy("id", "desc")
             ->get();
+        $totalNaira=UserAccount::where('user_id', '!=', null)->sum('naira_balance');
 
         // Aggregate wallet data
         $totalWallets = $users->sum(fn($user) => $user->virtualAccounts->count()); // Total wallets across all users
@@ -120,7 +122,8 @@ class WalletManagementRepository
         });
         return [
             "cardsData" => $cardsData,
-            "tableData" => $tableData
+            "tableData" => $tableData,
+            'totalNaira'=> $totalNaira,
         ];
     }
 }

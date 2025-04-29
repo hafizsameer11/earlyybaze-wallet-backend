@@ -209,7 +209,7 @@ class UserRepository
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
                 'img' => asset('storage/' . $user->profile_picture),
-                'kyc'=>$user->kyc
+                'kyc' => $user->kyc
             ];
         });
     }
