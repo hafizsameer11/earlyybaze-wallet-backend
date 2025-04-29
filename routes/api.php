@@ -333,14 +333,8 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('assets')->group(function () {
             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
-
-            // ✅ Set admin transfer
             Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
-
-            // ✅ Get all admin transfers
             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
-
-            // ✅ Set individual transfer (pass ID in URL)
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);
         });
     });
