@@ -152,7 +152,7 @@ class BuyTransactionRepository
         });
         $transactions = Transaction::where('user_id', $userId)->where('type', '!=', 'withdrawTransaction')->orderBy('created_at', 'desc')->take(4)->get();
         $transactions = $transactions->map(function ($transaction) {
-          
+
             $currency = WalletCurrency::where('currency', $transaction->currency)->first();
             $symbol = '';
             if ($currency) {
@@ -189,7 +189,7 @@ class BuyTransactionRepository
             $currency = 'NGN';
             return [
                 'id' => (int) $withdraw->id,
-                'name' => $withdraw->asset,
+                'name' => $currency,
                 'symbol' => $symbol,
                 'icon' => $symbol,
                 'balance' => $withdraw->amount,
