@@ -184,7 +184,9 @@ class TransactionSendRepository
                 'tx_id' => $reference,
                 'status' => 'completed',
                 'blockchain' => $network,
-                'transaction_id' => $senderTransaction->id
+                'transaction_id' => $senderTransaction->id,
+                'amount_usd' => $amountUsd,
+                'network_fee' => 0,
             ]);
 
             // Record receiver transaction
