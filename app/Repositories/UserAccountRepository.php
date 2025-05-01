@@ -19,7 +19,7 @@ class UserAccountRepository
     public function getUserBalance($id)
     {
         $userAccount = UserAccount::where('user_id', $id)->first();
-        $currencies = ['BTC', 'ETH', 'USDT'];
+        $currencies = WalletCurrency::all();;
 
         $userVirtualAccounts = VirtualAccount::where('user_id', $id)
             ->with('walletCurrency')
@@ -30,7 +30,7 @@ class UserAccountRepository
 
         $userVirtualAccounts = $userVirtualAccounts->map(function ($account) use (&$totalCryptoUsd) {
             $currency = $account->currency;
-            $accountBalance = $account->account_balance ?? '0';
+            $accountBalance = $account->available_balance ?? '0';
 
             $exchangeRate = ExchangeRate::where('currency', $currency)->first();
             if (!$exchangeRate || bccomp($exchangeRate->rate_usd, '0', 8) === 0) {
