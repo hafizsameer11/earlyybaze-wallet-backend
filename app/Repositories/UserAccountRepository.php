@@ -2,9 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Models\ExchangeRate;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use Illuminate\Support\Facades\Log;
 
 class UserAccountRepository
 {
@@ -18,33 +20,63 @@ class UserAccountRepository
     {
         $userAccount = UserAccount::where('user_id', $id)->first();
         $currencies = ['BTC', 'ETH', 'USDT'];
-        $userVirtualAccounts = VirtualAccount::where('user_id', $id)->with('walletCurrency')->whereIn('currency', $currencies)->get();
-        $userVirtualAccounts = $userVirtualAccounts->map(function ($account) {
+
+        $userVirtualAccounts = VirtualAccount::where('user_id', $id)
+            ->with('walletCurrency')
+            ->whereIn('currency', $currencies)
+            ->get();
+
+        $totalCryptoUsd = '0';
+
+        $userVirtualAccounts = $userVirtualAccounts->map(function ($account) use (&$totalCryptoUsd) {
+            $currency = $account->currency;
+            $accountBalance = $account->account_balance ?? '0';
+
+            $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+            if (!$exchangeRate || bccomp($exchangeRate->rate_usd, '0', 8) === 0) {
+                Log::warning("Exchange rate missing or invalid for currency: $currency");
+                $usdValue = '0';
+            } else {
+                $usdValue = bcmul($accountBalance, $exchangeRate->rate_usd, 8); // token * USD rate
+            }
+
+            // Accumulate total in USD
+            $totalCryptoUsd = bcadd($totalCryptoUsd, $usdValue, 8);
+
             return [
                 'id' => $account->id,
                 'name' => $account->walletCurrency->name,
-                'currency' => $account->currency,
+                'currency' => $currency,
                 'blockchain' => $account->blockchain,
                 'currency_id' => $account->currency_id,
                 'available_balance' => $account->available_balance,
-                'account_balance' => $account->account_balance,
+                'account_balance' => $accountBalance,
+                'account_balance_usd' => $usdValue,
                 'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
-                    'price' => $account->walletCurrency->price,
+                    'price' => $exchangeRate->rate_usd,
                     'symbol' => $account->walletCurrency->symbol,
-                    'naira_price' => $account->walletCurrency->naira_price,
+                    'naira_price' => $exchangeRate->rate_naira,
                     'name' => $account->walletCurrency->name
                 ]
             ];
         });
-        // return $userAccount;
+
+        // Save USD sum to crypto_balance
+        $userAccount->crypto_balance = $totalCryptoUsd;
+        $userAccount->save();
+
+        // Refresh to return updated record
+        $userAccount->refresh();
+
         return [
             'userBalance' => $userAccount,
             'userVirtualAccounts' => $userVirtualAccounts
         ];
     }
+
 
     public function create(array $data)
     {
