@@ -34,18 +34,19 @@ class transactionRepository
     public function getTransactionsForUser($user_id)
     {
         // Totals
-        $totalTransactions = Transaction::where('user_id', $user_id)->whereNotIn('type', ['withdrawTransaction'])->count();
+        $totalTransactions = Transaction::where('user_id', $user_id)->count();
         $totalWallets = VirtualAccount::where('user_id', $user_id)->count();
 
         // Transaction list
-        $transactions = Transaction::where('user_id', $user_id)->
-        with([
+        $transactions = Transaction::where('user_id', $user_id)
+        ->whereNotIn('type', ['withdrawTransaction'])
+        ->with([
             'user',
             'sendtransaction',
             'recievetransaction',
             'buytransaction',
             'swaptransaction',
-        ])->orderBy('created_at', 'desc')->get();
+                    ])->orderBy('created_at', 'desc')->get();
 
         // Graphical Data (monthly grouped by type)
         $rawStats = DB::table('transactions')
