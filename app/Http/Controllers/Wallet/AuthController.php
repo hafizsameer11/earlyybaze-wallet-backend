@@ -73,7 +73,7 @@ class AuthController extends Controller
             UserNotification::create([
                 'user_id' => $userd['id'],
                 'title' => 'Login Notification',
-                'messaege' => 'You logged in successfully'
+                'message' => 'You logged in successfully'
             ]);
             return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
