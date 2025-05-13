@@ -148,6 +148,7 @@ class BuyTransactionRepository
                 'balance' => $account->available_balance,
                 'account_balance' => $account->account_balance,
                 'price' => $price,
+                'title' => $account->walletCurrency->name,
             ];
         });
         $transactions = Transaction::where('user_id', $userId)->where('type', '!=', 'withdrawTransaction')->orderBy('created_at', 'desc')->take(4)->get();

@@ -23,7 +23,7 @@ class UserAccountRepository
 
         $userVirtualAccounts = VirtualAccount::where('user_id', $id)
             ->with('walletCurrency')
-        
+
             ->get();
 
         $totalCryptoUsd = '0';
