@@ -6,6 +6,7 @@ use App\Models\DepositAddress;
 use App\Models\ReceiveTransaction;
 use App\Models\TransactionSend;
 use App\Models\User;
+use App\Models\UserNotification;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use App\Services\ExchangeRateService;
@@ -172,6 +173,11 @@ class TransactionSendRepository
                 'amount_usd' => $amountUsd
             ]);
             $senderNotification = $this->notificationService->sendToUserById($sender->id, "Internal Send", "You have sent $amount $currency");
+            UserNotification::create([
+                'user_id' => $sender->id,
+                'title' => 'Internal Send',
+                'messaege' => "You have sent $amount $currency"
+            ]);
             TransactionSend::create([
                 'transaction_type' => 'internal',
                 'sender_virtual_account_id' => $senderAccount->account_id,
