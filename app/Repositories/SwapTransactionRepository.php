@@ -133,7 +133,8 @@ class SwapTransactionRepository
             ->where('blockchain', $swap->network)
             ->firstOrFail();
         $amountNaira = $swap->amount_naira;
-        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amountNaira, 8);
+        $amount=$swap->amount;
+        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
         $userVirtualAccount->save();
         $userAccount = UserAccount::where('user_id', $user->id)->first();
         if ($userAccount) {
