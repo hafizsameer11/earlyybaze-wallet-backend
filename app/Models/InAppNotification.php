@@ -11,7 +11,6 @@ class InAppNotification extends Model
     protected $fillable = [
         'title',
         'message',
-        'type',
         'status',
         'attachment'
     ];

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InAppNotificationRequest;
+use App\Models\InAppNotification;
+use App\Models\UserNotification;
 use App\Services\InAppNotificationService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class InAppNotificationController extends Controller
 {
@@ -22,12 +25,31 @@ class InAppNotificationController extends Controller
     public function index()
     {
         try {
-            $data = $this->inAppNotificationService->all();
-            return ResponseHelper::success($data, 'Notifications fetched successfully', 200);
+            $user = Auth::user();
+
+            // Fetch in-app notifications and append type
+            $inappNotifications = InAppNotification::all()->map(function ($item) {
+                $item->type = 'announcement';
+                return $item;
+            });
+
+            // Fetch user notifications
+            $userNotifications = UserNotification::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Merge and sort all notifications by created_at (if needed)
+            $mergedNotifications = $inappNotifications
+                ->merge($userNotifications)
+                ->sortByDesc('created_at')
+                ->values(); // Reindex
+
+            return ResponseHelper::success($mergedNotifications, 'Notifications fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }
+
 
     public function show($id)
     {
