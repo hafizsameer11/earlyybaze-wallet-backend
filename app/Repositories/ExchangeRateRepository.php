@@ -155,7 +155,7 @@ class ExchangeRateRepository
 
         return [
             'amount'         => $amountCoin,
-            'amount_usd'     => $amountCoin,
+            'amount_usd'     =>$amount_in === 'coin' ? $amountUsd : $amountCoin,
             'amount_naira'   => $amountNaira,
             'fee_summary'    => $feeSummary,
         ];
