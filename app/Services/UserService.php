@@ -72,7 +72,7 @@ class UserService
         try {
             $data['password'] = Hash::make($data['password']);
             $data['otp'] = rand(100000, 999999);
-            $data['user_code'] = $this->generateUserCode();
+            $data['user_code'] = $this->generateUserCode($data['name']);
             $user = $this->userRepository->create($data);
             // Mail::to($user->email)->send(new OtpMail($user->otp));
             // $this->userRepository->createNairaWallet($user);
@@ -90,11 +90,11 @@ class UserService
             throw new Exception('User registration failed.');
         }
     }
-    private function generateUserCode(): string
+    private function generateUserCode($username): string
     {
         do {
             $randomNumber = rand(100000, 999999);
-            $userCode = 'EarlyBaze' . $randomNumber;
+            $userCode = $username.'-' . $randomNumber;
         } while ($this->userRepository->findByUserCode($userCode));
 
         return $userCode;
