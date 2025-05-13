@@ -123,7 +123,7 @@ class SwapTransactionRepository
     }
     public function completeSwapTransaction($id)
     {
-        $swap = SwapTransaction::where('transaction_id', $id)->first();
+        $swap = SwapTransaction::where('id', $id)->first();
         if (!$swap) {
             throw new Exception('Transaction not found.');
         }
