@@ -76,13 +76,13 @@ class SwapTransactionRepository
                 throw new Exception('Insufficient balance for swap.');
             }
 
-           $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
-            $userVirtualAccount->save();
-            $userAccount = UserAccount::where('user_id', $user->id)->first();
-            if ($userAccount) {
-                $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
-                $userAccount->save();
-            }
+            //    $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
+            //     $userVirtualAccount->save();
+            //     $userAccount = UserAccount::where('user_id', $user->id)->first();
+            //     if ($userAccount) {
+            //         $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
+            //         $userAccount->save();
+            //     }
 
             // Save transaction record
             $transaction = $this->transactionService->create([
@@ -126,6 +126,19 @@ class SwapTransactionRepository
         $swap = SwapTransaction::where('transaction_id', $id)->first();
         if (!$swap) {
             throw new Exception('Transaction not found.');
+        }
+        $user = Auth::user();
+        $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
+            ->where('currency', $swap->currency)
+            ->where('blockchain', $swap->network)
+            ->firstOrFail();
+        $amountNaira = $swap->amount_naira;
+        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amountNaira, 8);
+        $userVirtualAccount->save();
+        $userAccount = UserAccount::where('user_id', $user->id)->first();
+        if ($userAccount) {
+            $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
+            $userAccount->save();
         }
         $swap->status = 'completed';
         $swap->save();
