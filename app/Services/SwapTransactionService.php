@@ -27,4 +27,12 @@ class SwapTransactionService
             throw new \Exception($e->getMessage());
         }
     }
+    public function completeSwapTransaction($id){
+        try {
+            return $this->SwapTransactionRepository->completeSwapTransaction($id);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }
+

@@ -63,11 +63,7 @@ class SwapTransactionRepository
             $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
             $user = Auth::user();
 
-            // Virtual accounts
-            // $adminVirtualAccount = VirtualAccount::where('user_id', $admin->id)
-            //     ->where('currency', $currency)
-            //     ->where('blockchain', $network)
-            //     ->firstOrFail();
+
 
             $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
                 ->where('currency', $currency)
@@ -80,13 +76,8 @@ class SwapTransactionRepository
                 throw new Exception('Insufficient balance for swap.');
             }
 
-            // Deduct from user, credit to admin, and add to user Naira
-            $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
+           $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
             $userVirtualAccount->save();
-
-            // $adminVirtualAccount->available_balance = bcadd($adminVirtualAccount->available_balance, $totalToDeduct, 8);
-            // $adminVirtualAccount->save();
-
             $userAccount = UserAccount::where('user_id', $user->id)->first();
             if ($userAccount) {
                 $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
@@ -106,7 +97,7 @@ class SwapTransactionRepository
             ]);
 
             // Save swap transaction
-            $data['status'] = 'completed';
+            $data['status'] = 'pending';
             $data['user_id'] = $user->id;
             $data['reference'] = $reference;
             $data['transaction_id'] = $transaction->id;
@@ -128,6 +119,16 @@ class SwapTransactionRepository
         }
         $currencySymbol = WalletCurrency::where('currency', $swap->currency)->first();
         $swap->symbol = $currencySymbol->symbol;
+        return $swap;
+    }
+    public function completeSwapTransaction($id)
+    {
+        $swap = SwapTransaction::where('transaction_id', $id)->first();
+        if (!$swap) {
+            throw new Exception('Transaction not found.');
+        }
+        $swap->status = 'completed';
+        $swap->save();
         return $swap;
     }
 }

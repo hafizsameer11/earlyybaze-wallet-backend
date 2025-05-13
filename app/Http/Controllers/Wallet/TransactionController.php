@@ -202,6 +202,15 @@ class TransactionController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function completeSwapTransaction($id){
+        try {
+            $transaction = $this->swapTransactionService->completeSwapTransaction($id);
+            return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+
+    }
     public function singleSwapTransaction($id)
     {
         try {
