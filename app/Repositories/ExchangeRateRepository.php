@@ -52,7 +52,7 @@ class ExchangeRateRepository
         $exchangeRate = ExchangeRate::findOrFail($id);
 
         if (isset($data['rate']) && $data['rate'] != $exchangeRate->rate) {
-         
+
             $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
 
             if (!$nairaExchangeRate) {
@@ -85,11 +85,12 @@ class ExchangeRateRepository
         $exchangeRate->save();
         return $exchangeRate;
     }
-    public function calculateExchangeRate($currency, $amount, $type = null, $to = null)
+    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd')
     {
         Log::info("data received", [
             'currency' => $currency,
-            'amount_usd_received' => $amount, // USD now
+            'input_amount' => $amount,
+            'amount_in' => $amount_in,
             'type' => $type,
             'to' => $to
         ]);
@@ -99,16 +100,30 @@ class ExchangeRateRepository
             throw new \Exception('Exchange rate not found');
         }
 
-        // Convert USD amount to Coin amount
         if (bccomp($exchangeRate->rate_usd, '0', 8) == 0) {
             throw new \Exception('Invalid USD rate');
         }
 
-        $amountCoin = bcdiv($amount, $exchangeRate->rate_usd, 8); // USD ÷ Rate to get coin
-        $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8); // USD × Naira rate
+        // Initialize vars
+        $amountUsd = '0.00';
+        $amountCoin = '0.00';
+        $amountNaira = '0.00';
+
+        if ($amount_in === 'coin') {
+            // Coin → USD
+            $amountCoin = $amount;
+            $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);  // Coin × USD rate
+            $amountNaira = bcmul($amountCoin, $exchangeRate->rate_naira, 8); // Coin × Naira rate
+        } else {
+            // USD → Coin (default)
+            $amountUsd = $amount;
+            $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8); // USD ÷ USD rate
+            $amountNaira = bcmul($amountUsd, $exchangeRate->rate_naira, 8);
+        }
 
         $feeSummary = null;
-        if ($type == 'send' && $to) {
+
+        if ($type === 'send' && $to) {
             $isEmail = filter_var($to, FILTER_VALIDATE_EMAIL);
             if ($isEmail) {
                 $from = Auth::user()->email;
@@ -117,10 +132,11 @@ class ExchangeRateRepository
                 $fromWallet = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
                 $from = $fromWallet?->address;
             }
-            Log::info("Calculating for currency $currency");
+
+            Log::info("Calculating fee for currency $currency from $from to $to");
 
             $fee = ExchangeFeeHelper::caclulateFee(
-                $amountCoin, // send coin amount
+                $amountCoin, // always send fee in coin
                 $currency,
                 $type,
                 $isEmail ? null : 'external_transfer',
@@ -130,18 +146,18 @@ class ExchangeRateRepository
             );
 
             $feeSummary = [
-                'platform_fee_usd' => $fee['platform_fee_usd'],
-                'blockchain_fee_usd' => $fee['blockchain_fee_usd'],
-                'total_fee_usd' => $fee['total_fee_usd'],
-                'amount_after_fee' => bcsub($amount, $fee['total_fee_usd'], 8), // USD - total_fee
+                'platform_fee_usd'    => $fee['platform_fee_usd'],
+                'blockchain_fee_usd'  => $fee['blockchain_fee_usd'],
+                'total_fee_usd'       => $fee['total_fee_usd'],
+                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8), // Subtract from USD base
             ];
         }
 
         return [
-            'amount' => $amountCoin, // <- now returning COIN amount here
-            'amount_usd' => $amountCoin, // <- original USD amount
-            'amount_naira' => $amountNaira,
-            'fee_summary' => $feeSummary, // null if not applicable
+            'amount'         => $amountCoin,
+            'amount_usd'     => $amountUsd,
+            'amount_naira'   => $amountNaira,
+            'fee_summary'    => $feeSummary,
         ];
     }
 }
