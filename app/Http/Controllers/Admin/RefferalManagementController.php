@@ -22,7 +22,7 @@ class RefferalManagementController extends Controller
     }
 
 
-    public function getReferralManagementWithStats()
+    public function getRefferalManagement()
     {
         $monthKey = Carbon::now()->format('Y-m');
         $startOfMonth = Carbon::now()->startOfMonth();
