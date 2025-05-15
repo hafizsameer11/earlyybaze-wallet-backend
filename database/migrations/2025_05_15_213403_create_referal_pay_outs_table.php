@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users');
-            $table->unsignedBigInteger('referal_earning_id');
+            $table->unsignedBigInteger('referal_earning_id')->nullable();
             $table->foreign('referal_earning_id')->references('id')->on('referal_earnings');
             $table->string('status')->default('pending');
             $table->string('amount')->nullable();

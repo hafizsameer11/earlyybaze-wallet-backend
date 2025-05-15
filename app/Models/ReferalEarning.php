@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ReferalEarning extends Model
 {
     use HasFactory;
-    protected $fillable = ['user_id', 'amount', 'currency', 'referal_id', 'type', 'status'];
+    protected $fillable = ['user_id', 'amount', 'currency', 'referal_id', 'type', 'status','swap_transaction_id'];
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -17,4 +17,9 @@ class ReferalEarning extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function swapTransaction()
+{
+    return $this->belongsTo(SwapTransaction::class);
+}
+
 }
