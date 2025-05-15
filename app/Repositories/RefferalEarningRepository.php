@@ -96,27 +96,40 @@ class RefferalEarningRepository
             ->get();
 
         // Step 4: Prepare referral breakdown
-        $detailedReferrals = $referredUsers->map(function ($refUser) use ($id) {
-            $earnedFromUser = ReferalEarning::where('user_id', $id)
-                ->where('referal_id', $refUser->id)
-                ->sum('amount');
+     $detailedReferrals = $referredUsers->map(function ($refUser) use ($id) {
+    // Total earnings from this referred user
+    $earnedFromUser = ReferalEarning::where('user_id', $id)
+        ->where('referal_id', $refUser->id)
+        ->sum('amount');
 
-            $subReferralCount = User::where('invite_code', $refUser->user_code)->count();
+    // All earnings breakdowns from this user
+    $referralEarnings = ReferalEarning::where('user_id', $id)
+        ->where('referal_id', $refUser->id)
+        ->get(['id', 'amount', 'status', 'type', 'created_at', 'swap_transaction_id']);
 
-            return [
-                'name' => $refUser->name,
-                'amount' => $earnedFromUser,
-                'created_at' => $refUser->created_at,
-                'image' => $refUser->profile_picture,
-                'refferalCount' => $subReferralCount,
-                'totalEarning' => $earnedFromUser,
-                'totalWithdrawls' => ReferalPayOut::where('user_id', $id)->sum('amount'),
-                'noOfReferrals' => $subReferralCount,
-                'totalTradesCompletedByReferrals' => SwapTransaction::where('user_id', $refUser->id)
-                    ->where('status', 'success')
-                    ->count(),
-            ];
-        });
+    // Total trades completed by this user (swap txn)
+    $totalSwaps = SwapTransaction::where('user_id', $refUser->id)
+        ->where('status', 'success')
+        ->count();
+
+    $subReferralCount = User::where('invite_code', $refUser->user_code)->count();
+
+    return [
+        'name' => $refUser->name,
+        'image' => $refUser->profile_picture,
+        'created_at' => $refUser->created_at,
+        'amount' => $earnedFromUser,
+        'totalEarning' => $earnedFromUser,
+        'refferalCount' => $subReferralCount,
+        'noOfReferrals' => $subReferralCount,
+        'totalTradesCompletedByReferrals' => $totalSwaps,
+        'totalWithdrawls' => ReferalPayOut::where('user_id', $id)->sum('amount'),
+
+        // ✅ NEW:
+        'referralEarningBreakdown' => $referralEarnings, // full list of earnings
+    ];
+});
+
 
         $userBanks = BankAccount::where('user_id', $id)->latest()->first();
 
