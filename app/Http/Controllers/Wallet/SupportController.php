@@ -42,6 +42,16 @@ class SupportController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function markTicketResolved($id)
+    {
+        try {
+            $user = Auth::user();
+            $ticket = $this->SupportTicketService->markResolved($id);
+            return ResponseHelper::success($ticket, 'Ticket resolved successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     public function getTicket($id)
     {
         try {

@@ -309,6 +309,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/assign-to-agent', [SupportController::class, 'assignToAgent']); // {ticket_id, user_id}
             Route::post('/create-reply-by-admin', [SupportController::class, 'createReplyByAdmin']);
             Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
+            Route::get('/mark-ticket-resolved/{id}', [SupportController::class, 'markTicketResolved']);
         });
 
         Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);

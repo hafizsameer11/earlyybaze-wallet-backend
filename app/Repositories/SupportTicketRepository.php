@@ -54,7 +54,15 @@ class SupportTicketRepository
         $ticket->update($data);
         return $ticket;
     }
-
+    public function markResolved($id)
+    {
+        $ticket = SupportTicket::find($id);
+        if (!$ticket) {
+            throw new \Exception('Ticket not found');
+        }
+        $ticket->update(['status' => 'resolved']);
+        return $ticket;
+    }
     public function delete($id)
     {
         // Add logic to delete data

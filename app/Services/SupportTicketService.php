@@ -47,6 +47,14 @@ class SupportTicketService
             throw new \Exception($e->getMessage());
         }
     }
+    public function markResolved($id)
+    {
+        try {
+            return $this->SupportTicketRepository->markResolved($id);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
     public function update($id, array $data)
     {
         return $this->SupportTicketRepository->update($id, $data);
