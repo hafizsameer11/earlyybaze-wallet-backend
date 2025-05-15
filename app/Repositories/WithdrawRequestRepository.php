@@ -53,7 +53,7 @@ class WithdrawRequestRepository
                 'user_id' => $withdraw->user_id
             ]);
         } elseif ($status == 'rejected') {
-            $withdraw->status = 'failed';
+            $withdraw->status = 'rejected';
             $userAccount = UserAccount::where('user_id', $withdraw->user_id)->first();
             $userAccount->naira_balance = $userAccount->naira_balance + $withdraw->total;
             $withdraw->save();
