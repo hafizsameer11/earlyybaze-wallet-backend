@@ -121,7 +121,7 @@ class RefferalEarningRepository
         $userBanks = BankAccount::where('user_id', $id)->latest()->first();
 
         // Step 5: Return everything
-        return response()->json([
+        return [
             'earning' => $detailedReferrals,
             'totalRefferals' => $totalReferred,
             'reffralCode' => $user->user_code,
@@ -141,7 +141,7 @@ class RefferalEarningRepository
             'payoutHistory' => $payoutHistory,
             'accountDetails' => $account,
             'bankAccount' => $userBanks,
-        ]);
+        ];
     }
     public function find($id)
     {
