@@ -57,20 +57,20 @@ class RefferalEarningRepository
             }
         }
 
-        // Step 2: Calculate totals
         $totalReferred = $referredUsers->count();
 
-        // ✅ Filter earnings only from this month
+        // Current month pending USD
         $pendingUsd = ReferalEarning::where('user_id', $id)
             ->where('status', 'pending')
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->sum('amount');
 
         $paidUsd = ReferalPayOut::where('user_id', $id)->where('status', 'paid')->sum('amount');
+
         $account = UserAccount::where('user_id', $id)->first();
 
-        // Step 3: Create or update this month's payout record
-        $payout = ReferalPayOut::firstOrCreate(
+        // Step 2: Get or create current month's payout
+        $currentPayout = ReferalPayOut::firstOrCreate(
             [
                 'user_id' => $id,
                 'month' => $monthKey,
@@ -85,13 +85,17 @@ class RefferalEarningRepository
             ]
         );
 
-        // ✅ Only update amount if just created
-        if ($payout->wasRecentlyCreated) {
-            $payout->amount = $pendingUsd;
-            $payout->save();
+        if ($currentPayout->wasRecentlyCreated) {
+            $currentPayout->amount = $pendingUsd;
+            $currentPayout->save();
         }
 
-        // Step 4: Prepare referred user stats
+        // Step 3: All payout history (including current)
+        $payoutHistory = ReferalPayOut::where('user_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Step 4: Prepare referral breakdown
         $detailedReferrals = $referredUsers->map(function ($refUser) use ($id) {
             $earnedFromUser = ReferalEarning::where('user_id', $id)
                 ->where('referal_id', $refUser->id)
@@ -113,8 +117,10 @@ class RefferalEarningRepository
                     ->count(),
             ];
         });
+
         $userBanks = BankAccount::where('user_id', $id)->latest()->first();
-        // Step 5: Final response
+
+        // Step 5: Return everything
         return response()->json([
             'earning' => $detailedReferrals,
             'totalRefferals' => $totalReferred,
@@ -124,17 +130,17 @@ class RefferalEarningRepository
                 'usd_paid' => $paidUsd,
                 'naira_paid' => $account->referral_earning_naira ?? 0,
             ],
-            'payout' => [
-                'amount' => $payout->amount,
-                'status' => $payout->status,
-                'exchange_rate' => $payout->exchange_rate,
-                'paid_to_account' => $payout->paid_to_account,
-                'paid_to_name' => $payout->paid_to_name,
-                'paid_to_bank' => $payout->paid_to_bank,
-                'month' => $payout->month,
+            'currentPayout' => [
+                'amount' => $currentPayout->amount,
+                'status' => $currentPayout->status,
+                'exchange_rate' => $currentPayout->exchange_rate,
+                'paid_to_account' => $currentPayout->paid_to_account,
+                'paid_to_name' => $currentPayout->paid_to_name,
+                'paid_to_bank' => $currentPayout->paid_to_bank,
             ],
+            'payoutHistory' => $payoutHistory,
             'accountDetails' => $account,
-            'BankAccount' => $userBanks
+            'bankAccount' => $userBanks,
         ]);
     }
     public function find($id)

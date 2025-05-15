@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('paid_to_bank')->nullable();
             $table->string('paid_to_name')->nullable();
             $table->text('exchange_rate')->nullable();
+            $table->string('month')->nullable();
             $table->timestamps();
         });
     }
