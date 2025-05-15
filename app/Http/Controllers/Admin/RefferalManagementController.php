@@ -104,4 +104,51 @@ class RefferalManagementController extends Controller
             'management' => $managementData->values(),
         ]);
     }
+    public function markAsPaid($userId)
+{
+    $monthKey = Carbon::now()->format('Y-m');
+
+    $payout = ReferalPayOut::where('user_id', $userId)
+        ->where('month', $monthKey)
+        ->first();
+
+    if (!$payout) {
+        return response()->json(['error' => 'Payout not found for current month'], 404);
+    }
+
+    $payout->status = 'paid';
+    $payout->paid_at = now();
+    $payout->save();
+
+    return response()->json(['message' => 'Payout marked as paid successfully']);
+}
+
+public function markAsPaidBulk(Request $request)
+{
+    $request->validate([
+        'user_ids' => 'required|array|min:1',
+        'user_ids.*' => 'integer|exists:users,id',
+    ]);
+
+    $monthKey = Carbon::now()->format('Y-m');
+
+    $updated = 0;
+    foreach ($request->user_ids as $userId) {
+        $payout = ReferalPayOut::where('user_id', $userId)
+            ->where('month', $monthKey)
+            ->first();
+
+        if ($payout && $payout->status !== 'paid') {
+            $payout->status = 'paid';
+            $payout->paid_at = now();
+            $payout->save();
+            $updated++;
+        }
+    }
+
+    return response()->json([
+        'message' => 'Bulk update completed',
+        'total_marked_as_paid' => $updated,
+    ]);
+}
 }
