@@ -43,7 +43,7 @@ class RefferalManagementController extends Controller
                     ->where('month', $monthKey) // e.g., '2025-05'
                     ->get();
 
-
+                $latestPayout = $payouts->first();
                 $totalPaidUsd = $payouts->sum('amount');
 
                 $totalPaidNaira = $payouts->sum(function ($payout) {
@@ -58,9 +58,11 @@ class RefferalManagementController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'referrals' => $referrals,
-                    'earned_usd' => $user->userAccount->total_referral_earnings ?? 0,
-                    'earned_naira' => $user->userAccount->referral_earning_naira ?? 0,
+                    'earned_usd' => $totalPaidUsd ?? 0,
+                    'earned_naira' => $totalPaidNaira ?? 0,
                     'referrer' => $user->user_code,
+                    'status' => $latestPayout->status,
+                    'paidAt' => $latestPayout->paid_at,
                     'total_payout_usd' => $totalPaidUsd,
                     'total_payout_naira' => $totalPaidNaira,
                     'withdrawn_this_month_usd' => $currentMonthPayout?->amount ?? 0,
