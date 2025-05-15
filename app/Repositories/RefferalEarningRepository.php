@@ -9,6 +9,7 @@ use App\Models\SwapTransaction;
 use App\Models\User;
 use App\Models\UserAccount;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class RefferalEarningRepository
 {
@@ -28,7 +29,7 @@ class RefferalEarningRepository
         $monthKey = Carbon::now()->format('Y-m');
 
         $referredUsers = User::where('invite_code', $user->user_code)->get();
-
+        Log::info("current reffered user", $referredUsers);
         // Step 1: Create referral earnings based on swaps
         foreach ($referredUsers as $refUser) {
             $swaps = SwapTransaction::where('user_id', $refUser->id)
@@ -96,39 +97,39 @@ class RefferalEarningRepository
             ->get();
 
         // Step 4: Prepare referral breakdown
-     $detailedReferrals = $referredUsers->map(function ($refUser) use ($id) {
-    // Total earnings from this referred user
-    $earnedFromUser = ReferalEarning::where('user_id', $id)
-        ->where('referal_id', $refUser->id)
-        ->sum('amount');
+        $detailedReferrals = $referredUsers->map(function ($refUser) use ($id) {
+            // Total earnings from this referred user
+            $earnedFromUser = ReferalEarning::where('user_id', $id)
+                ->where('referal_id', $refUser->id)
+                ->sum('amount');
 
-    // All earnings breakdowns from this user
-    $referralEarnings = ReferalEarning::where('user_id', $id)
-        ->where('referal_id', $refUser->id)
-        ->get(['id', 'amount', 'status', 'type', 'created_at', 'swap_transaction_id']);
+            // All earnings breakdowns from this user
+            $referralEarnings = ReferalEarning::where('user_id', $id)
+                ->where('referal_id', $refUser->id)
+                ->get(['id', 'amount', 'status', 'type', 'created_at', 'swap_transaction_id']);
 
-    // Total trades completed by this user (swap txn)
-    $totalSwaps = SwapTransaction::where('user_id', $refUser->id)
-        ->where('status', 'success')
-        ->count();
+            // Total trades completed by this user (swap txn)
+            $totalSwaps = SwapTransaction::where('user_id', $refUser->id)
+                ->where('status', 'success')
+                ->count();
 
-    $subReferralCount = User::where('invite_code', $refUser->user_code)->count();
+            $subReferralCount = User::where('invite_code', $refUser->user_code)->count();
 
-    return [
-        'name' => $refUser->name,
-        'image' => $refUser->profile_picture,
-        'created_at' => $refUser->created_at,
-        'amount' => $earnedFromUser,
-        'totalEarning' => $earnedFromUser,
-        'refferalCount' => $subReferralCount,
-        'noOfReferrals' => $subReferralCount,
-        'totalTradesCompletedByReferrals' => $totalSwaps,
-        'totalWithdrawls' => ReferalPayOut::where('user_id', $id)->sum('amount'),
+            return [
+                'name' => $refUser->name,
+                'image' => $refUser->profile_picture,
+                'created_at' => $refUser->created_at,
+                'amount' => $earnedFromUser,
+                'totalEarning' => $earnedFromUser,
+                'refferalCount' => $subReferralCount,
+                'noOfReferrals' => $subReferralCount,
+                'totalTradesCompletedByReferrals' => $totalSwaps,
+                'totalWithdrawls' => ReferalPayOut::where('user_id', $id)->sum('amount'),
 
-        // ✅ NEW:
-        'referralEarningBreakdown' => $referralEarnings, // full list of earnings
-    ];
-});
+                // ✅ NEW:
+                'referralEarningBreakdown' => $referralEarnings, // full list of earnings
+            ];
+        });
 
 
         $userBanks = BankAccount::where('user_id', $id)->latest()->first();
