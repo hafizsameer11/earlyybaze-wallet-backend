@@ -29,7 +29,7 @@ class RefferalEarningRepository
         $monthKey = Carbon::now()->format('Y-m');
 
         $referredUsers = User::where('invite_code', $user->user_code)->get();
-        Log::info("current reffered user", $referredUsers);
+        Log::info("current reffered user", [$referredUsers]);
         // Step 1: Create referral earnings based on swaps
         foreach ($referredUsers as $refUser) {
             $swaps = SwapTransaction::where('user_id', $refUser->id)
