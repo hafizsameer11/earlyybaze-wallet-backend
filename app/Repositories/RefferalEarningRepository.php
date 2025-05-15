@@ -68,7 +68,7 @@ class RefferalEarningRepository
         $paidUsd = ReferalPayOut::where('user_id', $id)->where('status', 'paid')->sum('amount');
 
         $account = UserAccount::where('user_id', $id)->first();
-
+        // $userBanks
         // Step 2: Get or create current month's payout
         $currentPayout = ReferalPayOut::firstOrCreate(
             [
