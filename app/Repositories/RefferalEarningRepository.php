@@ -32,7 +32,7 @@ class RefferalEarningRepository
         // Step 1: Create referral earnings based on swaps
         foreach ($referredUsers as $refUser) {
             $swaps = SwapTransaction::where('user_id', $refUser->id)
-                ->where('status', 'success')
+                ->where('status', 'completed')
                 ->where('amount_usd', '>=', 50)
                 ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
                 ->get();
