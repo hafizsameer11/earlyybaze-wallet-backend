@@ -40,7 +40,9 @@ class RefferalManagementController extends Controller
 
                 $payouts = ReferalPayOut::where('user_id', $user->id)
                     ->where('status', 'paid')
+                    ->where('month', $monthKey) // e.g., '2025-05'
                     ->get();
+
 
                 $totalPaidUsd = $payouts->sum('amount');
 
