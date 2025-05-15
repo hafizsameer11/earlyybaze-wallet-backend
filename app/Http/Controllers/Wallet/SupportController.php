@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SupportReplyRequest;
 use App\Http\Requests\SupportTicketRequest;
+use App\Models\UserActivity;
 use App\Services\SupportReplyService;
 // use App\Models\SupportReply;
 use App\Services\SupportTicketService;
@@ -75,6 +76,11 @@ class SupportController extends Controller
     {
         try {
             $user = Auth::user();
+            $userActivit = new UserActivity();
+            $userActivit->user_id = $user->id;
+            $data = $request->validated();
+            $userActivit->content = "You have successfully replied to a ticket of customer $user->name";
+            $userActivit->save();
             $ticket = $this->SupportReplyService->createByAdmin($request->all());
             return ResponseHelper::success($ticket, 'Reply created successfully', 200);
         } catch (\Exception $e) {
