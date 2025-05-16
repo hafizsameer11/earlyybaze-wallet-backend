@@ -15,6 +15,7 @@ use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\TransactionSend;
 use App\Models\UserActivity;
+use App\Models\UserNotification;
 use App\Models\VirtualAccount;
 use App\Services\BitcoinService;
 use App\Services\BscService;
@@ -60,9 +61,9 @@ class TransactionController extends Controller
                 $user = Auth::user();
                 $currency = strtoupper($validated['currency']);
                 $network = strtolower($validated['network']);
-                $userAccount=VirtualAccount::where('user_id')->where('currency',$currency)->first();
+                $userAccount = VirtualAccount::where('user_id')->where('currency', $currency)->first();
                 // $depositAddress
-                $deposiAddress=DepositAddress::where('virtual_account-id',$userAccount->id)->first();
+                $deposiAddress = DepositAddress::where('virtual_account-id', $userAccount->id)->first();
 
                 // Convert amount_after_fee (USD) to actual currency amount using exchange rate
                 $exchangeRate = ExchangeRate::where('currency', $currency)->first();
@@ -82,8 +83,8 @@ class TransactionController extends Controller
                 if ($network === 'bsc') {
                     $transaction = $this->BscService->transferToExternalAddress($user, $validated['email'], $amountToSend, $currency);
                 }
-                if($network=='bitcoin'){
-                    $transaction=$this->BitcoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
+                if ($network == 'bitcoin') {
+                    $transaction = $this->BitcoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
                 }
 
                 Log::info("Transaction created", [$transaction]);
@@ -192,24 +193,30 @@ class TransactionController extends Controller
         try {
             $user = Auth::user();
             $transaction = $this->swapTransactionService->swap($request->validated());
-            $userActivit=new UserActivity();
-            $userActivit->user_id=$user->id;
-            $data=$request->validated();
-            $userActivit->content="You have successfully swapped {$data['amount']}{$data['currency']}";
+            $userActivit = new UserActivity();
+            $userActivit->user_id = $user->id;
+            $data = $request->validated();
+            $userActivit->content = "You have successfully swapped {$data['amount']}{$data['currency']}";
             $userActivit->save();
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function completeSwapTransaction($id){
+    public function completeSwapTransaction($id)
+    {
         try {
+            $user = Auth::user();
             $transaction = $this->swapTransactionService->completeSwapTransaction($id);
+            UserNotification::create([
+                'user_id' => $user->id,
+                'title' => 'Swap',
+                'message' => "You have Successfully swaped"
+            ]);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
-
     }
     public function singleSwapTransaction($id)
     {

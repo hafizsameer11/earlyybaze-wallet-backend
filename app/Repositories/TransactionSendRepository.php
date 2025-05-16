@@ -176,7 +176,7 @@ class TransactionSendRepository
             UserNotification::create([
                 'user_id' => $sender->id,
                 'title' => 'Internal Send',
-                'messaege' => "You have sent $amount $currency"
+                'message' => "You have sent $amount $currency"
             ]);
             TransactionSend::create([
                 'transaction_type' => 'internal',
