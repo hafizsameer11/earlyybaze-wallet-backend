@@ -85,8 +85,14 @@ class FeeController extends Controller
         try {
             $amount = $request->amount;
             $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+
             $calculatedFee = bcmul($amount, $fee->percentage, 8);
-            return ResponseHelper::success($calculatedFee, 'Fee calculated successfully', 200);
+            $data=[
+                'fee'=>$calculatedFee,
+                'amount'=>$amount,
+                'feeObject'=>$fee
+            ];
+            return ResponseHelper::success($data, 'Fee calculated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
