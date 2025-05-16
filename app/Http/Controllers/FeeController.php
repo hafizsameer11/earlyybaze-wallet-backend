@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ExchangeFeeHelper;
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\FeeRequest;
+use App\Models\Fee;
 use App\Models\MasterWallet;
 use App\Models\WalletCurrency;
 use App\Services\FeeService;
@@ -75,6 +76,17 @@ class FeeController extends Controller
                 Auth::user()->id
             );
             return ResponseHelper::success($fee, 'Fee calculated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function calculateWithdrawFee(Request $request)
+    {
+        try {
+            $amount = $request->amount;
+            $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+            $calculatedFee = bcmul($amount, $fee->percentage, 8);
+            return ResponseHelper::success($calculatedFee, 'Fee calculated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
