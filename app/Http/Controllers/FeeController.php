@@ -86,7 +86,7 @@ class FeeController extends Controller
             $amount = $request->amount;
             $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
 
-$calculatedFee = bcmul($amount, bcdiv($fee->percentage, '100', 2), 2);
+$calculatedFee = bcmul($amount, bcdiv($fee->percentage, '100', 2), 8);
             $data=[
                 'fee'=>$calculatedFee,
                 'amount'=>$amount,
