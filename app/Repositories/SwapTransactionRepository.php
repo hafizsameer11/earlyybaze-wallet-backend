@@ -134,12 +134,13 @@ class SwapTransactionRepository
             ->firstOrFail();
         $amountNaira = $swap->amount_naira;
         $amount = $swap->amount;
-        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
-        Log::info("bcsub inputs", [
+          Log::info("bcsub inputs", [
             'available_balance' => $userVirtualAccount->available_balance,
             'amount_raw' => $amount,
             'amount_dump' => var_export($amount, true)
         ]);
+        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
+
 
         $userVirtualAccount->save();
         $userAccount = UserAccount::where('user_id', $user->id)->first();
