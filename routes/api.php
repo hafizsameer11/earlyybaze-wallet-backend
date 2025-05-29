@@ -219,8 +219,8 @@ Route::middleware('auth:sanctum')->group(function () {
         //reffer management data
         Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
         Route::get('refferal/get-for-user/{id}', [RefferalEarningController::class, 'getForUser']);
-Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
-Route::post('/referral/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
+        Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
+        Route::post('/referral/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
 
         Route::prefix('InAppNotifications')->group(function () {
             Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications

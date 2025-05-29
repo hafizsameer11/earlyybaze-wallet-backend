@@ -44,7 +44,7 @@ class SwapTransactionRepository
             // Fetch exchange rate
             $exchangeRate = ExchangeRate::where('currency', $currency)->latest()->firstOrFail();
             $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
-
+            Log::info("exchange rate", [$exchangeRate]);
             // Fee in token and converted currencies
             $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
             $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
