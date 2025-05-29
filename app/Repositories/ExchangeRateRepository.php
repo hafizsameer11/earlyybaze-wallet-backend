@@ -113,7 +113,7 @@ class ExchangeRateRepository
             // Coin → USD
             $amountCoin = $amount;
             $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);  // Coin × USD rate
-            $amountNaira = bcmul($amountCoin, $nairaExchangeRate->rate_naira, 8); // Coin × Naira rate
+            $amountNaira = bcmul($amountUsd, $nairaExchangeRate->rate_naira, 8); // Coin × Naira rate
         } else {
             // USD → Coin (default)
             $amountUsd = $amount;
