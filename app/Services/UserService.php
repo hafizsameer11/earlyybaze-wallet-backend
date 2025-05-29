@@ -52,7 +52,7 @@ class UserService
         try {
             $data['password'] = Hash::make($data['password']);
             $data['otp'] = rand(100000, 999999);
-            $data['user_code'] = $this->generateUserCode();
+            $data['user_code'] = $this->generateUserCode($data['name']);
             $user = $this->userRepository->create($data);
             Mail::to($user->email)->send(new OtpMail($user->otp));
             $this->userRepository->createNairaWallet($user);
@@ -94,7 +94,7 @@ class UserService
     {
         do {
             $randomNumber = rand(100000, 999999);
-            $userCode = $username.'-' . $randomNumber;
+            $userCode = $username . '-' . $randomNumber;
         } while ($this->userRepository->findByUserCode($userCode));
 
         return $userCode;
@@ -159,7 +159,7 @@ class UserService
             if (!$user) {
                 throw new Exception('User not found.');
             }
-            if ($user->role =='user') {
+            if ($user->role == 'user') {
                 throw new Exception('User is not an admin.');
             }
             if (!Hash::check($data['password'], $user->password)) {
