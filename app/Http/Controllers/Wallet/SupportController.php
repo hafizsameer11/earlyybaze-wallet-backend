@@ -48,7 +48,7 @@ class SupportController extends Controller
     {
         try {
             $user = Auth::user();
-            $unansweredCount = SupportTicket::where('user_id', $user->id)->where('answered', 'unanswered')->orderBy('created_at', 'desc')->get();;
+            $unansweredCount = SupportTicket::where('user_id', $user->id)->where('answered', 'unanswered')->count();
             return ResponseHelper::success(['unanswered_count' => $unansweredCount], 'Unanswered tickets count fetched successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
