@@ -162,7 +162,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
-    Route::post('/fee/calculate-withdraw-fee', [FeeController::class, 'calculateWifthdrawFee']);
+    Route::post('/fee/calculate-withdraw-fee', [FeeController::class, 'calculateWithdrawFee']);
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
     Route::post('wallet/swap', [TransactionController::class, 'swap']);
