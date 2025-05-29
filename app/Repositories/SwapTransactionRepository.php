@@ -140,6 +140,9 @@ class SwapTransactionRepository
             'amount_raw' => $amount,
             'amount_dump' => var_export($amount, true)
         ]);
+if (strpos(strtolower($amount), 'e') !== false) {
+    $amount = sprintf('%.8f', (float) $amount); // or more decimal precision as needed
+}
 
         $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
 
