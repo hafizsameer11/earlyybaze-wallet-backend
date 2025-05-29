@@ -120,7 +120,11 @@ class ExchangeRateRepository
             $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8); // USD ÷ USD rate
             $amountNaira = bcmul($amountUsd, $nairaExchangeRate->rate_naira, 8);
         }
-
+        Log::info("Calculated amounts", [
+            'amountCoin' => $amountCoin,
+            'amountUsd' => $amountUsd,
+            'amountNaira' => $amountNaira
+        ]);
         $feeSummary = null;
 
         if ($type === 'send' && $to) {
