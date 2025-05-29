@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SupportReplyRequest;
 use App\Http\Requests\SupportTicketRequest;
+use App\Models\SupportTicket;
 use App\Models\UserActivity;
 use App\Services\SupportReplyService;
 // use App\Models\SupportReply;
@@ -39,6 +40,16 @@ class SupportController extends Controller
             $user = Auth::user();
             $tickets = $this->SupportTicketService->getAllforUser($user->id);
             return ResponseHelper::success($tickets, 'Tickets retrieved successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getUnansweredTicketsCount()
+    {
+        try {
+            $user = Auth::user();
+            $unansweredCount = SupportTicket::where('user_id', $user->id)->where('answered', 'unanswered')->orderBy('created_at', 'desc')->get();;
+            return ResponseHelper::success(['unanswered_count' => $unansweredCount], 'Unanswered tickets count fetched successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

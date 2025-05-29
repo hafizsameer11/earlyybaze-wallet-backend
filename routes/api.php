@@ -148,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('support')->group(function () {
         Route::post('/create-ticket', [SupportController::class, 'crateTicket']);
         Route::get('/get-tickets', [SupportController::class, 'getTicketsForAuthUser']);
+        Route::get('/get-unread-tickets', [SupportController::class, 'getUnansweredTicketsCount']);
         Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
         Route::post('/send-reply', [SupportController::class, 'createReplyByUser']);
     });
