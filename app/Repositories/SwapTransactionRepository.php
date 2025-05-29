@@ -58,7 +58,7 @@ class SwapTransactionRepository
             $data['fee'] = $feeCurrency;
 
             $reference = 'EarlyBaze' . time();
-
+            Log::info("swap data", [$data]);
             // Get admin and user
             $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
             $user = Auth::user();
@@ -133,7 +133,7 @@ class SwapTransactionRepository
             ->where('blockchain', $swap->network)
             ->firstOrFail();
         $amountNaira = $swap->amount_naira;
-        $amount=$swap->amount;
+        $amount = $swap->amount;
         $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
         $userVirtualAccount->save();
         $userAccount = UserAccount::where('user_id', $user->id)->first();
