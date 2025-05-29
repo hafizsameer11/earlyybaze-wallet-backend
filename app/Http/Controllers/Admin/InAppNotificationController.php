@@ -21,7 +21,19 @@ class InAppNotificationController extends Controller
     {
         $this->inAppNotificationService = $inAppNotificationService;
     }
+    public function getUnreadCount()
+    {
+        try {
+            $user = Auth::user();
+            $unreadCount = UserNotification::where('user_id', $user->id)
+                ->where('status', 'unread')
+                ->count();
 
+            return ResponseHelper::success(['unread_count' => $unreadCount], 'Unread notifications count fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
     public function index()
     {
         try {
@@ -43,7 +55,9 @@ class InAppNotificationController extends Controller
                 ->merge($userNotifications)
                 ->sortByDesc('created_at')
                 ->values(); // Reindex
-
+            //mark all user notifications as read
+            UserNotification::where('user_id', $user->id)
+                ->update(['status' => 'read']);
             return ResponseHelper::success($mergedNotifications, 'Notifications fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage());

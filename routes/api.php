@@ -161,7 +161,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
-    Route::post('/fee/calculate-withdraw-fee', [FeeController::class, 'calculateWithdrawFee']);
+    Route::post('/fee/calculate-withdraw-fee', [FeeController::class, 'calculateWifthdrawFee']);
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
     Route::post('wallet/swap', [TransactionController::class, 'swap']);
@@ -178,6 +178,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']);
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
+    Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
 });
 //non auth routes
