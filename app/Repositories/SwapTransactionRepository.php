@@ -48,7 +48,7 @@ class SwapTransactionRepository
             // Fee in token and converted currencies
             $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
             $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
-            $amountNaira = bcmul($amount, $exchangeRate->rate_naira, 8);
+            $amountNaira = bcmul($amountUsd, $exchangeRatenaira->rate_naira, 8);
             $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
 
             // Add calculated values to data
