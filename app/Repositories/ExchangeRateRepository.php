@@ -103,7 +103,7 @@ class ExchangeRateRepository
         if (bccomp($exchangeRate->rate_usd, '0', 8) == 0) {
             throw new \Exception('Invalid USD rate');
         }
-
+        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
         // Initialize vars
         $amountUsd = '0.00';
         $amountCoin = '0.00';
@@ -113,12 +113,12 @@ class ExchangeRateRepository
             // Coin → USD
             $amountCoin = $amount;
             $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);  // Coin × USD rate
-            $amountNaira = bcmul($amountCoin, $exchangeRate->rate_naira, 8); // Coin × Naira rate
+            $amountNaira = bcmul($amountCoin, $nairaExchangeRate->rate_naira, 8); // Coin × Naira rate
         } else {
             // USD → Coin (default)
             $amountUsd = $amount;
             $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8); // USD ÷ USD rate
-            $amountNaira = bcmul($amountUsd, $exchangeRate->rate_naira, 8);
+            $amountNaira = bcmul($amountUsd, $nairaExchangeRate->rate_naira, 8);
         }
 
         $feeSummary = null;
@@ -155,7 +155,7 @@ class ExchangeRateRepository
 
         return [
             'amount'         => $amountCoin,
-            'amount_usd'     =>$amount_in === 'coin' ? $amountUsd : $amountCoin,
+            'amount_usd'     => $amount_in === 'coin' ? $amountUsd : $amountCoin,
             'amount_naira'   => $amountNaira,
             'fee_summary'    => $feeSummary,
         ];
