@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendNewsletterEmailJob;
 use App\Models\Newsletter;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class NewsletterController extends Controller
 
         $userIds = $data['users'];
         $newsletter->users()->attach($userIds);
+        dispatch(new SendNewsletterEmailJob($userIds, $data['title'], $data['content']));
 
         foreach (User::whereIn('id', $userIds)->get() as $user) {
             $newsletter->users()->updateExistingPivot($user->id, [
