@@ -148,13 +148,22 @@ class ExchangeRateRepository
                 $to,
                 auth()->id()
             );
-
-            $feeSummary = [
+            if($fee==null){
+                $feeSummary = [
+                    'platform_fee_usd'    => '0.00',
+                    'blockchain_fee_usd'  => '0.00',
+                    'total_fee_usd'       => '0.00',
+                    'amount_after_fee'    => $amountUsd, // No fee applied
+                ];
+            }else{
+                  $feeSummary = [
                 'platform_fee_usd'    => $fee['platform_fee_usd'] ?? '0.00',
-                'blockchain_fee_usd'  => $fee['blockchain_fee_usd']?? '0.00',
-                'total_fee_usd'       => $fee['total_fee_usd']?? '0.00',
-                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8)?? '0.00', // Subtract from USD base
+                'blockchain_fee_usd'  => $fee['blockchain_fee_usd'] ?? '0.00',
+                'total_fee_usd'       => $fee['total_fee_usd'] ?? '0.00',
+                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8) ?? '0.00', // Subtract from USD base
             ];
+            }
+
         }
 
         return [
