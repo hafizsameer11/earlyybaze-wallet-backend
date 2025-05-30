@@ -150,10 +150,10 @@ class ExchangeRateRepository
             );
 
             $feeSummary = [
-                'platform_fee_usd'    => $fee['platform_fee_usd'],
-                'blockchain_fee_usd'  => $fee['blockchain_fee_usd'],
-                'total_fee_usd'       => $fee['total_fee_usd'],
-                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8), // Subtract from USD base
+                'platform_fee_usd'    => $fee['platform_fee_usd'] ?? '0.00',
+                'blockchain_fee_usd'  => $fee['blockchain_fee_usd']?? '0.00',
+                'total_fee_usd'       => $fee['total_fee_usd']?? '0.00',
+                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8)?? '0.00', // Subtract from USD base
             ];
         }
 
