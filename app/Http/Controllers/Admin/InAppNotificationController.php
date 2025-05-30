@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InAppNotificationRequest;
+use App\Jobs\SendPushNotificationToAllUsers;
 use App\Models\InAppNotification;
 use App\Models\UserNotification;
 use App\Services\InAppNotificationService;
@@ -84,6 +85,8 @@ class InAppNotificationController extends Controller
             if (isset($validatedData['attachment'])) {
                 $validatedData['attachment'] = $request->file('attachment')->store('notifications', 'public');
             }
+            SendPushNotificationToAllUsers::dispatch($validatedData['title'], $validatedData['message']);
+
 
             $data = $this->inAppNotificationService->create($validatedData);
             return ResponseHelper::success($data, 'Notification created successfully', 201);

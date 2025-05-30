@@ -52,7 +52,7 @@ class ExchangeRateService
     public function update($id, array $data)
     {
         try {
-            return $this->ExchangeRateRepository->update( $data,$id);
+            return $this->ExchangeRateRepository->update($data, $id);
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
@@ -62,14 +62,13 @@ class ExchangeRateService
     {
         return $this->ExchangeRateRepository->delete($id);
     }
-    public function calculateExchangeRate($currency, $amount, $type = null,$to=null,$amount_in=null)
+    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = null)
     {
-      try{
-          return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type,$to,$amount_in);
-      }catch(\Exception $e){
-        Log::error('Error calculating exchange rate: ' . $e->getMessage());
-          throw new \Exception($e->getMessage());
-
-      }
+        try {
+            return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type, $to, $amount_in);
+        } catch (\Exception $e) {
+            Log::error('Error calculating exchange rate: ' . $e->getMessage());
+            throw new \Exception($e->getMessage());
+        }
     }
 }
