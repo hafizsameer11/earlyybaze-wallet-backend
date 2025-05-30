@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\ExchangeRateRepository;
+use Illuminate\Support\Facades\Log;
 
 class ExchangeRateService
 {
@@ -63,6 +64,12 @@ class ExchangeRateService
     }
     public function calculateExchangeRate($currency, $amount, $type = null,$to=null,$amount_in=null)
     {
-        return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type,$to,$amount_in);
+      try{
+          return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type,$to,$amount_in);
+      }catch(\Exception $e){
+        Log::error('Error calculating exchange rate: ' . $e->getMessage());
+          throw new \Exception($e->getMessage());
+
+      }
     }
 }
