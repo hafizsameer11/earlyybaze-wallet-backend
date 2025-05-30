@@ -36,7 +36,8 @@ class ExchangeFeeHelper
 
         $fee = Fee::where('type', $type)->first();
         if (!$fee) {
-            throw new \Exception('Fee not found');
+            return;
+            // throw new \Exception('Fee not found');
         }
 
         // 1. Platform fee in USD
