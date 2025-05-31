@@ -141,7 +141,7 @@ class RefferalEarningRepository
             'reffralCode' => $user->user_code,
             'Earning' => [
                 'usd_pending' => $pendingUsd,
-                'usd_paid' => $paidUsd,
+                'usd_paid' => $pendingUsd,
                 'naira_paid' => $account->referral_earning_naira ?? 0,
             ],
             'currentPayout' => [
