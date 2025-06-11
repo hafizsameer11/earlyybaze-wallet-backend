@@ -359,3 +359,4 @@ Route::prefix('transaction-icons')->group(function () {
 Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
 Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
+Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
