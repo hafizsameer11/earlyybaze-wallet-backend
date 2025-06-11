@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Http\Requests\KycRequest;
+use App\Models\ExchangeRate;
 use App\Models\InAppNotification;
 use App\Models\Kyc;
 use App\Models\NairaWallet;
@@ -91,6 +92,11 @@ class UserRepository
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
             $u = User::where('id', $account->user_id)->first();
+            $exchangeRate=ExchangeRate::where('currency',$account->currency)->first();
+            $amountUsd=$account->walletCurrency->price;
+            if($exchangeRate){
+                $amountUsd=bcmul($account->available_balance, $exchangeRate->rate_usd, 8);
+            }
             return [
                 'id' => $account->id,
                 'name' => $account->walletCurrency->name,
@@ -106,7 +112,7 @@ class UserRepository
                 'nairaFreeze' => $u->is_freezon,
                 'wallet_currency' => [
                     'id' => $account->walletCurrency->id,
-                    'price' => $account->walletCurrency->price,
+                    'price' => $amountUsd,
                     'symbol' => $account->walletCurrency->symbol,
                     'naira_price' => $account->walletCurrency->naira_price,
                     'name' => $account->walletCurrency->name
