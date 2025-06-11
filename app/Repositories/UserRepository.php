@@ -95,7 +95,7 @@ class UserRepository
             $exchangeRate=ExchangeRate::where('currency',$account->currency)->first();
             $amountUsd=$account->walletCurrency->price;
             if($exchangeRate){
-                $amountUsd=bcmul($account->available_balance, $exchangeRate->rate_usd,4);
+                $amountUsd=bcmul($account->available_balance, $exchangeRate->rate_usd,2);
             }
             return [
                 'id' => $account->id,
