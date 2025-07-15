@@ -84,9 +84,9 @@ public function getMasterWalletDetails()
             case 'bsc':
                 $balance = $this->BscService->getBscMasterBalances();
                 break;
-            case 'litecoin':
-                $balance = $this->LitecoinService->getAddressBalance($wallet->address);
-                break;
+            // // case 'litecoin':
+            // //     $balance = $this->LitecoinService->getAddressBalance($wallet->address);
+            //     break;
             case 'tron':
                 $balance = $this->TronService->getTrxBalance($wallet->address);
                 break;
