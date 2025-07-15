@@ -72,7 +72,7 @@ public function getMasterWalletDetails()
 
     $walletsWithBalances = $masterWallets->map(function ($wallet) {
         // Symbol path
-        $symbol = WalletCurrency::where('currency', $wallet->currency)->first();
+        $symbol = WalletCurrency::where('blockchain', $wallet->blockchain)->first();
         $wallet->symbol = $symbol ? asset('storage/' . $symbol->symbol) : null;
 
         // Initialize defaults
