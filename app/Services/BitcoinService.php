@@ -171,12 +171,16 @@ class BitcoinService
             throw new \Exception("BTC Address Balance Fetch Failed: " . $response->body());
         }
 
-        $balance = $response->json()['balance'] ?? null;
-        Log::info("wallet balance of bitcoin is ",[$response]);
-        if (is_null($balance)) {
-            throw new \Exception('BTC Address Balance not found in API response.');
-        }
+        // $balance = $response->json()['balance'] ?? null;
+        $incoming = $response->json()['incoming'] ?? 0;
+        $outgoing = $response->json()['outgoing'] ?? 0;
 
-        return (float) $balance;
+
+        Log::info("wallet balance of bitcoin is ", [$response->json()]);
+        // if (is_null($incoming)) {
+        //     throw new \Exception('BTC Address Balance not found in API response.');
+        // }
+
+        return (float) bcsub($incoming, $outgoing, 8);
     }
 }
