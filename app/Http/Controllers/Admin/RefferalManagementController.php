@@ -62,7 +62,7 @@ class RefferalManagementController extends Controller
                     'earned_naira' => $totalPaidNaira ?? 0,
                     'referrer' => $user->user_code,
                     'status' => $latestPayout->status ?? '',
-                    'paidAt' => $latestPayout->paid_at,
+                    'paidAt' => $latestPayout->paid_at ?? '',
                     'total_payout_usd' => $totalPaidUsd,
                     'total_payout_naira' => $totalPaidNaira,
                     'withdrawn_this_month_usd' => $currentMonthPayout?->amount ?? 0,
