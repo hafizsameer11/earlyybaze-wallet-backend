@@ -12,6 +12,7 @@ use App\Services\MasterWalletService;
 use App\Services\TronTransferService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 
 class MasterWalletController extends Controller
 {
@@ -57,64 +58,89 @@ class MasterWalletController extends Controller
 
     //   use Illuminate\Support\Arr;
 
-    public function getMasterWalletDetails()
-    {
-        $masterWallets = MasterWallet::orderBy('created_at', 'desc')->get();
-        $totalWallets = $masterWallets->count();
+public function getMasterWalletDetails()
+{
+    $masterWallets = MasterWallet::orderBy('created_at', 'desc')->get();
+    $totalWallets = $masterWallets->count();
 
-        if ($masterWallets->isEmpty()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No master wallets found'
-            ], 404);
-        }
+    if ($masterWallets->isEmpty()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No master wallets found'
+        ], 404);
+    }
 
-        $walletsWithBalances = $masterWallets->map(function ($wallet) {
-            // Add symbol path (optional logic based on currency or blockchain)
-            $symbol = WalletCurrency::where('currency', $wallet->currency)->first();
-            $wallet->symbol = $symbol ? asset('storage/' . $symbol->symbol) : null;
+    $walletsWithBalances = $masterWallets->map(function ($wallet) {
+        // Symbol path
+        $symbol = WalletCurrency::where('currency', $wallet->currency)->first();
+        $wallet->symbol = $symbol ? asset('storage/' . $symbol->symbol) : null;
 
-            // Get balance based on blockchain
+        // Initialize defaults
+        $ethBalance = "0.00000000";
+        $tokenBalances = [];
+
+        try {
             switch (strtolower($wallet->blockchain)) {
                 case 'ethereum':
                     $balance = $this->EthService->getEthereumMasterBalances();
+                    $ethBalance = $balance['eth_balance'] ?? "0.00000000";
+                    $tokenBalances = $balance['token_balances'] ?? [];
                     break;
+
                 case 'bitcoin':
-                    $balance = $this->BitcoinService->getAddressBalance($wallet->address);
+                    $btc = $this->BitcoinService->getAddressBalance($wallet->address);
+                    $ethBalance = number_format($btc, 8, '.', '');
                     break;
+
                 case 'bsc':
                     $balance = $this->BscService->getBscMasterBalances();
+                    $ethBalance = $balance['bnb_balance'] ?? "0.00000000";
+                    $tokenBalances = $balance['token_balances'] ?? [];
                     break;
-                // case 'litecoin':
-                //     $balance = $this->LitecoinService->getAddressBalance($wallet->address);
-                //     break;
+
                 case 'tron':
-                    $balance = $this->TronService->getTrxBalance($wallet->address);
+                    $trx = $this->TronService->getTrxBalance($wallet->address);
+                    $ethBalance = number_format($trx, 8, '.', '');
                     break;
+
+                case 'litecoin':
+                    $ltc = $this->LitecoinService->getAddressBalance($wallet->address);
+                    $ethBalance = number_format($ltc, 8, '.', '');
+                    break;
+
                 default:
-                    $balance = ['error' => 'Unsupported blockchain'];
+                    // Unsupported blockchains like solana
+                    break;
             }
+        } catch (\Exception $e) {
+            Log::error('Wallet balance fetch failed: ' . $e->getMessage(), ['wallet_id' => $wallet->id]);
+        }
 
-            // Clean sensitive data
-            $cleanWallet = Arr::except($wallet->toArray(), [
-                'private_key',
-                'mnemonic',
-                'xpub',
-                'response'
-            ]);
-
-            return array_merge($cleanWallet, ['balance' => $balance]);
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Master wallet details fetched',
-            'data' => [
-                'totalWallets' => $totalWallets,
-                'wallets' => $walletsWithBalances
-            ]
+        // Clean sensitive data
+        $cleanWallet = Arr::except($wallet->toArray(), [
+            'private_key', 'mnemonic', 'xpub', 'response'
         ]);
-    }
+
+        // Flatten token balances
+        foreach ($tokenBalances as $key => $value) {
+            $cleanWallet[$key] = $value;
+        }
+
+        $cleanWallet['eth_balance'] = $ethBalance;
+
+        return $cleanWallet;
+    });
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Master wallet details fetched',
+        'data' => [
+            'totalWallets' => $totalWallets,
+            'wallets' => $walletsWithBalances
+        ]
+    ]);
+}
+
 
     public function getMasterWalletBalance($id)
     {
