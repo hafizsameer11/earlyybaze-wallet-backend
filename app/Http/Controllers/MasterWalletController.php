@@ -55,48 +55,62 @@ class MasterWalletController extends Controller
     }
     // use Illuminate\Support\Arr;
 
-    public function getMasterWalletDetails()
-    {
-        $totalWallets = MasterWallet::count();
+    
+public function getMasterWalletDetails()
+{
+    $masterWallets = MasterWallet::orderBy('created_at', 'desc')->get();
+    $totalWallets = $masterWallets->count();
 
-        $masterWallet = MasterWallet::orderBy('created_at', 'desc')
-            ->first();
+    if ($masterWallets->isEmpty()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No master wallets found'
+        ], 404);
+    }
 
-        if (!$masterWallet) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No master wallet found'
-            ], 404);
+    $walletsWithBalances = $masterWallets->map(function ($wallet) {
+        // Add symbol path (optional logic based on currency or blockchain)
+        $symbol = WalletCurrency::where('currency', $wallet->currency)->first();
+        $wallet->symbol = $symbol ? asset('storage/' . $symbol->symbol) : null;
+
+        // Get balance based on blockchain
+        switch (strtolower($wallet->blockchain)) {
+            case 'ethereum':
+                $balance = $this->EthService->getEthereumMasterBalances();
+                break;
+            case 'bitcoin':
+                $balance = $this->BitcoinService->getAddressBalance($wallet->address);
+                break;
+            case 'bsc':
+                $balance = $this->BscService->getBscMasterBalances();
+                break;
+            case 'litecoin':
+                $balance = $this->LitecoinService->getAddressBalance($wallet->address);
+                break;
+            case 'tron':
+                $balance = $this->TronService->getTrxBalance($wallet->address);
+                break;
+            default:
+                $balance = ['error' => 'Unsupported blockchain'];
         }
 
-        // Add symbol path
-        $symbol = WalletCurrency::where('currency', 'ETH')->first();
-        $symbolPath = $symbol ? asset('storage/' . $symbol->symbol) : null;
-        $masterWallet->symbol = $symbolPath;
-
-        // Fetch ETH and ERC-20 balances
-        $balanceDetails = $this->EthService->getEthereumMasterBalances();
-
-        // Exclude sensitive data
-        $cleanWallet = Arr::except($masterWallet->toArray(), [
-            'private_key',
-            'mnemonic',
-            'xpub',
-            'response'
+        // Clean sensitive data
+        $cleanWallet = Arr::except($wallet->toArray(), [
+            'private_key', 'mnemonic', 'xpub', 'response'
         ]);
 
-        // Merge in balances
-        $mergedWallet = array_merge($cleanWallet, $balanceDetails);
+        return array_merge($cleanWallet, ['balance' => $balance]);
+    });
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Ethereum master wallet details fetched',
-            'data' => [
-                'totalWallets' => $totalWallets,
-                'wallet' => [$mergedWallet]
-            ]
-        ]);
-    }
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Master wallet details fetched',
+        'data' => [
+            'totalWallets' => $totalWallets,
+            'wallets' => $walletsWithBalances
+        ]
+    ]);
+}
     public function getMasterWalletBalance($id)
     {
         $masterWallet = MasterWallet::find($id);
