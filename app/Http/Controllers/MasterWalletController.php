@@ -136,7 +136,7 @@ public function getMasterWalletDetails()
         'message' => 'Master wallet details fetched',
         'data' => [
             'totalWallets' => $totalWallets,
-            'wallets' => $walletsWithBalances
+            'wallet' => $walletsWithBalances
         ]
     ]);
 }
