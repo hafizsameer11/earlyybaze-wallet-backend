@@ -172,7 +172,7 @@ class BitcoinService
         }
 
         $balance = $response->json()['balance'] ?? null;
-        Log::info("wallet balance of bitcoin is ",[$balance]);
+        Log::info("wallet balance of bitcoin is ",[$response->json()]);
         if (is_null($balance)) {
             throw new \Exception('BTC Address Balance not found in API response.');
         }
