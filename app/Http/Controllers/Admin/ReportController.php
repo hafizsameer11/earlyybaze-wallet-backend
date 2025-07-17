@@ -25,15 +25,15 @@ class ReportController extends Controller
 
         foreach ($timeFrames as $key => [$from, $to]) {
             $totalUsers = User::whereBetween('created_at', [$from, $to])->count();
-            $activeUsers = User::where('is_active', true)->whereBetween('created_at', [$from, $to])->count();
+            $activeUsers = User::where('is_active', operator: true)->whereBetween('created_at', [$from, $to])->count();
             $newUsers = $totalUsers;
             $payingUsers = User::whereHas('transactions', fn($q) => $q->whereBetween('created_at', [$from, $to]))->count();
             $deletedUsers = User::onlyTrashed()->whereBetween('deleted_at', [$from, $to])->count();
 
             // placeholder static data
-            $engagedSessions = 260;
-            $bouncedUsers = 120;
-            $engagementRate = 15000;
+            $engagedSessions = 0;
+            $bouncedUsers = 0;
+            $engagementRate = 0;
 
             $totalRevenue = Transaction::whereIn('type', ['swap', 'buy'])
                 ->where('status', 'completed')
