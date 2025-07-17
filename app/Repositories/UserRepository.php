@@ -271,25 +271,21 @@ class UserRepository
         $totalWallets += $item->account_count;
 
         return [
-            'currency' => $item->walletCurrency,
-            'total_balance' => $item->total_balance,
-            'usd_balance' => $usdBalance,
-            'account_count' => $item->account_count
+            'currency' => $item->walletCurrency,      // full WalletCurrency object
+            'total_balance' => $item->total_balance,   // total available_balance
+            'usd_balance' => $usdBalance,              // converted to USD
+            'account_count' => $item->account_count    // total virtual accounts for this currency
         ];
     });
 
     $totalNgn = bcmul($totalUsd, 1550, 2);
 
-    // Append totals as an extra row
-    $mapped->push([
-        'currency' => 'TOTALS',
-        'total_balance' => null,
-        'usd_balance' => $totalUsd,
-        'account_count' => $totalWallets,
-        'ngn_balance' => $totalNgn,
-    ]);
-
-    return $mapped;
+    return [
+        'balances' => $mapped,
+        'total_wallets' => $totalWallets,
+        'total_usd_balance' => $totalUsd,
+        'total_ngn_balance' => $totalNgn
+    ];
 }
 
 
