@@ -11,7 +11,8 @@ class UserAccount extends Model
     protected $fillable = [
         'user_id',
         'account_number',
-        'referral_earning_naira'
+        'referral_earning_naira',
+        'naira_balance'
     ];
     public function user()
     {
