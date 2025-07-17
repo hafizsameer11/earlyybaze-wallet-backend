@@ -13,6 +13,7 @@ class transactionRepository
     {
         $totalTransactions = Transaction::count();
         $totalWallets = VirtualAccount::count();
+        $totalRevenue=Transaction::sum('amount');
 
         $transactions = Transaction::with([
             'user',
@@ -22,7 +23,7 @@ class transactionRepository
             'swaptransaction',
             'withdraw_transaction.withdraw_request',
         ])->orderBy('created_at', 'desc')->get();
-        return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets];
+        return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets,'totalRevenue'=>$totalRevenue];
     }
 
     public function find($id)
