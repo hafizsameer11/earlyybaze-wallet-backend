@@ -256,36 +256,40 @@ class UserRepository
         ->groupBy('currency_id')
         ->get();
 
-    $totalUsdBalance = 0;
+    $totalUsd = 0;
     $totalWallets = 0;
 
-    $mappedBalances = $balances->map(function ($item) use (&$totalUsdBalance, &$totalWallets) {
-        $exchangeRate =ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
+    $mapped = $balances->map(function ($item) use (&$totalUsd, &$totalWallets) {
+        $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
 
         $usdBalance = 0;
         if ($exchangeRate) {
             $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
         }
 
-        $totalUsdBalance = bcadd($totalUsdBalance, $usdBalance, 8);
+        $totalUsd = bcadd($totalUsd, $usdBalance, 8);
         $totalWallets += $item->account_count;
 
         return [
-            'currency' => $item->walletCurrency,      // full WalletCurrency object
-            'total_balance' => $item->total_balance,   // total available_balance
-            'usd_balance' => $usdBalance,              // converted to USD
-            'account_count' => $item->account_count    // total virtual accounts for this currency
+            'currency' => $item->walletCurrency,
+            'total_balance' => $item->total_balance,
+            'usd_balance' => $usdBalance,
+            'account_count' => $item->account_count
         ];
     });
 
-    $totalNgnBalance = bcmul($totalUsdBalance, 1550, 2);
+    $totalNgn = bcmul($totalUsd, 1550, 2);
 
-    return [
-        'wallets' => $mappedBalances,
-        'total_wallets' => $totalWallets,
-        'total_usd_balance' => $totalUsdBalance,
-        'total_ngn_balance' => $totalNgnBalance
-    ];
+    // Append totals as an extra row
+    $mapped->push([
+        'currency' => 'TOTALS',
+        'total_balance' => null,
+        'usd_balance' => $totalUsd,
+        'account_count' => $totalWallets,
+        'ngn_balance' => $totalNgn,
+    ]);
+
+    return $mapped;
 }
 
 
