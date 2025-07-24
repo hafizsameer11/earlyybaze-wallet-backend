@@ -43,7 +43,7 @@ class ExchangeRateRepository
         if ($data['currency'] !== 'NGN') {
             throw new \Exception('Only NGN currency can be created with currency_id = 1.');
         }
-
+        $data['currency_id']=null;
         // Skip USD calculation, just copy rate to rate_naira
         $data['rate_naira'] = $data['rate'];
         return ExchangeRate::create($data);
