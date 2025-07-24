@@ -88,6 +88,6 @@ class WithdrawRequestRepository
     }
     public function getAllwithdrawRequests()
     {
-        return WithdrawRequest::where('status','!=', 'pending')->with('bankAccount', 'user')->orderBy('created_at', 'desc')->get();
+        return WithdrawRequest::where('status','!=', 'approved')->with('bankAccount', 'user')->orderBy('created_at', 'desc')->get();
     }
 }
