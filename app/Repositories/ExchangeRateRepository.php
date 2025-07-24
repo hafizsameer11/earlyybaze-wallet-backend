@@ -36,15 +36,35 @@ class ExchangeRateRepository
         }
         return $exchangeRate;
     }
-    public function create(array $data)
-    {
-        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
-        //calculate the exchange rate in naira
-        $data['rate_usd'] = 1 / $data['rate'];
-        $usd_rate = $data['rate_usd'];
-        $data['rate_naira'] = $nairaExchangeRate->rate * $usd_rate;
+   public function create(array $data)
+{
+    if (isset($data['currency_id']) && $data['currency_id'] == 1) {
+        // Only allow NGN currency creation for ID 1
+        if ($data['currency'] !== 'NGN') {
+            throw new \Exception('Only NGN currency can be created with currency_id = 1.');
+        }
+
+        // Skip USD calculation, just copy rate to rate_naira
+        $data['rate_naira'] = $data['rate'];
         return ExchangeRate::create($data);
     }
+
+    // For other currencies, continue with USD and Naira rate calculation
+    $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')
+        ->orderBy('id', 'desc')
+        ->first();
+
+    if (!$nairaExchangeRate) {
+        throw new \Exception('NGN exchange rate not found.');
+    }
+
+    $data['rate_usd'] = 1 / $data['rate'];
+    $usdRate = $data['rate_usd'];
+    $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+
+    return ExchangeRate::create($data);
+}
+
 
 
     public function update(array $data, $id)
