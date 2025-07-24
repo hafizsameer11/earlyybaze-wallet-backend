@@ -28,7 +28,8 @@ class UpdateProfileRequest extends FormRequest
             'phone' => 'nullable|string',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'password' => 'nullable',
-            'email' => 'nullable'
+            'email' => 'nullable',
+            'pin'=>'nullable'
 
         ];
     }
