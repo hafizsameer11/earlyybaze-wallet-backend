@@ -18,6 +18,10 @@ class WalletCurrencyService
     {
         return $this->WalletCurrencyRepository->all();
     }
+    public function ngnCurrency()
+    {
+        return $this->WalletCurrencyRepository->ngnCurrency();
+    }
 
     public function find($id)
     {

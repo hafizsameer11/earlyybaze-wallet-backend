@@ -11,6 +11,17 @@ class WalletCurrencyRepository
     {
         return WalletCurrency::all();
     }
+    public function ngnCurrency()
+    {
+        return [
+            'id' => 1,
+            'currency' => 'NGN',
+            'symbol' => '₦',
+            'blockchain' => 'NGN',
+            'blockhain_name' => 'Naira',
+        ];
+        // return WalletCurrency::where('currency', 'NGN')->latest()->get();
+    }
 
     public function find($id)
     {
