@@ -28,7 +28,7 @@ class TransactionManagementController extends Controller
     public function getWithdrawRequests()
     {
         try {
-            $withdrawRequests = WithdrawRequest::where('status', 'pending')->orderBy('created_at', 'desc')->get();
+            $withdrawRequests = WithdrawRequest::orderBy('created_at', 'desc')->get();
             $withdrawRequests->map(function ($withdrawRequest) {
                 $withdrawRequest->type = 'withdraw';
                 return $withdrawRequest;
