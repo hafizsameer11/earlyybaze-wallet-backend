@@ -15,7 +15,7 @@ class ExchangeRateRepository
 {
     public function all()
     {
-        return ExchangeRate::all();
+        return ExchangeRate::where('currency','NGN')->orderBy('id', 'desc')->get();
     }
 
     public function find($id)
