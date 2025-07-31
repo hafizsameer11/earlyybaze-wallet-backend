@@ -190,7 +190,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
         Route::post('/manual-transform-to-master-wallet', action: [BlockChainController::class, 'manualTransformToMasterWalts']);
         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
-        Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToE xternalAddress']);
+        Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
     Route::prefix('admin')->group(function () {
 

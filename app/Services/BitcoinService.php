@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 class BitcoinService
 {
     protected string $blockchain = 'bitcoin';
-
     public function transferToMasterWallet(VirtualAccount $virtualAccount, string $amount)
     {
         $fromAddress = DepositAddress::where('virtual_account_id', $virtualAccount->id)->value('address');
@@ -72,7 +71,6 @@ class BitcoinService
 
         return $txHash;
     }
-
     public function transferToExternalAddress($user, string $toAddress, string $amount)
     {
         $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->firstOrFail();
@@ -170,17 +168,9 @@ class BitcoinService
         if ($response->failed()) {
             throw new \Exception("BTC Address Balance Fetch Failed: " . $response->body());
         }
-
-        // $balance = $response->json()['balance'] ?? null;
         $incoming = $response->json()['incoming'] ?? 0;
         $outgoing = $response->json()['outgoing'] ?? 0;
-
-
         Log::info("wallet balance of bitcoin is ", [$response->json()]);
-        // if (is_null($incoming)) {
-        //     throw new \Exception('BTC Address Balance not found in API response.');
-        // }
-
         return (float) bcsub($incoming, $outgoing, 8);
     }
 }
