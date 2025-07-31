@@ -60,7 +60,7 @@ class SwapTransactionRepository
             $reference = 'EarlyBaze' . time();
             Log::info("swap data", [$data]);
             // Get admin and user
-            $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
+            // $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
             $user = Auth::user();
 
 
