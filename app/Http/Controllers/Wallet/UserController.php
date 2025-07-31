@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use App\Models\UserActivity;
 
 class UserController extends Controller
 {
@@ -177,5 +178,10 @@ class UserController extends Controller
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
+    }
+    public function getUserActivity(){
+        $userId = Auth::user()->id;
+        $userActivity = UserActivity::where('user_id', $userId)->get();
+        return ResponseHelper::success($userActivity, 'User activity retrieved successfully', 200);
     }
 }

@@ -108,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
+    Route::get('user-activity', [UserController::class, 'getUserActivity']);
     //Fee Module
     Route::prefix('fee')->group(function () {
         Route::post('/create', [FeeController::class, 'create']); // Create a fee
