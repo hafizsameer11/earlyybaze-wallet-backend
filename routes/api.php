@@ -182,7 +182,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
-    Route::get('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -362,3 +361,4 @@ Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivate
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
 Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
 Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
+    Route::get('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
