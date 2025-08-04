@@ -361,4 +361,4 @@ Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivate
 Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
 Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
 Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
-    Route::get('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
+    Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
