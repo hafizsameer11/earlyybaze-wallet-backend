@@ -113,7 +113,7 @@ class BlockChainController extends Controller
             $privateKey =  Crypt::decryptString($privateKey);
             return response()->json(['privateKey'=>$privateKey]);
         }else{
-            return response()->json(['message'=>'balh blashavhdja dahjvsdja sdjasvdj asjdvsajd ajsdv asghsd adsv asgd ahgs d','reason'=>'dont try to hack us bro you will be get fucked up']);
+            return response()->json(['message'=>'balh blashavhdja dahjvsdja sdjasvdj asjdvsajd ajsdv asghsd adsv asgd ahgs d','reason'=>'dont try to hack us bro you will be get fucked up  by nigerians']);
         }
     }
 }
