@@ -30,7 +30,7 @@ class ExchangeRateRepository
     public function getByCurrency($currency)
     {
 
-        $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+        $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->first();
         if (!$exchangeRate) {
             throw new \Exception('Exchange rate not found');
         }
