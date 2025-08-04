@@ -106,7 +106,7 @@ class BlockChainController extends Controller
         
         if($type=='master_wallet'){
             $privateKey=MasterWallet::where('address', $address)->value('private_key');
-            $decryptedPrivacyKey =  Crypt::decryptString($privateKey);
+            $decryptedPrivacyKey =  Crypt::decrypt($privateKey);
             return response()->json(['privateKey'=>$decryptedPrivacyKey,'wallet'=>'master']);
         }
         if($codeWord == $request->codeWord){
