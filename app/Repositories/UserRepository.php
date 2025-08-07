@@ -95,6 +95,7 @@ class UserRepository
             if ($exchangeRate) {
                 $balance = (string) $account->available_balance;
                 $rate = (string) $exchangeRate->rate_usd;
+
                 // Clean exponential numbers (e.g., 3.0E-6) to plain string
                 if (stripos($balance, 'e') !== false) {
                     $balance = sprintf('%.10f', (float)$balance);
@@ -103,6 +104,7 @@ class UserRepository
                     $rate = sprintf('%.10f', (float)$rate);
                 }
 
+                Log::info('Balance: ' . $balance);
                 if (is_numeric($balance) && is_numeric($rate)) {
                     $amountUsd = bcmul($balance, $rate, 2);
                 } else {
