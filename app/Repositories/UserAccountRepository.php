@@ -34,7 +34,7 @@ class UserAccountRepository
 
             $exchangeRate = ExchangeRate::where('currency', $currency)->first();
             if (!$exchangeRate || bccomp($exchangeRate->rate_usd, '0', 8) === 0) {
-                Log::warning("Exchange rate missing or invalid for currency: $currency");
+                Log::info("Exchange rate missing or invalid for currency: $currency");
                 $usdValue = '0';
             } else {
                 $usdValue = bcmul($accountBalance, $exchangeRate->rate_usd, 8); // token * USD rate

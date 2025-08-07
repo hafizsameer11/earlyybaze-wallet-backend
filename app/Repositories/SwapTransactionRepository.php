@@ -42,7 +42,7 @@ class SwapTransactionRepository
             $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
 
             // Fetch exchange rate
-            $exchangeRate = ExchangeRate::where('currency', $currency)->latest()->firstOrFail();
+            $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->firstOrFail();
             $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
             Log::info("exchange rate", [$exchangeRate]);
             // Fee in token and converted currencies
