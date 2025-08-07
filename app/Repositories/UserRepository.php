@@ -93,7 +93,21 @@ class UserRepository
             $exchangeRate = ExchangeRate::where('currency', $account->currency)->first();
             $amountUsd = $account->walletCurrency->price;
             if ($exchangeRate) {
-                $amountUsd = bcmul($account->available_balance, $exchangeRate->rate_usd, 2);
+                $balance = (string) $account->available_balance;
+                $rate = (string) $exchangeRate->rate_usd;
+                // Clean exponential numbers (e.g., 3.0E-6) to plain string
+                if (stripos($balance, 'e') !== false) {
+                    $balance = sprintf('%.10f', (float)$balance);
+                }
+                if (stripos($rate, 'e') !== false) {
+                    $rate = sprintf('%.10f', (float)$rate);
+                }
+
+                if (is_numeric($balance) && is_numeric($rate)) {
+                    $amountUsd = bcmul($balance, $rate, 2);
+                } else {
+                    $amountUsd = '0.00';
+                }
             }
             return [
                 'id' => $account->id,
@@ -250,65 +264,65 @@ class UserRepository
         $users = User::whereNot('role', 'user')->get();
         return $users;
     }
- public function getUserBalances()
-{
-    // ===== VirtualAccount Stats =====
-    $balances = VirtualAccount::with('walletCurrency')
-        ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
-        ->groupBy('currency_id')
-        ->get();
+    public function getUserBalances()
+    {
+        // ===== VirtualAccount Stats =====
+        $balances = VirtualAccount::with('walletCurrency')
+            ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
+            ->groupBy('currency_id')
+            ->get();
 
-    $totalUsd = 0;
-    $totalWallets = 0;
+        $totalUsd = 0;
+        $totalWallets = 0;
 
-    $mapped = $balances->map(function ($item) use (&$totalUsd, &$totalWallets) {
-        $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
+        $mapped = $balances->map(function ($item) use (&$totalUsd, &$totalWallets) {
+            $exchangeRate = \App\Models\ExchangeRate::where('currency', $item->walletCurrency->currency)->latest()->first();
 
-        $usdBalance = 0;
-        if ($exchangeRate) {
-            $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
-        }
+            $usdBalance = 0;
+            if ($exchangeRate) {
+                $usdBalance = bcmul($item->total_balance, $exchangeRate->rate_usd, 8);
+            }
 
-        $totalUsd = bcadd($totalUsd, $usdBalance, 8);
-        $totalWallets += $item->account_count;
+            $totalUsd = bcadd($totalUsd, $usdBalance, 8);
+            $totalWallets += $item->account_count;
 
+            return [
+                'currency' => $item->walletCurrency,
+                'total_balance' => $item->total_balance,
+                'usd_balance' => $usdBalance,
+                'account_count' => $item->account_count
+            ];
+        });
+
+        $totalNgn = bcmul($totalUsd, 1550, 2);
+
+        // ===== Naira Balance Stats =====
+        $userAccounts = \App\Models\UserAccount::with('user:id,name,email') // you can include more fields if needed
+            ->select('user_id', 'naira_balance')
+            ->get();
+
+        $totalNairaBalance = $userAccounts->sum('naira_balance');
+        $totalNairaWallets = $userAccounts->count();
+
+        $userNairaBalances = $userAccounts->map(function ($item) {
+            return [
+                'user' => $item->user,
+                'naira_balance' => $item->naira_balance
+            ];
+        });
+
+        // ===== Final Response =====
         return [
-            'currency' => $item->walletCurrency,
-            'total_balance' => $item->total_balance,
-            'usd_balance' => $usdBalance,
-            'account_count' => $item->account_count
+            'balances' => $mapped,
+            'total_wallets' => $totalWallets,
+            'total_usd_balance' => $totalUsd,
+            'total_ngn_balance' => $totalNgn,
+
+            'total_naira_balance' => $totalNairaBalance,
+            'total_naira_wallets' => $totalNairaWallets,
+            'naira_wallets' => $userNairaBalances,
         ];
-    });
-
-    $totalNgn = bcmul($totalUsd, 1550, 2);
-
-    // ===== Naira Balance Stats =====
-    $userAccounts = \App\Models\UserAccount::with('user:id,name,email') // you can include more fields if needed
-        ->select('user_id', 'naira_balance')
-        ->get();
-
-    $totalNairaBalance = $userAccounts->sum('naira_balance');
-    $totalNairaWallets = $userAccounts->count();
-
-    $userNairaBalances = $userAccounts->map(function ($item) {
-        return [
-            'user' => $item->user,
-            'naira_balance' => $item->naira_balance
-        ];
-    });
-
-    // ===== Final Response =====
-    return [
-        'balances' => $mapped,
-        'total_wallets' => $totalWallets,
-        'total_usd_balance' => $totalUsd,
-        'total_ngn_balance' => $totalNgn,
-
-        'total_naira_balance' => $totalNairaBalance,
-        'total_naira_wallets' => $totalNairaWallets,
-        'naira_wallets' => $userNairaBalances,
-    ];
-}
+    }
 
 
 
