@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\ExchangeRate;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Http;
+
+class FetchExchangeRates implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct()
+    {
+        //
+    }
+
+  use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function handle(): void
+    {
+        // CoinMarketCap symbols
+        $apiSymbols = ['BTC', 'ETH', 'BNB', 'TRX', 'LTC'];
+
+        // Mapping CMC symbols to your DB values
+        $symbolMap = [
+            'BTC' => 'btc',
+            'ETH' => 'eth',
+            'BNB' => 'bsc',
+            'TRX' => 'tron',
+            'LTC' => 'ltc',
+        ];
+
+        $response = Http::withHeaders([
+            'X-CMC_PRO_API_KEY' => 'cedec018-8d93-4a8f-b42e-29252a40c621',
+            'Accept' => 'application/json',
+        ])->get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', [
+            'symbol' => implode(',', $apiSymbols),
+            'convert' => 'USD',
+        ]);
+
+        if (!$response->ok()) {
+            logger()->error('CoinMarketCap API error: ' . $response->body());
+            return;
+        }
+
+        $data = $response->json('data');
+
+        foreach ($symbolMap as $apiSymbol => $dbCurrency) {
+            Log::info("Updating rate_usd for {$dbCurrency}");
+            if (!isset($data[$apiSymbol]['quote']['USD']['price'])) {
+                logger()->warning("Price not found for symbol: {$apiSymbol}");
+                continue;
+            }
+
+            $price = $data[$apiSymbol]['quote']['USD']['price'];
+
+            ExchangeRate::whereRaw('LOWER(currency) = ?', [strtolower($dbCurrency)])
+                ->update(['rate_usd' => $price]);
+
+            logger()->info("Updated rate_usd for {$dbCurrency}: {$price}");
+        }
+    }
+}
