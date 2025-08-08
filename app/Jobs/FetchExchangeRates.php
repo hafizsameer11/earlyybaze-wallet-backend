@@ -67,7 +67,7 @@ class FetchExchangeRates implements ShouldQueue
                 continue;
             }
 
-$price = round($data[$apiSymbol]['quote']['USD']['price'], 4); // ⬅️ Keep 6 decimals (adjust as needed)
+$price = round($data[$apiSymbol]['quote']['USD']['price'], 3); // ⬅️ Keep 6 decimals (adjust as needed)
             Log::info('prices for exchange rate',[
                 'price' => $price]);
 
