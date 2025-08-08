@@ -6,6 +6,7 @@ use App\Models\ExchangeRate;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class UserAccountRepository
@@ -27,7 +28,7 @@ class UserAccountRepository
             ->get();
 
         $totalCryptoUsd = '0';
-
+      
         $userVirtualAccounts = $userVirtualAccounts->map(function ($account) use (&$totalCryptoUsd) {
             $currency = $account->currency;
             $accountBalance = $account->available_balance ?? '0';
@@ -39,7 +40,8 @@ class UserAccountRepository
             } else {
                 $usdValue = bcmul($accountBalance, $exchangeRate->rate_usd, 8); // token * USD rate
             }
-
+              $user=Auth::user();
+            Log::info("fetching for user $user->name");
             // Accumulate total in USD
             $totalCryptoUsd = bcadd($totalCryptoUsd, $usdValue, 8);
 
