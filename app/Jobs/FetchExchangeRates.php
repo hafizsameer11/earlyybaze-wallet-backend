@@ -59,7 +59,8 @@ class FetchExchangeRates implements ShouldQueue
         foreach ($symbolMap as $apiSymbol => $dbCurrency) {
             Log::info("Updating rate_usd for {$dbCurrency}");
             if (!isset($data[$apiSymbol]['quote']['USD']['price'])) {
-                logger()->info("Price not found for symbol: {$apiSymbol}");
+                // logger()->info();
+                Log::info("Price not found for symbol: {$apiSymbol}");
                 continue;
             }
 
