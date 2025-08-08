@@ -74,7 +74,7 @@ $price = round($data[$apiSymbol]['quote']['USD']['price'], 3); // ⬅️ Keep 6 
             ExchangeRate::whereRaw('LOWER(currency) = ?', [strtolower($dbCurrency)])
                 ->update(['rate_usd' => $price]);
 
-            logger()->info("Updated rate_usd for {$dbCurrency}: {$price}");
+            // logger()->info("Updated rate_usd for {$dbCurrency}: {$price}");
         }
     }
 }
