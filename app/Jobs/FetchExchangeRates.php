@@ -30,6 +30,9 @@ class FetchExchangeRates implements ShouldQueue
         // CoinMarketCap symbols
         $apiSymbols = ['BTC', 'ETH', 'BNB', 'TRX', 'LTC'];
 
+        Log::info('api response is for exchange rate',[
+            'api_symbols' => $apiSymbols,
+        ]);
         // Mapping CMC symbols to your DB values
         $symbolMap = [
             'BTC' => 'btc',
