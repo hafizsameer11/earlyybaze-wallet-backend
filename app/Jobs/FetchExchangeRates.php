@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class FetchExchangeRates implements ShouldQueue
 {
@@ -51,7 +52,9 @@ class FetchExchangeRates implements ShouldQueue
             return;
         }
 
-        $data = $response->json('data');
+        $data = $response->json('data');    
+        Log::info('api response is for exchange rate',[
+            'data' => $data]);
 
         foreach ($symbolMap as $apiSymbol => $dbCurrency) {
             Log::info("Updating rate_usd for {$dbCurrency}");
@@ -61,6 +64,8 @@ class FetchExchangeRates implements ShouldQueue
             }
 
             $price = $data[$apiSymbol]['quote']['USD']['price'];
+            Log::info('prices for exchange rate',[
+                'price' => $price]);
 
             ExchangeRate::whereRaw('LOWER(currency) = ?', [strtolower($dbCurrency)])
                 ->update(['rate_usd' => $price]);
