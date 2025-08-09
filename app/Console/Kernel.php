@@ -14,7 +14,13 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
-                $schedule->job(new FetchExchangeRates)->everyMinute();
+                // $schedule->job(new FetchExchangeRates)->everyMinute();
+                  $schedule->job(new FetchExchangeRates)->everyMinute();
+
+    // 2) Then run a worker to drain the queue (no overlap)
+    $schedule->command('queue:work --stop-when-empty --sleep=3 --tries=3')
+        ->everyMinute()
+        ->withoutOverlapping();
 
     }
 
