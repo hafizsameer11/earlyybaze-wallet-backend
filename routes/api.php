@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
 use App\Http\Controllers\Api\MinimumTradeController;
+use App\Http\Controllers\api\OnChainTransferLogController;
 use App\Http\Controllers\Api\TransactionIconController;
 use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\ExchangeRateController;
@@ -362,3 +363,5 @@ Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
 Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
 Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
 Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
+Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
+    ->name('api.on-chain-transfer-logs.store');
