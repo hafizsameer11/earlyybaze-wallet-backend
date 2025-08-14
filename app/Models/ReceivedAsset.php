@@ -21,7 +21,12 @@ class ReceivedAsset extends Model
         'status',
         'index',
         'user_id',
-        'transfer_address'
+        'transfer_address',
+        'transfered_tx',
+        'transfered_amount',
+        'gas_fee',
+        'address_to_send',
+
     ];
     public function user()
     {
