@@ -43,7 +43,7 @@ class FetchExchangeRates implements ShouldQueue
         ];
 
         $response = Http::withHeaders([
-            'X-CMC_PRO_API_KEY' => 'cedec018-8d93-4a8f-b42e-29252a40c621',
+            'X-CMC_PRO_API_KEY' => 'd7c627aa-2be5-4cb9-8bb5-6dc10fc034cd',
             'Accept' => 'application/json',
         ])->get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', [
             'symbol' => implode(',', $apiSymbols),
