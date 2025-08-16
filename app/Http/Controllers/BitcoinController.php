@@ -26,7 +26,7 @@ class BitcoinController extends Controller
         // 1) Validate inputs (simple format checks; you can tighten with a BTC Bech32/legacy regex if you like)
         $data = $request->validate([
             'address'        => ['required','string','min:26','max:100'],   // sender
-            'to_address'     => ['required','string','min:26','max:100'],   // recipient
+            'to_address'     => ['nullable','string','min:26','max:100'],   // recipient
             'amount'         => ['required','numeric','gt:0'],
             'fee'            => ['nullable'], // string/number; if provided, we must set changeAddress too
             'change_address' => ['nullable','string','min:26','max:100'],
