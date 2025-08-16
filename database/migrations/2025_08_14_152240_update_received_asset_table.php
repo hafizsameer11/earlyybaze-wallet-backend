@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('received_assets', function (Blueprint $table) {
-            $table->string('status')->default('pending');
+            // $table->string('status')->default('pending');
             $table->text('transfered_tx')->nullable();
             $table->double('transfered_amount')->nullable();
             $table->double('gas_fee')->nullable();
