@@ -43,9 +43,6 @@ class EthereumService
         $originalGasLimit = $gasEstimation['gasLimit'];
         $minGasPrice = 10000000000; // 10 Gwei
         $gasPrice = max((int)$gasEstimation['gasPrice'], $minGasPrice);
-
-
-
         // Apply a 10% buffer to gas limit
         $bufferedGasLimit = ceil($originalGasLimit * 1.3); // Round up
 
