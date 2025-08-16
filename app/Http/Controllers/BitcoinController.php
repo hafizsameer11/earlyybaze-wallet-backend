@@ -30,7 +30,7 @@ class BitcoinController extends Controller
         'to_address'      => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
         'amount'          => ['required','numeric','gt:0', 'regex:/^\d+(\.\d{1,8})?$/'], // max 8 decimals
         'fee'             => ['nullable','numeric','gte:0'],                              // if set => require change_address
-        'change_address'  => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/', 'required_with:fee'],
+        'change_address'  => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
         // optional: 'rbf' => ['nullable','boolean'],
     ], [
         'address.regex'        => 'Sender address is not a valid BTC address.',
