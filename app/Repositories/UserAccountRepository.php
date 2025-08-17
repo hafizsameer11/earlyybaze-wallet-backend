@@ -20,6 +20,14 @@ class UserAccountRepository
     public function getUserBalance($id)
     {
         $userAccount = UserAccount::where('user_id', $id)->first();
+        if(!$userAccount){
+            //create user account
+            $userAccount = UserAccount::create([
+                'user_id' => $id,
+                'naira_balance' => '0',
+                'crypto_balance' => '0'
+            ]);
+        }
         $currencies = WalletCurrency::all();;
 
         $userVirtualAccounts = VirtualAccount::where('user_id', $id)
