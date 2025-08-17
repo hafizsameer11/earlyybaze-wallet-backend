@@ -126,7 +126,7 @@ class TransactionSendRepository
             $sender = Auth::user();
             //check if receiver email and sender email are same
             if ($receiver->email == $sender->email) {
-                return ['success' => false, 'error' => 'You cannot send to yourself'];
+               throw new \Exception('You cannot send to yourself');
             }
 
             $senderAccount = VirtualAccount::where('user_id', $sender->id)
