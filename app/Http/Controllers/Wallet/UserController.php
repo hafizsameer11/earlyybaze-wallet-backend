@@ -171,6 +171,10 @@ class UserController extends Controller
             if(!$user) {
                 return ResponseHelper::error('Email not found', 404);
             }
+            //check if that email and auth user are same 
+            if($user->id == Auth::user()->id) {
+                return ResponseHelper::error('Cannot Send to your own email', 400);
+            }
             // if ($user) {
             //     return ResponseHelper::error('Email already exists', 400);
             // }
