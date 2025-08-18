@@ -7,6 +7,7 @@ use App\Models\VirtualAccount;
 use App\Models\DepositAddress;
 use App\Models\Ledger;
 use App\Models\MasterWalletTransaction;
+use App\Models\TransferLog;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +42,7 @@ class BitcoinService
                 'value' => (float) number_format($adjustedAmount, 8, '.', '')
             ]],
             'fee' => number_format($feeBtc, 8, '.', ''),
-            'changeAddress' => $fromAddress,
+            'changeAddress' => $toAddress,
         ];
 
         $response = Http::withHeaders([
@@ -53,7 +54,7 @@ class BitcoinService
         }
 
         $txHash = $response->json()['txId'];
-
+        Log::info("BTC Transfer Success: " . $txHash);
         MasterWalletTransaction::create([
             'user_id' => $virtualAccount->user_id,
             'master_wallet_id' => $masterWallet->id,
@@ -65,14 +66,22 @@ class BitcoinService
             'tx_hash' => $txHash,
         ]);
 
-        Ledger::create([
+        TransferLog::create([
             'user_id' => $virtualAccount->user_id,
-            'type' => 'transfer',
-            'blockchain' => $this->blockchain,
-            'currency' => 'BTC',
             'amount' => $adjustedAmount,
-            'tx_hash' => $txHash,
+            'fee' => $feeBtc,
+            'currency' => 'BTC',
+            'from_address' => $fromAddress,
+            'to_address' => $toAddress,
         ]);
+        // Ledger::create([
+        //     'user_id' => $virtualAccount->user_id,
+        //     'type' => 'transfer',
+        //     'blockchain' => $this->blockchain,
+        //     'currency' => 'BTC',
+        //     'amount' => $adjustedAmount,
+        //     'tx_hash' => $txHash,
+        // ]);
 
         return $txHash;
     }
