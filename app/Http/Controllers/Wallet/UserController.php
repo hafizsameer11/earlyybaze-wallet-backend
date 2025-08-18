@@ -61,7 +61,7 @@ class UserController extends Controller
         try {
             $data = $request->validated();
             $email = $data['email'];
-            Log::info("data $email");
+            // Log::info("data $email");
             $user = $this->userService->setPin($data['email'], $data['pin']);
             return ResponseHelper::success($user, 'Pin set successfully', 200);
         } catch (Exception $e) {
@@ -127,7 +127,7 @@ class UserController extends Controller
     {
         try {
             // $isBuy = $request->all();
-            Log::info('Is Buy: ' . $isBuy);
+            // Log::info('Is Buy: ' . $isBuy);
             if (!$isBuy) {
                 $walletCurrencies = $this->userService->getwalletcurrenciesforuser();
                 return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
@@ -155,7 +155,7 @@ class UserController extends Controller
     public function setFcmToken(Request $request)
     {
         $userId = Auth::user()->id;
-        Log::info("FC token set: " . $request->fcmToken);
+        // Log::info("FC token set: " . $request->fcmToken);
         $fcmToken = $request->fcmToken;
 
         $user = User::where('id', $userId)->first();

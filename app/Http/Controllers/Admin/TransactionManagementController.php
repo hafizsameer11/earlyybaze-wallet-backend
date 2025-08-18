@@ -62,7 +62,7 @@ class TransactionManagementController extends Controller
     public function getSingleInternalReceiveTransaction($id)
     {
         try {
-            Log::info('Fetching single internal receive transaction', ['id' => $id]);
+            // Log::info('Fetching single internal receive transaction', ['id' => $id]);
             $transaction = $this->transactionSendService->findByTransactionId($id, $type = "receive");
             return ResponseHelper::success($transaction, 'Transaction fetched successfully', 200);
         } catch (\Exception $e) {

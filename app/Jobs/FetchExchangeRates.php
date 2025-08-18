@@ -30,9 +30,9 @@ class FetchExchangeRates implements ShouldQueue
         // CoinMarketCap symbols
         $apiSymbols = ['BTC', 'ETH', 'BNB', 'TRX', 'LTC'];
 
-        Log::info('api response is for exchange rate',[
-            'api_symbols' => $apiSymbols,
-        ]);
+        // Log::info('api response is for exchange rate',[
+        //     'api_symbols' => $apiSymbols,
+        // ]);
         // Mapping CMC symbols to your DB values
         $symbolMap = [
             'BTC' => 'btc',
@@ -60,16 +60,16 @@ class FetchExchangeRates implements ShouldQueue
             'data' => $data]);
 
         foreach ($symbolMap as $apiSymbol => $dbCurrency) {
-            Log::info("Updating rate_usd for {$dbCurrency}");
+            // Log::info("Updating rate_usd for {$dbCurrency}");
             if (!isset($data[$apiSymbol]['quote']['USD']['price'])) {
                 // logger()->info();
-                Log::info("Price not found for symbol: {$apiSymbol}");
+                // Log::info("Price not found for symbol: {$apiSymbol}");
                 continue;
             }
 
 $price = round($data[$apiSymbol]['quote']['USD']['price'], 3); // ⬅️ Keep 6 decimals (adjust as needed)
-            Log::info('prices for exchange rate',[
-                'price' => $price]);
+            // Log::info('prices for exchange rate',[
+            //     'price' => $price]);
 
             ExchangeRate::whereRaw('LOWER(currency) = ?', [strtolower($dbCurrency)])
                 ->update(['rate_usd' => $price]);

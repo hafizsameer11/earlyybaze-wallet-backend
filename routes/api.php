@@ -28,6 +28,7 @@ use App\Http\Controllers\MarketDataController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
 use App\Http\Controllers\RefferalEarningController;
+use App\Http\Controllers\TronController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
@@ -367,4 +368,6 @@ Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPri
 Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
     ->name('api.on-chain-transfer-logs.store');
 
-    Route::post('btc-transfer',[BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
+Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
+Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
+Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);

@@ -64,7 +64,7 @@ class BuyTransactionRepository
     public function create(array $data)
     {
         $refference = 'EarlyBaze' . time();
-        Log::info('Buy Transaction', $data);
+        // Log::info('Buy Transaction', $data);
         try {
             $transaction = $this->transactionService->create([
                 'type' => 'buy',

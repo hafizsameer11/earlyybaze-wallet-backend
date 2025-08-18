@@ -48,12 +48,12 @@ class TransactionController extends Controller
     public function sendInternalTransaction(InternalTransferRequest $request)
     {
         try {
-            Log::info("Internal Transfer request", $request->validated());
+            // Log::info("Internal Transfer request", $request->validated());
 
             $validated = $request->validated();
             $sendingType = filter_var($validated['email'], FILTER_VALIDATE_EMAIL) ? 'internal' : 'external';
-            Log::info("Send data", $validated);
-            Log::info("Detected Sending Type: $sendingType");
+            // Log::info("Send data", $validated);
+            // Log::info("Detected Sending Type: $sendingType");
             if ($sendingType == 'internal') {
 
                 $transaction = $this->transactionSendService->sendInternalTransaction(array_merge($validated, ['sending_type' => $sendingType]));
@@ -87,7 +87,7 @@ class TransactionController extends Controller
                     $transaction = $this->BitcoinService->transferToExternalAddress($user, $validated['email'], $amountToSend);
                 }
 
-                Log::info("Transaction created", [$transaction]);
+                // Log::info("Transaction created", [$transaction]);
                 $senderTransaction = $this->transactionService->create([
                     'type' => 'send',
                     'amount' => $validated['amount'],
@@ -129,7 +129,7 @@ class TransactionController extends Controller
 
 
 
-            Log::info('Transaction Sendiind datya to backend', $transaction);
+            // Log::info('Transaction Sendiind datya to backend', $transaction);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             Log::error("Error in Internal Transfer: " . $e->getMessage());

@@ -107,13 +107,13 @@ class ExchangeRateRepository
     }
     public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd')
     {
-        Log::info("data received", [
-            'currency' => $currency,
-            'input_amount' => $amount,
-            'amount_in' => $amount_in,
-            'type' => $type,
-            'to' => $to
-        ]);
+        // Log::info("data received", [
+        //     'currency' => $currency,
+        //     'input_amount' => $amount,
+        //     'amount_in' => $amount_in,
+        //     'type' => $type,
+        //     'to' => $to
+        // ]);
 
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
         if (!$exchangeRate) {
