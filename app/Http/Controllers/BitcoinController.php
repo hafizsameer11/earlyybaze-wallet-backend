@@ -24,7 +24,6 @@ class BitcoinController extends Controller
      */
     public function transferBtc(Request $request)
     {
-        // 1) Validate inputs (simple format checks; you can tighten with a BTC Bech32/legacy regex if you like)
             $v = Validator::make($request->all(), [
         'address'         => ['required','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'], // basic BTC addr check
         'to_address'      => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
@@ -38,19 +37,15 @@ class BitcoinController extends Controller
         'change_address.regex' => 'Change address is not a valid BTC address.',
         'amount.regex'         => 'Amount must have at most 8 decimal places.',
     ]);
-
     if ($v->fails()) {
         return response()->json([
             'success' => false,
             'code'    => 'VALIDATION_ERROR',
             'message' => 'Validation failed.',
-            'errors'  => $v->errors(), // { field: [msg, ...], ... }
+            'errors'  => $v->errors(),
         ], 422);
     }
-
-    // 1) Pull validated data (and keep your current hard-coded to/ change if that’s what you want)
-    $data          = $v->validated();
-        
+    $data = $v->validated();        
         $senderAddress  = $data['address'];
         $toAddress      = 'bc1qqhapyfgxqcns6zsccqq2qkejg9g65gkluca2gg';
         $amountBtc      = (float) $data['amount'];

