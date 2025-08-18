@@ -167,7 +167,7 @@ class TronController extends Controller
         $v = Validator::make($request->all(), [
             'address'        => ['required','string','min:34','max:50','regex:/^T[1-9A-HJ-NP-Za-km-z]{33}$/'],
             'amount'         => ['required','numeric','gt:0','regex:/^\d+(\.\d{1,6})?$/'],
-            'fee_limit'  => ['nullable','integer','gte:0'],
+            'fee_limit'  => ['nullable','integer'],
         ], [
             'address.regex'  => 'Sender address is not a valid Tron Base58 address.',
             'amount.regex'   => 'Amount must have at most 6 decimal places.',
@@ -240,7 +240,7 @@ class TronController extends Controller
             'to'             => $toAddress,
             'amount'         => number_format($amountUsdt, 6, '.', ''), // USDT typically 6 decimals
             'tokenAddress'=> $usdtContract,
-            'feeLimit'       => $feeLimitSun, // in Sun
+            'feeLimit'       => (int) $feeLimitSun,
         ];
 
         try {
