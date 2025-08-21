@@ -195,7 +195,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
-    Route::prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware([ 'admin']) ->group(function () {
 
         Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
         Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
