@@ -195,8 +195,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
-    Route::prefix('admin')->middleware([ 'admin']) ->group(function () {
+    Route::prefix('admin')->middleware(['admin'])->group(function () {
 
+        Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
+        Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
+        Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
+        Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
+        Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
+        Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
+            ->name('api.on-chain-transfer-logs.store');
+
+        Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
+        Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
+        Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);
         Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
         Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
         Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
@@ -360,14 +371,3 @@ Route::prefix('transaction-icons')->group(function () {
     Route::get('/{id}', [TransactionIconController::class, 'show']);
     Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
 });
-Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
-Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
-Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
-Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
-Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
-Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
-    ->name('api.on-chain-transfer-logs.store');
-
-Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
-Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
-Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);
