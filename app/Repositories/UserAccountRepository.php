@@ -49,7 +49,7 @@ class UserAccountRepository
                 $usdValue = bcmul($accountBalance, $exchangeRate->rate_usd, 8); // token * USD rate
             }
               $user=Auth::user();
-            Log::info("fetching for user $user->name");
+            // Log::info("fetching for user $user->name");
             // Accumulate total in USD
             $totalCryptoUsd = bcadd($totalCryptoUsd, $usdValue, 8);
 
