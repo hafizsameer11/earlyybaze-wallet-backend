@@ -25,6 +25,7 @@ class Authenticate extends Middleware
                 'url'    => $request->fullUrl(),
                 'headers'=> $request->headers->all(),
                 'body'   => $request->except(['password', 'password_confirmation']), // don’t log sensitive
+                'ip'     => $request->ip(),
             ]);
         }
 

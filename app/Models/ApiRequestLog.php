@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ApiRequestLog extends Model
 {
     use HasFactory;
-     protected $fillable = ['email', 'method', 'url', 'headers', 'body'];
+     protected $fillable = ['email', 'method', 'url', 'headers', 'body','ip'];
 
     protected $casts = [
         'headers' => 'array',
