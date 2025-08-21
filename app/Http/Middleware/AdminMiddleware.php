@@ -25,7 +25,7 @@ class AdminMiddleware
         if ($request->user()->role === 'user') {
             return $request->expectsJson()
                 ? response()->json(['message' => 'Forbidden: not allowed for user role.'], 403)
-                : route('login');
+                : response()->json(['message' => 'Forbidden: not allowed for user role. error 2 and your role is ' . $request->user()->role . ''], 403);
         }
 
         return $next($request);
