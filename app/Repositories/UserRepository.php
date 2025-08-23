@@ -222,7 +222,7 @@ class UserRepository
     }
     public function getFomatedUsers()
     {
-        $users = User::with('kyc')->get();
+        $users = User::with('kyc')->orderBy('created_at', 'desc')->get();
         return $users->map(function ($user) {
             return [
                 'id' => $user->id,
