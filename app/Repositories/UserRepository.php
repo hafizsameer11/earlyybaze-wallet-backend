@@ -256,7 +256,8 @@ class UserRepository
             'kyc_status' => $user->kyc_status,
             'user_activity' => $user->userActivity,
             'kycDetails' => $kycdetails,
-            'notifcations' => $notifications
+            'notifcations' => $notifications,
+            'role' => $user->role
         ];
         return $user;
     }
