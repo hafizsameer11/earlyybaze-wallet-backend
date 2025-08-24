@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -71,6 +72,10 @@ class RoleController extends Controller
     }
     public function getRoleModuleByName($name)
     {
+        $auth=Auth::user();
+        if($auth->role!='admin'){
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $role = Role::with('modules')->where('name', $name)->firstOrFail();
         $allModules = Module::all();
 
