@@ -104,7 +104,7 @@ Route::prefix('auth')->group(function () {
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
-// Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
 //Authenticated routes for user
 Route::middleware('auth:sanctum')->group(function () {
@@ -187,188 +187,188 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
 });
 //non auth routes
-// Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
 
-//     Route::prefix('blockchain')->group(function () {
-//         Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
-//         Route::post('/manual-transform-to-master-wallet', action: [BlockChainController::class, 'manualTransformToMasterWalts']);
-//         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
-//         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
-//     });
-//     Route::prefix('admin')->middleware(['admin'])->group(function () {
+    Route::prefix('blockchain')->group(function () {
+        Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
+        Route::post('/manual-transform-to-master-wallet', action: [BlockChainController::class, 'manualTransformToMasterWalts']);
+        Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
+        Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
+    });
+    Route::prefix('admin')->middleware(['admin'])->group(function () {
 
-//         Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
-//         Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
-//         Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
-//         Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
-//         Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
-//         Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
-//             ->name('api.on-chain-transfer-logs.store');
+        Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
+        Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
+        Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
+        Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
+        Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
+        Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
+            ->name('api.on-chain-transfer-logs.store');
 
-//         Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
-//         Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
-//         Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);
-//         Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
-//         Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
-//         Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
-//         Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
-//         Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
-//         Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
-//         //usermanagement
-//         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
-//         Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
-//         Route::get('/user-management/user-assets/{userId}', [UserManagementController::class, 'getUserAssets']);
-//         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
-//         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
-//         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
-//         Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
-//         Route::get('/user-management/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
-//         Route::get('/user-management/block-user/{id}', [UserManagementController::class, 'blockUser']);
-//         Route::post('/create-user', [UserManagementController::class, 'createUser']);
-//         //banners
-//         Route::get('/banners', [InAppBannerController::class, 'index']);
-//         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
-//         Route::post('/banners', [InAppBannerController::class, 'create']);
-//         Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
-//         Route::delete('/banners/{id}', [InAppBannerController::class, 'delete']);
+        Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
+        Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
+        Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);
+        Route::get('admin-virtual-accounts', [UserManagementController::class, 'adminVirtualAccounts']);
+        Route::get('referal_payments', [ReferalPaymentController::class, 'index']); // Get all records
+        Route::post('referal_payments', [ReferalPaymentController::class, 'store']); // Create new record
+        Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
+        Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
+        Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
+        //usermanagement
+        Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
+        Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
+        Route::get('/user-management/user-assets/{userId}', [UserManagementController::class, 'getUserAssets']);
+        Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
+        Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
+        Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
+        Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
+        Route::get('/user-management/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
+        Route::get('/user-management/block-user/{id}', [UserManagementController::class, 'blockUser']);
+        Route::post('/create-user', [UserManagementController::class, 'createUser']);
+        //banners
+        Route::get('/banners', [InAppBannerController::class, 'index']);
+        Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
+        Route::post('/banners', [InAppBannerController::class, 'create']);
+        Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
+        Route::delete('/banners/{id}', [InAppBannerController::class, 'delete']);
 
-//         //reffer management data
-//         Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
-//         Route::get('refferal/get-for-user/{id}', [RefferalEarningController::class, 'getForUser']);
-//         Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
-//         Route::post('/referral/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
+        //reffer management data
+        Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
+        Route::get('refferal/get-for-user/{id}', [RefferalEarningController::class, 'getForUser']);
+        Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
+        Route::post('/referral/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
 
-//         Route::prefix('InAppNotifications')->group(function () {
-//             Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
-//             Route::get('/get-single/{id}', [InAppNotificationController::class, 'show']); // Get single notification
-//             Route::post('/create', [InAppNotificationController::class, 'store']); // Create notification
-//             Route::post('/update/{id}', [InAppNotificationController::class, 'update']); // Update notification
-//             Route::delete('/delete/{id}', [InAppNotificationController::class, 'destroy']); // Delete notification
-//         });
-//         Route::prefix('transactions')->group(function () {
-//             Route::get('/get-all', [TransactionManagementController::class, 'getAll']);
-//             Route::get('/get-for-user/{id}', [TransactionManagementController::class, 'getTransactionsForUser']);
-//             Route::get('/get-singe/swap/{id}', [TransactionManagementController::class, 'getSingleSwapTransaction']);
-//             Route::get('/get-singe/buy/{id}', [TransactionManagementController::class, 'getSingleBuyTransaction']);
-//             Route::get('/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
-//             Route::get('/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
-//             Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
-//             //withdraw single
-//             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
-//             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'ReferalPaymentController@destroy']);
-//             Route::get('/withdraw-requests', [TransactionManagementController::class, 'getWithdrawRequests']);
+        Route::prefix('InAppNotifications')->group(function () {
+            Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
+            Route::get('/get-single/{id}', [InAppNotificationController::class, 'show']); // Get single notification
+            Route::post('/create', [InAppNotificationController::class, 'store']); // Create notification
+            Route::post('/update/{id}', [InAppNotificationController::class, 'update']); // Update notification
+            Route::delete('/delete/{id}', [InAppNotificationController::class, 'destroy']); // Delete notification
+        });
+        Route::prefix('transactions')->group(function () {
+            Route::get('/get-all', [TransactionManagementController::class, 'getAll']);
+            Route::get('/get-for-user/{id}', [TransactionManagementController::class, 'getTransactionsForUser']);
+            Route::get('/get-singe/swap/{id}', [TransactionManagementController::class, 'getSingleSwapTransaction']);
+            Route::get('/get-singe/buy/{id}', [TransactionManagementController::class, 'getSingleBuyTransaction']);
+            Route::get('/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
+            Route::get('/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
+            Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
+            //withdraw single
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
+            Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'ReferalPaymentController@destroy']);
+            Route::get('/withdraw-requests', [TransactionManagementController::class, 'getWithdrawRequests']);
 
-//             Route::get('/get-all-buy-request', [TransactionManagementController::class, 'getAllBuyRequest']);
-//             Route::post('/update-buy-transaction/{id}', [TransactionManagementController::class, 'updateBuyTransaction']);
-//         });
-//         Route::prefix('withdrawRequest')->group(function (): void {
-//             Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);
-//             Route::get('/get-single/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
-//             Route::post('/withdraw/update-status/{id}', [WithdrawController::class, 'updateStatus']);
-//         });
-//         Route::prefix('kyc')->group(function (): void {
-//             Route::get('/get-all', [KycController::class, 'getAll']);
-//             Route::post('/update-status/{id}', [KycController::class, 'updateStatus']);
-//         });
-//         Route::prefix('walletmanagement')->group(function (): void {
-//             Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
-//             Route::post('/freeze-wallet/{id}', [WalletManagementController::class, 'freezeWallet']);
-//             Route::post('/freeze-naira-wallet/{id}', [WalletManagementController::class, 'freezeNairaWallet']);
-//         });
-//         Route::prefix('trade-limits')->group(function () {
-//             Route::get('/get-all', [TradeLimitController::class, 'index']);
-//             Route::post('/create', [TradeLimitController::class, 'store']);
-//             Route::get('/get-single/{id}', [TradeLimitController::class, 'show']);
-//             Route::post('/update/{id}', [TradeLimitController::class, 'update']);
-//             Route::delete('/delete/{id}', [TradeLimitController::class, 'destroy']);
-//             Route::get('/type/{type}', [TradeLimitController::class, 'getByType']); // Custom method
-//         });
-//         Route::prefix('aml-rules')->group(function () {
-//             Route::get('/get-all', [AmlRuleController::class, 'index']);
-//             Route::post('/create', [AmlRuleController::class, 'store']);
-//             Route::get('/get-single/{id}', [AmlRuleController::class, 'show']);
-//             Route::post('/update/{id}', [AmlRuleController::class, 'update']);
-//             Route::delete('/delete/{id}', [AmlRuleController::class, 'destroy']);
-//             Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
-//         });
-//         Route::get('/market-data', [MarketDataController::class, 'index']);
-//         Route::prefix('maintenance-services')->group(function () {
-//             Route::get('/get-all', [MaintenanceServiceController::class, 'index']);          // Get all services
-//             Route::post('/create', [MaintenanceServiceController::class, 'store']);          // Create new service
-//             Route::get('/get-single/{id}', [MaintenanceServiceController::class, 'show']);   // Get single service by ID
-//             Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
-//             Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
-//         });
+            Route::get('/get-all-buy-request', [TransactionManagementController::class, 'getAllBuyRequest']);
+            Route::post('/update-buy-transaction/{id}', [TransactionManagementController::class, 'updateBuyTransaction']);
+        });
+        Route::prefix('withdrawRequest')->group(function (): void {
+            Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);
+            Route::get('/get-single/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
+            Route::post('/withdraw/update-status/{id}', [WithdrawController::class, 'updateStatus']);
+        });
+        Route::prefix('kyc')->group(function (): void {
+            Route::get('/get-all', [KycController::class, 'getAll']);
+            Route::post('/update-status/{id}', [KycController::class, 'updateStatus']);
+        });
+        Route::prefix('walletmanagement')->group(function (): void {
+            Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
+            Route::post('/freeze-wallet/{id}', [WalletManagementController::class, 'freezeWallet']);
+            Route::post('/freeze-naira-wallet/{id}', [WalletManagementController::class, 'freezeNairaWallet']);
+        });
+        Route::prefix('trade-limits')->group(function () {
+            Route::get('/get-all', [TradeLimitController::class, 'index']);
+            Route::post('/create', [TradeLimitController::class, 'store']);
+            Route::get('/get-single/{id}', [TradeLimitController::class, 'show']);
+            Route::post('/update/{id}', [TradeLimitController::class, 'update']);
+            Route::delete('/delete/{id}', [TradeLimitController::class, 'destroy']);
+            Route::get('/type/{type}', [TradeLimitController::class, 'getByType']); // Custom method
+        });
+        Route::prefix('aml-rules')->group(function () {
+            Route::get('/get-all', [AmlRuleController::class, 'index']);
+            Route::post('/create', [AmlRuleController::class, 'store']);
+            Route::get('/get-single/{id}', [AmlRuleController::class, 'show']);
+            Route::post('/update/{id}', [AmlRuleController::class, 'update']);
+            Route::delete('/delete/{id}', [AmlRuleController::class, 'destroy']);
+            Route::get('/transaction-type/{type}', [AmlRuleController::class, 'getByTransactionType']);
+        });
+        Route::get('/market-data', [MarketDataController::class, 'index']);
+        Route::prefix('maintenance-services')->group(function () {
+            Route::get('/get-all', [MaintenanceServiceController::class, 'index']);          // Get all services
+            Route::post('/create', [MaintenanceServiceController::class, 'store']);          // Create new service
+            Route::get('/get-single/{id}', [MaintenanceServiceController::class, 'show']);   // Get single service by ID
+            Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
+            Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
+        });
 
-//         Route::prefix('roles')->group(function () {
-//             Route::get('/get-all', [RoleController::class, 'index']);
-//             Route::post('/create', [RoleController::class, 'store']);
-//             Route::get('/get-single/{id}', [RoleController::class, 'show']);
-//             Route::post('/update/{id}', [RoleController::class, 'update']);
-//             Route::delete('/delete/{id}', [RoleController::class, 'destroy']);
-//             Route::get('/{id}/permissions', [RoleController::class, 'getRoleModulePermissions']);
-//             Route::get('/{name}/permission', [RoleController::class, 'getRoleModuleByName']);
-//             Route::post('/{id}/modules', [RoleController::class, 'assignModules']);
-//         });
+        Route::prefix('roles')->group(function () {
+            Route::get('/get-all', [RoleController::class, 'index']);
+            Route::post('/create', [RoleController::class, 'store']);
+            Route::get('/get-single/{id}', [RoleController::class, 'show']);
+            Route::post('/update/{id}', [RoleController::class, 'update']);
+            Route::delete('/delete/{id}', [RoleController::class, 'destroy']);
+            Route::get('/{id}/permissions', [RoleController::class, 'getRoleModulePermissions']);
+            Route::get('/{name}/permission', [RoleController::class, 'getRoleModuleByName']);
+            Route::post('/{id}/modules', [RoleController::class, 'assignModules']);
+        });
 
-//         Route::prefix('modules')->group(function () {
-//             Route::get('/get-all', [ModuleController::class, 'index']);
-//             Route::post('/create', [ModuleController::class, 'store']);
-//             Route::delete('/delete/{id}', [ModuleController::class, 'destroy']);
-//         });
-//         Route::prefix('payout-rules')->group(function () {
-//             Route::get('/get-all', [PayoutRuleController::class, 'index']);
-//             Route::post('/create', [PayoutRuleController::class, 'store']);
-//             Route::get('/get-single/{id}', [PayoutRuleController::class, 'show']);
-//             Route::post('/update/{id}', [PayoutRuleController::class, 'update']);
-//             Route::delete('/delete/{id}', [PayoutRuleController::class, 'destroy']);
-//             Route::get('/get-by-event/{event}', [PayoutRuleController::class, 'getByEvent']);
-//         });
-//         Route::prefix('support')->group(function () {
-//             Route::get('/get-non-users', [UserManagementController::class, 'getNonUsers']);
-//             Route::get('/get-all-tickets', [SupportController::class, 'getAllTickets']);
-//             Route::post('/assign-to-agent', [SupportController::class, 'assignToAgent']); // {ticket_id, user_id}
-//             Route::post('/create-reply-by-admin', [SupportController::class, 'createReplyByAdmin']);
-//             Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
-//             Route::post('/mark-ticket-resolved/{id}', [SupportController::class, 'markTicketResolved']);
-//         });
+        Route::prefix('modules')->group(function () {
+            Route::get('/get-all', [ModuleController::class, 'index']);
+            Route::post('/create', [ModuleController::class, 'store']);
+            Route::delete('/delete/{id}', [ModuleController::class, 'destroy']);
+        });
+        Route::prefix('payout-rules')->group(function () {
+            Route::get('/get-all', [PayoutRuleController::class, 'index']);
+            Route::post('/create', [PayoutRuleController::class, 'store']);
+            Route::get('/get-single/{id}', [PayoutRuleController::class, 'show']);
+            Route::post('/update/{id}', [PayoutRuleController::class, 'update']);
+            Route::delete('/delete/{id}', [PayoutRuleController::class, 'destroy']);
+            Route::get('/get-by-event/{event}', [PayoutRuleController::class, 'getByEvent']);
+        });
+        Route::prefix('support')->group(function () {
+            Route::get('/get-non-users', [UserManagementController::class, 'getNonUsers']);
+            Route::get('/get-all-tickets', [SupportController::class, 'getAllTickets']);
+            Route::post('/assign-to-agent', [SupportController::class, 'assignToAgent']); // {ticket_id, user_id}
+            Route::post('/create-reply-by-admin', [SupportController::class, 'createReplyByAdmin']);
+            Route::get('/get-ticket/{id}', [SupportController::class, 'getTicket']);
+            Route::post('/mark-ticket-resolved/{id}', [SupportController::class, 'markTicketResolved']);
+        });
 
-//         Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
+        Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
 
-//         Route::prefix('newsletters')->group(function () {
-//             Route::get('/get-all', [NewsletterController::class, 'index']);
-//             Route::post('/create', [NewsletterController::class, 'store']);
-//             Route::get('/get-single/{id}', [NewsletterController::class, 'show']);
-//             Route::get('/user/{userId}', [NewsletterController::class, 'userNewsletters']);
-//         });
-//         Route::prefix('master-wallet')->group(function () {
-//             Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
-//             Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
-//             Route::get('/get-master-wallet-balance/{id}', [MasterWalletController::class, 'getMasterWalletBalance']);
-//         });
-//         Route::get('/minimum-trades', [MinimumTradeController::class, 'index']);        // Get all
-//         Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'show']);   // Get single
-//         Route::post('/minimum-trades', [MinimumTradeController::class, 'store']);       // Create
-//         Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
-//         Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'destroy']); // Delete
-//         Route::prefix('reports')->group(function () {
-//             Route::get('/get-all', [ReportController::class, 'index']);
-//         });
-//         Route::prefix('user-balances')->group(function () {
-//             Route::get('/get-all', [UserManagementController::class, 'getUserBalances']);
-//             Route::get('/get-by-currency/{currencyId}', [UserManagementController::class, 'getBalanceByCurrency']);
-//         });
-//         Route::prefix('assets')->group(function () {
-//             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
-//             Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
-//             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
-//             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);
-//         });
-//     });
-// });
-// Route::prefix('transaction-icons')->group(function () {
-//     Route::get('/', [TransactionIconController::class, 'index']);
-//     Route::post('/', [TransactionIconController::class, 'store']);
-//     Route::get('/{id}', [TransactionIconController::class, 'show']);
-//     Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
-// });
+        Route::prefix('newsletters')->group(function () {
+            Route::get('/get-all', [NewsletterController::class, 'index']);
+            Route::post('/create', [NewsletterController::class, 'store']);
+            Route::get('/get-single/{id}', [NewsletterController::class, 'show']);
+            Route::get('/user/{userId}', [NewsletterController::class, 'userNewsletters']);
+        });
+        Route::prefix('master-wallet')->group(function () {
+            Route::get('/eth-balance', [MasterWalletController::class, 'getEthBalance']);
+            Route::get('/get-master-wallets', [MasterWalletController::class, 'getMasterWalletDetails']);
+            Route::get('/get-master-wallet-balance/{id}', [MasterWalletController::class, 'getMasterWalletBalance']);
+        });
+        Route::get('/minimum-trades', [MinimumTradeController::class, 'index']);        // Get all
+        Route::get('/minimum-trades/{id}', [MinimumTradeController::class, 'show']);   // Get single
+        Route::post('/minimum-trades', [MinimumTradeController::class, 'store']);       // Create
+        Route::put('/minimum-trades/{id}', [MinimumTradeController::class, 'update']);   // Update
+        Route::delete('/minimum-trades/{id}', [MinimumTradeController::class, 'destroy']); // Delete
+        Route::prefix('reports')->group(function () {
+            Route::get('/get-all', [ReportController::class, 'index']);
+        });
+        Route::prefix('user-balances')->group(function () {
+            Route::get('/get-all', [UserManagementController::class, 'getUserBalances']);
+            Route::get('/get-by-currency/{currencyId}', [UserManagementController::class, 'getBalanceByCurrency']);
+        });
+        Route::prefix('assets')->group(function () {
+            Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
+            Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
+            Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
+            Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);
+        });
+    });
+});
+Route::prefix('transaction-icons')->group(function () {
+    Route::get('/', [TransactionIconController::class, 'index']);
+    Route::post('/', [TransactionIconController::class, 'store']);
+    Route::get('/{id}', [TransactionIconController::class, 'show']);
+    Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
+});
