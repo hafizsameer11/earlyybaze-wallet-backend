@@ -104,7 +104,7 @@ Route::prefix('auth')->group(function () {
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
-Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+// Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
 //Authenticated routes for user
 Route::middleware('auth:sanctum')->group(function () {
