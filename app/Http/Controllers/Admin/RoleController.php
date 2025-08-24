@@ -73,9 +73,9 @@ class RoleController extends Controller
     public function getRoleModuleByName($name)
     {
         $auth=Auth::user();
-        if($auth->role!='admin'){
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        // if($auth->role!='admin'){
+        //     return response()->json(['message' => 'Unauthorized'], 403);
+        // }
         $role = Role::with('modules')->where('name', $name)->firstOrFail();
         $allModules = Module::all();
 
