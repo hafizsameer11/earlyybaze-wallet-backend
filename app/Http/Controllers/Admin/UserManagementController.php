@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BankAccountRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use App\Repositories\UserRepository;
 use App\Services\BankAccountService;
 use App\Services\UserService;
 use Exception;
@@ -15,10 +16,11 @@ use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
-    protected $userService, $bankAccountService;
-    public function __construct(UserService $userService, BankAccountService $bankAccountService)
+    protected $userService, $bankAccountService,$userRepo;
+    public function __construct(UserService $userService, BankAccountService $bankAccountService,UserRepository $userRepository)
     {
         $this->userService = $userService;
+        $this->userRepo = $userRepository;
         $this->bankAccountService = $bankAccountService;
     }
 
@@ -61,6 +63,15 @@ class UserManagementController extends Controller
         try {
             $data = $this->userService->getUserManagementData();
             return ResponseHelper::success($data, 'User details fetched successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+    public function getUserAssets($userId)
+    {
+        try {
+            $data = $this->userRepo->getUserAssets($userId);
+            return ResponseHelper::success($data, 'User assets fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

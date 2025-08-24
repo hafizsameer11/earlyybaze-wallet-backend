@@ -88,7 +88,8 @@ class UserRepository
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
         $userAccount = UserAccount::where('user_id', $userId)->first();
-        $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount) {
+        $ngnExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
+        $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount, $ngnExchangeRate) {
             $u = User::where('id', $account->user_id)->first();
             $exchangeRate = ExchangeRate::where('currency', $account->currency)->first();
             $amountUsd = $account->walletCurrency->price;
@@ -110,6 +111,8 @@ class UserRepository
                 } else {
                     $amountUsd = '0.00';
                 }
+                //grt amount in ngn too 
+                $amountNGN = $amountUsd * $ngnExchangeRate->rate_usd;
             }
             return [
                 'id' => $account->id,
@@ -118,6 +121,7 @@ class UserRepository
                 'blockchain' => $account->blockchain,
                 'currency_id' => $account->currency_id,
                 'available_balance' => $account->available_balance,
+                'ngn_balance' => $amountNGN ?? null,
                 'account_balance' => $account->account_balance,
                 'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
