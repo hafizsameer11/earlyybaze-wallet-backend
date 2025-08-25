@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -78,7 +79,7 @@ public function statsCardData()
                         $totalRevenueNgn += $ngn;
                     } else {
                         // If any rate missing, skip or handle as needed
-                        // Log::warning("Missing rate for {$code} or NGN");
+                        Log::warning("Missing rate for {$code} or NGN");
                     }
                 }
             }
