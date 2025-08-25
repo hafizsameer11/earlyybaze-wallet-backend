@@ -11,7 +11,7 @@ class AssetController extends Controller
 {
     public function getAvaialbleAsset()
     {
-        $assets = ReceivedAsset::latest()->get();
+        $assets = ReceivedAsset::with('user')->latest()->get();
         return $assets;
     }
     public function setAdminTransfer(Request $request)
