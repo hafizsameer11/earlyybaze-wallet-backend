@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Wallet;
 
 use App\Helpers\ResponseHelper;
+use App\Helpers\UserActivityHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
@@ -74,6 +75,7 @@ class AuthController extends Controller
                 'title' => 'Login Notification',
                 'message' => 'You logged in successfully'
             ]);
+            UserActivityHelper::LoggedInUserActivity('User logged in');
             return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
@@ -131,6 +133,7 @@ class AuthController extends Controller
     {
         try {
             $user = $this->userService->changePassword($request->old_password, $request->new_password);
+            UserActivityHelper::LoggedInUserActivity('User changed their password');
             return ResponseHelper::success($user, 'Password changed successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
+use App\Helpers\UserActivityHelper;
 use App\Http\Requests\KycRequest;
 use App\Models\Kyc;
 use App\Models\User;
@@ -21,6 +22,7 @@ class KycController extends Controller
     {
         try {
             $kyc = $this->kycService->create($request->validated());
+            UserActivityHelper::LoggedInUserActivity('User created a kyc');
             return ResponseHelper::success($kyc, 'Kyc created successfully', 201);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());

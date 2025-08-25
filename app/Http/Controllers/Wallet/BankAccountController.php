@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Wallet;
 
 use App\Helpers\ResponseHelper;
+use App\Helpers\UserActivityHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BankAccountRequest;
 use App\Services\BankAccountService;
@@ -22,6 +23,7 @@ class BankAccountController extends Controller
     {
         try {
             $bankAccount = $this->BankaccountService->create($request->all());
+            UserActivityHelper::LoggedInUserActivity('User added a bank account');
             return ResponseHelper::success($bankAccount, 'Bank account created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -31,6 +33,7 @@ class BankAccountController extends Controller
     {
         try {
             $user=Auth::user();
+            UserActivityHelper::LoggedInUserActivity('User viewed their bank accounts');
             $bankAccount = $this->BankaccountService->getForUser($user->id);
             return ResponseHelper::success($bankAccount, 'Bank account retrieved successfully', 200);
         } catch (Exception $e) {
@@ -40,7 +43,9 @@ class BankAccountController extends Controller
     public function find($id)
     {
         try {
+
             $bankAccount = $this->BankaccountService->find($id);
+
             return ResponseHelper::success($bankAccount, 'Bank account retrieved successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -50,6 +55,7 @@ class BankAccountController extends Controller
     {
         try {
             $bankAccount = $this->BankaccountService->update($id, $request->all());
+            UserActivityHelper::LoggedInUserActivity('User updated a bank account');
             return ResponseHelper::success($bankAccount, 'Bank account updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -59,6 +65,7 @@ class BankAccountController extends Controller
     {
         try {
             $bankAccount = $this->BankaccountService->delete($id);
+            UserActivityHelper::LoggedInUserActivity('User deleted a bank account');
             return ResponseHelper::success($bankAccount, 'Bank account deleted successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

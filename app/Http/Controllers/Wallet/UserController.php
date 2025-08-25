@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Wallet;
 
 use App\Helpers\ResponseHelper;
+use App\Helpers\UserActivityHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PinRequest;
 use App\Http\Requests\UpdateProfileRequest;
@@ -40,6 +41,7 @@ class UserController extends Controller
         try {
             $user = Auth::user();
             $user = $this->userService->updateUserProfile($request->validated(), $user->id);
+            UserActivityHelper::LoggedInUserActivity('User updated their profile');
             return ResponseHelper::success($user, 'User profile updated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -118,6 +120,7 @@ class UserController extends Controller
     {
         try {
             $depositAddress = $this->userService->getDepostiAddress($currency, $network);
+            UserActivityHelper::LoggedInUserActivity('User viewed their deposit address for ' . $currency . ' on ' . $network);
             return ResponseHelper::success($depositAddress, 'Deposit Address retrieved successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage());

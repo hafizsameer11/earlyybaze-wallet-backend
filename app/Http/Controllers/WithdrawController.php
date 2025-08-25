@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
+use App\Helpers\UserActivityHelper;
 use App\Http\Requests\WithdrawRequest;
 use App\Services\WithdrawRequestService;
 use Exception;
@@ -19,6 +20,7 @@ class WithdrawController extends Controller
     {
         try {
             $withdraw = $this->withdrawService->create($request->all());
+            UserActivityHelper::LoggedInUserActivity('User created a withdraw request');
             return ResponseHelper::success($withdraw, 'Withdraw created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -37,6 +39,7 @@ class WithdrawController extends Controller
     {
         try {
             $withdraw = $this->withdrawService->getWithDrawRequestforAuthenticatedUser();
+            UserActivityHelper::LoggedInUserActivity('User viewed their withdraw requests');
             return ResponseHelper::success($withdraw, 'Withdraw fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

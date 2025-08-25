@@ -204,7 +204,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
         Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
             ->name('api.on-chain-transfer-logs.store');
-
         Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');
         Route::post('/transfer/trx', [TronController::class, 'transferTrx']);
         Route::post('/transfer/usdt-tron', [TronController::class, 'transferUsdtTron']);
