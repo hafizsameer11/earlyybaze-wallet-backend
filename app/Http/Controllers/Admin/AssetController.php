@@ -11,7 +11,7 @@ class AssetController extends Controller
 {
     public function getAvaialbleAsset()
     {
-        $assets = ReceivedAsset::where('status', 'inWallet')->latest()->get();
+        $assets = ReceivedAsset::latest()->get();
         return $assets;
     }
     public function setAdminTransfer(Request $request)
