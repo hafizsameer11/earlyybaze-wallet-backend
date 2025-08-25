@@ -56,6 +56,7 @@ class SwapTransactionRepository
             $data['amount_naira'] = $amountNaira;
             $data['fee_naira'] = $feeNaira;
             $data['fee'] = $feeCurrency;
+            $data['exchange_rate'] = $exchangeRatenaira->rate_naira;
 
             $reference = 'EarlyBaze' . time();
             Log::info("swap data", [$data]);
