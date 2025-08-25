@@ -9,22 +9,34 @@ use Illuminate\Support\Facades\DB;
 
 class transactionRepository
 {
-    public function all()
-    {
-        $totalTransactions = Transaction::count();
-        $totalWallets = VirtualAccount::count();
-        $totalRevenue=Transaction::sum('amount');
+public function all()
+{
+    $totalTransactions = Transaction::count();
+    $totalWallets      = VirtualAccount::count();
+    $totalRevenue      = Transaction::sum('amount');
 
-        $transactions = Transaction::with([
-            'user',
-            'sendtransaction',
-            'recievetransaction',
-            'buytransaction',
-            'swaptransaction',
-            'withdraw_transaction.withdraw_request',
-        ])->orderBy('created_at', 'desc')->get();
-        return ['transactions' => $transactions, 'totalTransactions' => $totalTransactions, 'totalWallets' => $totalWallets,'totalRevenue'=>$totalRevenue];
-    }
+    $transactions = Transaction::with([
+        'user',
+        'sendtransaction',
+        'recievetransaction',
+        'buytransaction',
+        // filter swaptransaction by status
+        'swaptransaction' => function ($query) {
+            $query->where('status', 'completed');
+        },
+        'withdraw_transaction.withdraw_request',
+    ])
+    ->orderBy('created_at', 'desc')
+    ->get();
+
+    return [
+        'transactions'       => $transactions,
+        'totalTransactions'  => $totalTransactions,
+        'totalWallets'       => $totalWallets,
+        'totalRevenue'       => $totalRevenue,
+    ];
+}
+
 
     public function find($id)
     {

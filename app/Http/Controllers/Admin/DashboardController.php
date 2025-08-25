@@ -90,7 +90,7 @@ public function statsCardData()
         'totalTransactions' => $totalTransactions,
         'totalWallets'      => $totalWallets,
         'totalRevenue'      => $totalRevenueNgn, // in NGN
-        'totalRevenueUSD'   => $totalRevenueNgn / ($ngnRateUsd ?? 1), // in USD (approx)
+        'totalRevenueUSD'   => $totalRevenueNgn / ($ngnRateUsd ?? 1520), // in USD (approx)
     ];
 }
 
