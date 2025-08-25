@@ -32,6 +32,7 @@ class RegisterRequest extends FormRequest
             'profile_picture' => 'nullable',
             'role'=>'nullable',
             'pin' => 'nullable',
+            'fullName'=>'nullable'
         ];
     }
 

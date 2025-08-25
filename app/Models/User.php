@@ -32,7 +32,8 @@ class User extends Authenticatable
         'profile_picture',
         'role',
         'kyc_status',
-        'is_freezon'
+        'is_freezon',
+        'fullName',
     ];
 
     /**
@@ -53,6 +54,9 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+            'two_factor_enabled' => 'boolean',
+    'two_factor_recovery_codes' => 'array',
+    'two_factor_confirmed_at' => 'datetime',
     ];
     public function transactions()
     {
