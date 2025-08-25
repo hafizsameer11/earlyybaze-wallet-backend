@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DepositAddress;
+use App\Models\ReceivedAsset;
 use App\Models\TransferLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
 
 class BitcoinController extends Controller
 {
-     /**
+    /**
      * Send BTC to an external address using Tatum's /v3/bitcoin/transaction
      *
      * Body expects:
@@ -24,28 +25,29 @@ class BitcoinController extends Controller
      */
     public function transferBtc(Request $request)
     {
-            $v = Validator::make($request->all(), [
-        'address'         => ['required','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'], // basic BTC addr check
-        'to_address'      => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
-        'amount'          => ['required','numeric','gt:0', 'regex:/^\d+(\.\d{1,8})?$/'], // max 8 decimals
-        'fee'             => ['nullable','numeric','gte:0'],                              // if set => require change_address
-        'change_address'  => ['nullable','string','min:26','max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
-        // optional: 'rbf' => ['nullable','boolean'],
-    ], [
-        'address.regex'        => 'Sender address is not a valid BTC address.',
-        'to_address.regex'     => 'Recipient address is not a valid BTC address.',
-        'change_address.regex' => 'Change address is not a valid BTC address.',
-        'amount.regex'         => 'Amount must have at most 8 decimal places.',
-    ]);
-    if ($v->fails()) {
-        return response()->json([
-            'success' => false,
-            'code'    => 'VALIDATION_ERROR',
-            'message' => 'Validation failed.',
-            'errors'  => $v->errors(),
-        ], 422);
-    }
-    $data = $v->validated();        
+        $v = Validator::make($request->all(), [
+            'address'         => ['required', 'string', 'min:26', 'max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'], // basic BTC addr check
+            'to_address'      => ['nullable', 'string', 'min:26', 'max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
+            'amount'          => ['required', 'numeric', 'gt:0', 'regex:/^\d+(\.\d{1,8})?$/'], // max 8 decimals
+            'fee'             => ['nullable', 'numeric', 'gte:0'],                              // if set => require change_address
+            'change_address'  => ['nullable', 'string', 'min:26', 'max:100', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,}$/'],
+            'received_transaction_id' => ['nullable'],
+            // optional: 'rbf' => ['nullable','boolean'],
+        ], [
+            'address.regex'        => 'Sender address is not a valid BTC address.',
+            'to_address.regex'     => 'Recipient address is not a valid BTC address.',
+            'change_address.regex' => 'Change address is not a valid BTC address.',
+            'amount.regex'         => 'Amount must have at most 8 decimal places.',
+        ]);
+        if ($v->fails()) {
+            return response()->json([
+                'success' => false,
+                'code'    => 'VALIDATION_ERROR',
+                'message' => 'Validation failed.',
+                'errors'  => $v->errors(),
+            ], 422);
+        }
+        $data = $v->validated();
         $senderAddress  = $data['address'];
         $toAddress      = 'bc1qqhapyfgxqcns6zsccqq2qkejg9g65gkluca2gg';
         $amountBtc      = (float) $data['amount'];
@@ -127,20 +129,30 @@ class BitcoinController extends Controller
                 ], $resp->status());
             }
             $body = $resp->json();
-            $transferLog=TransferLog::create([
+            $transferLog = TransferLog::create([
                 'from_address' => $senderAddress,
                 'to_address' => $toAddress,
                 'amount' => $amountBtc,
                 'currency' => 'BTC',
                 'tx' => json_encode($body)
             ]);
+            if (isset($body['txId'])) {
+                $receivedTransacton = ReceivedAsset::where('id', $data['received_transaction_id'])->first();
+                // $receivedTransacton->status='completed';
+                $receivedTransacton->transfer_address = $senderAddress;
+                $receivedTransacton->status = 'completed';
+                $receivedTransacton->transfered_tx = $body['txId'] ?? null;
+                $receivedTransacton->transfered_amount = $amountBtc;
+                $receivedTransacton->gas_fee = $explicitFee ?? 0;
+                $receivedTransacton->address_to_send = $toAddress;
+                $receivedTransacton->save();
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'BTC transaction submitted.',
                 'result'  => $body,
             ], 200);
-
         } catch (\Throwable $e) {
             Log::error('Tatum BTC transfer exception', [
                 'err' => $e->getMessage(),
