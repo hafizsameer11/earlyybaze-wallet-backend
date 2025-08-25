@@ -29,6 +29,7 @@ use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
 use App\Http\Controllers\RefferalEarningController;
 use App\Http\Controllers\TronController;
+use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\Wallet\AuthController;
 use App\Http\Controllers\Wallet\BankAccountController;
 use App\Http\Controllers\Wallet\SupportController;
@@ -196,7 +197,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
     Route::prefix('admin')->middleware(['admin'])->group(function () {
+   Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
+    Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
+    Route::post('/2fa/disable', [TwoFactorController::class, 'disable']); // admin token
 
+    // --- 2FA verify (only with temp token ability 2fa:pending) ---
+    Route::post('/2fa/verify', [TwoFactorController::class, 'verify']);
         Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
         Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
         Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
