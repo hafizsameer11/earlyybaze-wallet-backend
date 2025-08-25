@@ -82,15 +82,17 @@ class AuthController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
-    public function adminLogin(Request $request)
-    {
-        try {
-            $data = $this->userService->adminLogin($request->all());
-            return ResponseHelper::success($data, 'Admin logged in successfully', 200);
-        } catch (\Exception $e) {
-            return ResponseHelper::error($e->getMessage());
-        }
+// app/Http/Controllers/AuthController.php (excerpt)
+public function adminLogin(Request $request)
+{
+    try {
+        $data = $this->userService->adminLogin($request->all());
+        return ResponseHelper::success($data, $data['message'] ?? 'OK', 200);
+    } catch (\Exception $e) {
+        return ResponseHelper::error($e->getMessage());
     }
+}
+
 
     public function resendOtp(Request $request)
     {

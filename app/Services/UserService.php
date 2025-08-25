@@ -152,30 +152,47 @@ class UserService
             throw new Exception('Login failed ' . $e->getMessage());
         }
     }
-    public function adminLogin(array $data): ?array
-    {
-        try {
-            $user = $this->userRepository->findByEmail($data['email']);
-            if (!$user) {
-                throw new Exception('User not found.');
-            }
-            if ($user->role == 'user') {
-                throw new Exception('User is not an admin.');
-            }
-            if (!Hash::check($data['password'], $user->password)) {
-                throw new Exception('Invalid password.');
-            }
-            $token = $user->createToken('auth_token')->plainTextToken;
-            // $userData = $user->only(['id', 'email']);
+public function adminLogin(array $data): ?array
+{
+    try {
+        $user = $this->userRepository->findByEmail($data['email']);
+        if (!$user) {
+            throw new Exception('User not found.');
+        }
+        if ($user->role === 'user') {
+            throw new Exception('User is not an admin.');
+        }
+        if (!Hash::check($data['password'], $user->password)) {
+            throw new Exception('Invalid password.');
+        }
+
+        // if admin has 2FA enabled, issue a TEMP token with ability 2fa:pending
+        if ($user->two_factor_enabled) {
+            $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
+
             return [
                 'user' => $user,
-                'token' => $token
+                'twoFARequired' => true,
+                'temp_token' => $tempToken,      // use only for /api/2fa/verify
+                'message' => 'Two-factor authentication required',
             ];
-        } catch (Exception $e) {
-            Log::error('Admin login error: ' . $e->getMessage());
-            throw new Exception('Admin login failed ' . $e->getMessage());
         }
+
+        // otherwise issue normal admin token
+        $token = $user->createToken('auth_token', ['admin'])->plainTextToken;
+
+        return [
+            'user' => $user,
+            'token' => $token,
+            'twoFARequired' => false,
+            'message' => 'Admin logged in successfully',
+        ];
+    } catch (Exception $e) {
+        Log::error('Admin login error: ' . $e->getMessage());
+        throw new Exception('Admin login failed ' . $e->getMessage());
     }
+}
+
     public function setPin(string $email, string $pin): ?User
     {
         try {
