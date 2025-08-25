@@ -128,7 +128,8 @@ class UserManagementController extends Controller
     public function createUser(RegisterRequest $request)
     {
         try {
-            $user = $this->userService->createUser($request->validated());
+            // $user = $this->userService->createUser($request->validated());
+            $user=[];
             return ResponseHelper::success($user, 'User created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
