@@ -24,7 +24,7 @@ public function all()
         'swaptransaction' => function ($query) {
             $query->where('status', 'completed');
         },
-        'withdraw_transaction.withdraw_request',
+        'withdraw_transaction.withdraw_request.bankAccount',
     ])
     ->orderBy('created_at', 'desc')
     ->get();
