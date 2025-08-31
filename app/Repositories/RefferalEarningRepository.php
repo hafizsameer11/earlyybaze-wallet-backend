@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\BankAccount;
 use App\Models\ReferalEarning;
 use App\Models\ReferalPayOut;
+use App\Models\ReferralExchangeRate;
 use App\Models\SwapTransaction;
 use App\Models\User;
 use App\Models\UserAccount;
@@ -114,7 +115,7 @@ class RefferalEarningRepository
                 ->count();
 
             $subReferralCount = User::where('invite_code', $refUser->user_code)->count();
-
+            // $RefferalExchange=RefferalExchange::where('user_id', $refUser->id)->first();
             return [
                 'name' => $refUser->name,
                 'image' => $refUser->profile_picture,
@@ -133,7 +134,10 @@ class RefferalEarningRepository
 
 
         $userBanks = BankAccount::where('user_id', $id)->latest()->first();
-
+        $refferalExchangeRate=ReferralExchangeRate::where('user_id', $id)->latest()->first();
+        if(!$refferalExchangeRate){
+            $refferalExchangeRate=ReferralExchangeRate::latest()->first();
+        }
         // Step 5: Return everything
         return [
             'earning' => $detailedReferrals,
@@ -141,7 +145,7 @@ class RefferalEarningRepository
             'reffralCode' => $user->user_code,
             'Earning' => [
                 'usd_pending' => $pendingUsd,
-                'usd_paid' => $pendingUsd,
+                'usd_paid' => $paidUsd*$refferalExchangeRate->amount,
                 'naira_paid' => $account->referral_earning_naira ?? 0,
             ],
             'currentPayout' => [
