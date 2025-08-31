@@ -47,7 +47,7 @@ class RefferalEarningRepository
                     ReferalEarning::create([
                         'user_id' => $id,
                         'referal_id' => $refUser->id,
-                        'amount' => 1,
+                        'amount' => 0.1,
                         'currency' => 'USD',
                         'type' => 'swap_bonus',
                         'status' => 'pending',
