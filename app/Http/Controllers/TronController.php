@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Models\DepositAddress;
+use App\Models\ReceivedAsset;
 use App\Models\TransferLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -168,6 +169,7 @@ class TronController extends Controller
             'address'        => ['required','string','min:34','max:50','regex:/^T[1-9A-HJ-NP-Za-km-z]{33}$/'],
             'amount'         => ['required','numeric','gt:0','regex:/^\d+(\.\d{1,6})?$/'],
             'fee_limit'  => ['nullable','integer'],
+             'received_transaction_id' => ['nullable'],
         ], [
             'address.regex'  => 'Sender address is not a valid Tron Base58 address.',
             'amount.regex'   => 'Amount must have at most 6 decimal places.',
@@ -277,6 +279,17 @@ class TronController extends Controller
                 'currency'     => 'USDT_TRON',
                 'tx'           => json_encode($body),
             ]);
+             if (isset($body['txId'])) {
+                $receivedTransacton = ReceivedAsset::where('id', $data['received_transaction_id'])->first();
+                // $receivedTransacton->status='completed';
+                $receivedTransacton->transfer_address = $senderAddress;
+                $receivedTransacton->status = 'completed';
+                $receivedTransacton->transfered_tx = $body['txId'] ?? null;
+                $receivedTransacton->transfered_amount = $amountUsdt;
+                $receivedTransacton->gas_fee = $feeLimitSun ?? 0;
+                $receivedTransacton->address_to_send = $toAddress;
+                $receivedTransacton->save();
+            }
 
             return response()->json([
                 'success' => true,
