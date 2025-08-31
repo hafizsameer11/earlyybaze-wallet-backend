@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Controllers\Controller;
 use App\Models\ReferalEarning;
 use App\Models\ReferalPayOut;
+use App\Models\ReferralExchangeRate;
 use App\Models\User;
 use App\Models\WithdrawTransaction;
 use App\Services\RefferalEarningService;
@@ -153,6 +154,28 @@ class RefferalManagementController extends Controller
         return response()->json([
             'message' => 'Bulk update completed',
             'total_marked_as_paid' => $updated,
+        ]);
+    }
+    public function setExchangeRate(Request $request){
+        $amount=   $request->input('amount');
+        $user_id=   $request->input('user_id');
+        $is_for_all=   $request->input('is_for_all', true);
+        if($is_for_all){
+            // Update or create a global exchange rate
+            $exchangeRate = ReferralExchangeRate::updateOrCreate(
+                ['is_for_all' => true],
+                ['amount' => $amount, 'user_id' => null]
+            );
+        } else {
+            // Update or create a user-specific exchange rate
+            $exchangeRate = ReferralExchangeRate::updateOrCreate(
+                ['user_id' => $user_id, 'is_for_all' => false],
+                ['amount' => $amount]
+            );
+        }
+        return response()->json([
+            'message' => 'Exchange rate set successfully',
+            'exchange_rate' => $exchangeRate,
         ]);
     }
 }
