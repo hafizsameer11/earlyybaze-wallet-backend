@@ -23,7 +23,7 @@ class RefferalManagementController extends Controller
     }
 
 
-  public function getRefferalManagement()
+   public function getRefferalManagement()
 {
     $monthKey = Carbon::now()->format('Y-m');
     $startOfMonth = Carbon::now()->startOfMonth();
@@ -34,67 +34,81 @@ class RefferalManagementController extends Controller
     // === ADMIN TABLE DATA (PER USER) ===
     $managementData = $users
         ->filter(function ($user) {
+            // Only users who have actually referred at least one user
             return User::where('invite_code', $user->user_code)->count() > 0;
         })
         ->map(function ($user) use ($monthKey) {
             $referrals = User::where('invite_code', $user->user_code)->count();
 
-            // Paid payouts for THIS month
-            $payouts = ReferalPayOut::where('user_id', $user->id)
-                ->where('status', 'paid')
-                ->where('month', $monthKey)
-                ->get();
-
-            $latestPayout = $payouts->first();
-            $totalPaidUsd = $payouts->sum('amount');
-
-            $totalPaidNaira = $payouts->sum(function ($payout) {
-                return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
-            });
-
-            // Any payout row for this month (you had this already)
+            // ---- CORE CHANGE: get the CURRENT month payout row regardless of status
             $currentMonthPayout = ReferalPayOut::where('user_id', $user->id)
                 ->where('month', $monthKey)
+                ->orderByDesc('id')
                 ->first();
 
-            // ✅ NEW: Pending payouts for THIS month
-            $pendingPayouts = ReferalPayOut::where('user_id', $user->id)
-                ->where('status', 'pending')
+            // Status/paidAt should come from the current month payout (if any)
+            $currentStatus = $currentMonthPayout->status ?? ''; // '' keeps your FE safe
+            $currentPaidAt = ($currentMonthPayout && $currentMonthPayout->status === 'paid')
+                ? $currentMonthPayout->paid_at
+                : null;
+
+            // ---- PAID totals for THIS month (sum in case multiple rows exist)
+            $paidThisMonth = ReferalPayOut::where('user_id', $user->id)
                 ->where('month', $monthKey)
+                ->where('status', 'paid')
                 ->get();
 
-            $pendingUsd = $pendingPayouts->sum('amount');
-
-            $pendingNaira = $pendingPayouts->sum(function ($payout) {
+            $totalPaidUsd = $paidThisMonth->sum('amount');
+            $totalPaidNaira = $paidThisMonth->sum(function ($payout) {
                 return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
             });
+
+            // ---- PENDING totals for THIS month
+            $pendingThisMonth = ReferalPayOut::where('user_id', $user->id)
+                ->where('month', $monthKey)
+                ->where('status', 'pending')
+                ->get();
+
+            $pendingUsd = $pendingThisMonth->sum('amount');
+            $pendingNaira = $pendingThisMonth->sum(function ($payout) {
+                return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
+            });
+
+            // ---- "Withdrawn this month" should count only if actually paid
+            $withdrawnUsd = ($currentMonthPayout && $currentMonthPayout->status === 'paid')
+                ? $currentMonthPayout->amount
+                : 0;
+
+            $withdrawnNaira = ($currentMonthPayout && $currentMonthPayout->status === 'paid' && $currentMonthPayout->exchange_rate)
+                ? $currentMonthPayout->amount * $currentMonthPayout->exchange_rate
+                : 0;
 
             return [
                 'id' => $user->id,
                 'name' => $user->name,
                 'referrals' => $referrals,
 
-                // Earned (paid) this month
+                // Earned (PAID) this month
                 'earned_usd' => $totalPaidUsd ?? 0,
                 'earned_naira' => $totalPaidNaira ?? 0,
 
-                // ✅ NEW: Pending payouts this month
+                // Pending (this month)
                 'pending_payout_usd' => $pendingUsd ?? 0,
                 'pending_payout_naira' => $pendingNaira ?? 0,
 
-                'referrer' => $user->user_code,
-                'status' => $latestPayout->status ?? '',
-                'paidAt' => $latestPayout->paid_at ?? '',
+                // Status/paidAt from the CURRENT month payout row (fix)
+                'status' => $currentStatus,
+                'paidAt' => $currentPaidAt,
 
+                // Totals (same month scope as above)
                 'total_payout_usd' => $totalPaidUsd,
                 'total_payout_naira' => $totalPaidNaira,
 
-                // Your existing “withdrawn this month”
-                'withdrawn_this_month_usd' => $currentMonthPayout?->amount ?? 0,
-                'withdrawn_this_month_naira' => $currentMonthPayout && $currentMonthPayout->exchange_rate
-                    ? $currentMonthPayout->amount * $currentMonthPayout->exchange_rate
-                    : 0,
+                // Withdrawn only when current payout is paid
+                'withdrawn_this_month_usd' => $withdrawnUsd,
+                'withdrawn_this_month_naira' => $withdrawnNaira,
 
+                'referrer' => $user->user_code,
                 'img' => $user->profile_picture,
             ];
         });
@@ -134,6 +148,7 @@ class RefferalManagementController extends Controller
         'management' => $managementData->values(),
     ]);
 }
+
 
     public function markAsPaid($userId)
     {
@@ -182,11 +197,12 @@ class RefferalManagementController extends Controller
             'total_marked_as_paid' => $updated,
         ]);
     }
-    public function setExchangeRate(Request $request){
-        $amount=   $request->input('amount');
-        $user_id=   $request->input('user_id');
-        $is_for_all=   $request->input('is_for_all', true);
-        if($is_for_all){
+    public function setExchangeRate(Request $request)
+    {
+        $amount =   $request->input('amount');
+        $user_id =   $request->input('user_id');
+        $is_for_all =   $request->input('is_for_all', true);
+        if ($is_for_all) {
             // Update or create a global exchange rate
             $exchangeRate = ReferralExchangeRate::updateOrCreate(
                 ['is_for_all' => true],
