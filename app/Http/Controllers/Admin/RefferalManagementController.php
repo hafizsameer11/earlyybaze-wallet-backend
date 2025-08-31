@@ -23,92 +23,118 @@ class RefferalManagementController extends Controller
     }
 
 
-    public function getRefferalManagement()
-    {
-        $monthKey = Carbon::now()->format('Y-m');
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+  public function getRefferalManagement()
+{
+    $monthKey = Carbon::now()->format('Y-m');
+    $startOfMonth = Carbon::now()->startOfMonth();
+    $endOfMonth = Carbon::now()->endOfMonth();
 
-        $users = User::with('userAccount')->get();
+    $users = User::with('userAccount')->get();
 
-        // === ADMIN TABLE DATA (PER USER) ===
-        $managementData = $users
-            ->filter(function ($user) {
-                return User::where('invite_code', $user->user_code)->count() > 0;
-            })
-            ->map(function ($user) use ($monthKey) {
-                $referrals = User::where('invite_code', $user->user_code)->count();
+    // === ADMIN TABLE DATA (PER USER) ===
+    $managementData = $users
+        ->filter(function ($user) {
+            return User::where('invite_code', $user->user_code)->count() > 0;
+        })
+        ->map(function ($user) use ($monthKey) {
+            $referrals = User::where('invite_code', $user->user_code)->count();
 
-                $payouts = ReferalPayOut::where('user_id', $user->id)
-                    ->where('status', 'paid')
-                    ->where('month', $monthKey) // e.g., '2025-05'
-                    ->get();
+            // Paid payouts for THIS month
+            $payouts = ReferalPayOut::where('user_id', $user->id)
+                ->where('status', 'paid')
+                ->where('month', $monthKey)
+                ->get();
 
-                $latestPayout = $payouts->first();
-                $totalPaidUsd = $payouts->sum('amount');
+            $latestPayout = $payouts->first();
+            $totalPaidUsd = $payouts->sum('amount');
 
-                $totalPaidNaira = $payouts->sum(function ($payout) {
-                    return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
-                });
-
-                $currentMonthPayout = ReferalPayOut::where('user_id', $user->id)
-                    ->where('month', $monthKey)
-                    ->first();
-
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'referrals' => $referrals,
-                    'earned_usd' => $totalPaidUsd ?? 0,
-                    'earned_naira' => $totalPaidNaira ?? 0,
-                    'referrer' => $user->user_code,
-                    'status' => $latestPayout->status ?? '',
-                    'paidAt' => $latestPayout->paid_at ?? '',
-                    'total_payout_usd' => $totalPaidUsd,
-                    'total_payout_naira' => $totalPaidNaira,
-                    'withdrawn_this_month_usd' => $currentMonthPayout?->amount ?? 0,
-                    'withdrawn_this_month_naira' => $currentMonthPayout && $currentMonthPayout->exchange_rate
-                        ? $currentMonthPayout->amount * $currentMonthPayout->exchange_rate
-                        : 0,
-                    'img' => $user->profile_picture,
-                ];
+            $totalPaidNaira = $payouts->sum(function ($payout) {
+                return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
             });
 
-        // === DASHBOARD CARD STATS ===
-        $referrersCount = User::whereIn('user_code', function ($query) {
-            $query->select('invite_code')->from('users')->whereNotNull('invite_code');
-        })->count();
+            // Any payout row for this month (you had this already)
+            $currentMonthPayout = ReferalPayOut::where('user_id', $user->id)
+                ->where('month', $monthKey)
+                ->first();
 
-        $totalReferrals = User::whereNotNull('invite_code')->count();
+            // ✅ NEW: Pending payouts for THIS month
+            $pendingPayouts = ReferalPayOut::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->where('month', $monthKey)
+                ->get();
 
-        $totalEarnings = ReferalEarning::sum('amount');
+            $pendingUsd = $pendingPayouts->sum('amount');
 
-        $totalPaidUsd = ReferalPayOut::where('status', 'paid')->sum('amount');
+            $pendingNaira = $pendingPayouts->sum(function ($payout) {
+                return $payout->exchange_rate ? $payout->amount * $payout->exchange_rate : 0;
+            });
 
-        $totalPaidNaira = ReferalPayOut::where('status', 'paid')
-            ->sum(DB::raw('amount * exchange_rate'));
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'referrals' => $referrals,
 
-        $pendingThisMonth = ReferalEarning::where('status', 'pending')
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
+                // Earned (paid) this month
+                'earned_usd' => $totalPaidUsd ?? 0,
+                'earned_naira' => $totalPaidNaira ?? 0,
 
-        $payoutCountThisMonth = ReferalPayOut::where('month', $monthKey)->count();
+                // ✅ NEW: Pending payouts this month
+                'pending_payout_usd' => $pendingUsd ?? 0,
+                'pending_payout_naira' => $pendingNaira ?? 0,
 
-        $stats = [
-            'referrers' => $referrersCount,
-            'total_referrals' => $totalReferrals,
-            'total_earned_usd' => round($totalEarnings, 2),
-            'total_paid_usd' => round($totalPaidUsd, 2),
-            'total_paid_naira' => round($totalPaidNaira, 2),
-            'pending_this_month_usd' => round($pendingThisMonth, 2),
-            'payouts_this_month' => $payoutCountThisMonth,
-        ];
+                'referrer' => $user->user_code,
+                'status' => $latestPayout->status ?? '',
+                'paidAt' => $latestPayout->paid_at ?? '',
 
-        return response()->json([
-            'stats' => $stats,
-            'management' => $managementData->values(),
-        ]);
-    }
+                'total_payout_usd' => $totalPaidUsd,
+                'total_payout_naira' => $totalPaidNaira,
+
+                // Your existing “withdrawn this month”
+                'withdrawn_this_month_usd' => $currentMonthPayout?->amount ?? 0,
+                'withdrawn_this_month_naira' => $currentMonthPayout && $currentMonthPayout->exchange_rate
+                    ? $currentMonthPayout->amount * $currentMonthPayout->exchange_rate
+                    : 0,
+
+                'img' => $user->profile_picture,
+            ];
+        });
+
+    // === DASHBOARD CARD STATS ===
+    $referrersCount = User::whereIn('user_code', function ($query) {
+        $query->select('invite_code')->from('users')->whereNotNull('invite_code');
+    })->count();
+
+    $totalReferrals = User::whereNotNull('invite_code')->count();
+
+    $totalEarnings = ReferalEarning::sum('amount');
+
+    $totalPaidUsd = ReferalPayOut::where('status', 'paid')->sum('amount');
+
+    $totalPaidNaira = ReferalPayOut::where('status', 'paid')
+        ->sum(DB::raw('amount * exchange_rate'));
+
+    $pendingThisMonth = ReferalEarning::where('status', 'pending')
+        ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+        ->sum('amount');
+
+    $payoutCountThisMonth = ReferalPayOut::where('month', $monthKey)->count();
+
+    $stats = [
+        'referrers' => $referrersCount,
+        'total_referrals' => $totalReferrals,
+        'total_earned_usd' => round($totalEarnings, 2),
+        'total_paid_usd' => round($totalPaidUsd, 2),
+        'total_paid_naira' => round($totalPaidNaira, 2),
+        'pending_this_month_usd' => round($pendingThisMonth, 2),
+        'payouts_this_month' => $payoutCountThisMonth,
+    ];
+
+    return response()->json([
+        'stats' => $stats,
+        'management' => $managementData->values(),
+    ]);
+}
+
     public function markAsPaid($userId)
     {
         $monthKey = Carbon::now()->format('Y-m');
