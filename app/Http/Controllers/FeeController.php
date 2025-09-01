@@ -80,21 +80,41 @@ class FeeController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function calculateWithdrawFee(Request $request)
-    {
-        try {
-            $amount = $request->amount;
-            $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+   public function calculateWithdrawFee(Request $request)
+{
+    try {
+        $amount = $request->amount;
 
-$calculatedFee = bcmul($amount, bcdiv($fee->percentage, '100', 2), 8);
-            $data=[
-                'fee'=>$calculatedFee,
-                'amount'=>$amount,
-                'feeObject'=>$fee
-            ];
-            return ResponseHelper::success($data, 'Fee calculated successfully', 200);
-        } catch (Exception $e) {
-            return ResponseHelper::error($e->getMessage(), 500);
+        // latest withdraw fee config
+        $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+
+        if (!$fee) {
+            throw new Exception("No withdraw fee defined.");
         }
+
+        // calculate percentage fee
+        $percentageFee = bcmul($amount, bcdiv($fee->percentage, '100', 8), 8);
+
+        // add fixed fee if available (fallback 0)
+        $fixedFee = $fee->amount ?? 0;
+
+        // final fee = percentage + fixed
+        $calculatedFee = bcadd($percentageFee, $fixedFee, 8);
+
+        $data = [
+            'fee'       => $calculatedFee,
+            'amount'    => $amount,
+            'feeObject' => $fee,
+            'breakdown' => [
+                'percentage_fee' => $percentageFee,
+                'fixed_fee'      => $fixedFee
+            ]
+        ];
+
+        return ResponseHelper::success($data, 'Fee calculated successfully', 200);
+    } catch (Exception $e) {
+        return ResponseHelper::error($e->getMessage(), 500);
     }
+}
+
 }
