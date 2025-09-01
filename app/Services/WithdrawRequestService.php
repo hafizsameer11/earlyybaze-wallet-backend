@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Fee;
 use App\Models\UserAccount;
 use App\Repositories\WithdrawRequestRepository;
 use Exception;
@@ -26,30 +27,54 @@ class WithdrawRequestService
         return $this->WithdrawRequestRepository->find($id);
     }
 
-    public function create(array $data): \App\Models\WithdrawRequest
-    {
-        try {
-            $user = Auth::user();
-            //check if user has enough balance
-            $userAccount = UserAccount::where('user_id', $user->id)->first();
-            if (!$userAccount) {
-                throw new Exception('User Account not found');
-            }
-            $data['user_id'] = $user->id;
-            $data['status'] = 'pending';
-            //use time stamp for reference
-            $refferece = 'EarlyBaze' . time();
-            $data['reference'] = $refferece;
-            $total = $data['amount'] + $data['fee'];
-            if ($userAccount->naira_balance < $total) {
-                throw new Exception('Insufficient Balance');
-            }
-            $data['total'] = $total;
-            return $this->WithdrawRequestRepository->create($data);
-        } catch (Exception $e) {
-            throw new Exception('Withdraw Request Creation Failed ' . $e->getMessage());
+   public function createWithdrawRequest(Request $request)
+{
+    try {
+        $user = Auth::user();
+
+        // Check if user has account
+        $userAccount = UserAccount::where('user_id', $user->id)->first();
+        if (!$userAccount) {
+            throw new Exception('User Account not found');
         }
+
+        // Get latest withdraw fee config
+        $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+        if (!$fee) {
+            throw new Exception("No withdraw fee defined.");
+        }
+
+        $amount = $request->amount;
+
+        // calculate percentage fee
+        $percentageFee = bcmul($amount, bcdiv($fee->percentage, '100', 8), 8);
+
+        // fixed fee if available
+        $fixedFee = $fee->amount ?? 0;
+
+        // final fee
+        $calculatedFee = bcadd($percentageFee, $fixedFee, 8);
+
+        // Prepare withdrawal data
+        $data['user_id']   = $user->id;
+        $data['status']    = 'pending';
+        $data['reference'] = 'EarlyBaze' . time();
+        $data['amount']    = $amount;
+        $data['fee']       = $calculatedFee;
+        $data['total']     = bcadd($amount, $calculatedFee, 8);
+
+        // Check balance
+        if ($userAccount->naira_balance < $data['total']) {
+            throw new Exception('Insufficient Balance');
+        }
+
+        return $this->WithdrawRequestRepository->create($data);
+
+    } catch (Exception $e) {
+        throw new Exception('Withdraw Request Creation Failed: ' . $e->getMessage());
     }
+}
+
 
     public function updateStatus($id, array $data)
     {
