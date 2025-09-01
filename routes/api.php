@@ -21,6 +21,7 @@ use App\Http\Controllers\api\OnChainTransferLogController;
 use App\Http\Controllers\Api\TransactionIconController;
 use App\Http\Controllers\BitcoinController;
 use App\Http\Controllers\BlockChainController;
+use App\Http\Controllers\DepositAddressController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
@@ -378,3 +379,4 @@ Route::prefix('transaction-icons')->group(function () {
     Route::get('/{id}', [TransactionIconController::class, 'show']);
     Route::delete('/{id}', [TransactionIconController::class, 'destroy']);
 });
+Route::post('/users/{user}/virtual-accounts/assign-deposit-addresses', [DepositAddressController::class, 'assignAll']);
