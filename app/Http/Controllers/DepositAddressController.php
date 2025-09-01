@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\AssignDepositAddress;
 use App\Models\User;
 use App\Models\VirtualAccount;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class DepositAddressController extends Controller
             $virtualAccounts = VirtualAccount::query()
                 ->where('user_id', $user->id)
                 // ->whereNull('deposit_address')
-                ->get(['id', 'account_id', 'currency', 'blockchain']);
+            ->get();
 
             if ($virtualAccounts->isEmpty()) {
                 return response()->json([
