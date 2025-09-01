@@ -6,7 +6,6 @@ use App\Models\Fee;
 use App\Models\UserAccount;
 use App\Repositories\WithdrawRequestRepository;
 use Exception;
-use Google\Service\Docs\Request;
 use Illuminate\Support\Facades\Auth;
 
 class WithdrawRequestService
@@ -28,43 +27,37 @@ class WithdrawRequestService
         return $this->WithdrawRequestRepository->find($id);
     }
 
-   public function create(Request $request)
+public function create(array $data): \App\Models\WithdrawRequest
 {
     try {
         $user = Auth::user();
 
-        // Check if user has account
+        // check if user has enough balance
         $userAccount = UserAccount::where('user_id', $user->id)->first();
         if (!$userAccount) {
             throw new Exception('User Account not found');
         }
 
-        // Get latest withdraw fee config
+        $data['user_id'] = $user->id;
+        $data['status']  = 'pending';
+        $data['reference'] = 'EarlyBaze' . time();
+
+        $amount = $data['amount'];
+
+        // --- Fee logic ---
         $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
         if (!$fee) {
             throw new Exception("No withdraw fee defined.");
         }
 
-        $amount = $request->amount;
-
-        // calculate percentage fee
         $percentageFee = bcmul($amount, bcdiv($fee->percentage, '100', 8), 8);
-
-        // fixed fee if available
-        $fixedFee = $fee->amount ?? 0;
-
-        // final fee
+        $fixedFee      = $fee->amount ?? 0;
         $calculatedFee = bcadd($percentageFee, $fixedFee, 8);
 
-        // Prepare withdrawal data
-        $data['user_id']   = $user->id;
-        $data['status']    = 'pending';
-        $data['reference'] = 'EarlyBaze' . time();
-        $data['amount']    = $amount;
-        $data['fee']       = $calculatedFee;
-        $data['total']     = bcadd($amount, $calculatedFee, 8);
+        $data['fee']  = $calculatedFee;
+        $data['total'] = bcadd($amount, $calculatedFee, 8);
 
-        // Check balance
+        // balance check
         if ($userAccount->naira_balance < $data['total']) {
             throw new Exception('Insufficient Balance');
         }
@@ -72,7 +65,7 @@ class WithdrawRequestService
         return $this->WithdrawRequestRepository->create($data);
 
     } catch (Exception $e) {
-        throw new Exception('Withdraw Request Creation Failed: ' . $e->getMessage());
+        throw new Exception('Withdraw Request Creation Failed ' . $e->getMessage());
     }
 }
 
