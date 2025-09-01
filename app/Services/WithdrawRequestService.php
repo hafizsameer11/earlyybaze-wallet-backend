@@ -6,6 +6,7 @@ use App\Models\Fee;
 use App\Models\UserAccount;
 use App\Repositories\WithdrawRequestRepository;
 use Exception;
+use Google\Service\Docs\Request;
 use Illuminate\Support\Facades\Auth;
 
 class WithdrawRequestService
@@ -27,7 +28,7 @@ class WithdrawRequestService
         return $this->WithdrawRequestRepository->find($id);
     }
 
-   public function createWithdrawRequest(Request $request)
+   public function create(Request $request)
 {
     try {
         $user = Auth::user();
