@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\ExchangeRate;
 use App\Models\Fee;
 use App\Models\SwapTransaction;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
@@ -12,7 +13,9 @@ use App\Models\WalletCurrency;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SwapTransactionRepository
@@ -122,42 +125,113 @@ class SwapTransactionRepository
         $swap->symbol = $currencySymbol->symbol;
         return $swap;
     }
-    public function completeSwapTransaction($id)
-    {
-        $swap = SwapTransaction::where('id', $id)->first();
-        if (!$swap) {
-            throw new Exception('Transaction not found.');
+    // public function completeSwapTransaction($id)
+    // {
+    //     $swap = SwapTransaction::where('id', $id)->first();
+    //     if (!$swap) {
+    //         throw new Exception('Transaction not found.');
+    //     }
+    //     $user = Auth::user();
+    //     $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
+    //         ->where('currency', $swap->currency)
+    //         ->where('blockchain', $swap->network)
+    //         ->firstOrFail();
+    //     $amountNaira = $swap->amount_naira;
+    //     $amount = $swap->amount;
+
+    //     Log::info("bcsub inputs", [
+    //         'available_balance' => $userVirtualAccount->available_balance,
+    //         'amount_raw' => $amount,
+    //         'amount_dump' => var_export($amount, true)
+    //     ]);
+    //     if (strpos(strtolower($amount), 'e') !== false) {
+    //         $amount = sprintf('%.8f', (float) $amount); // or more decimal precision as needed
+    //     }
+
+    //     $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
+
+
+    //     $userVirtualAccount->save();
+    //     $userAccount = UserAccount::where('user_id', $user->id)->first();
+    //     if ($userAccount) {
+    //         $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
+    //         $userAccount->save();
+    //     }
+    //     $swap->status = 'completed';
+    //     $swap->save();
+    //     app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($swap);
+
+    //     return $swap;
+    // }
+
+public function completeSwapTransaction($id)
+{
+    $attempts = 0;
+    retry:
+    try {
+        return DB::transaction(function () use ($id) {
+            // 1) lock swap
+            $swap = SwapTransaction::where('id', $id)->lockForUpdate()->first();
+            if (!$swap) throw new Exception('Transaction not found.');
+
+            if ($swap->status !== 'pending') return $swap;
+
+            $userId = $swap->user_id;
+
+            // 2) lock VA
+            $va = VirtualAccount::where('user_id', $userId)
+                ->where('currency', $swap->currency)
+                ->where('blockchain', $swap->network)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // 3) normalize amounts
+            $amount       = (string)$swap->amount;
+            $amountNaira  = (string)$swap->amount_naira;
+
+            if (stripos($amount, 'e') !== false) {
+                $amount = sprintf('%.8f', (float)$amount);
+            }
+
+            // TODO: if fee must also be deducted, compute $totalToDeduct here and use it instead of $amount
+            if (bccomp($va->available_balance, $amount, 8) < 0) {
+                throw new Exception('Insufficient balance during completion.');
+            }
+
+            // 4) apply VA debit
+            $va->available_balance = bcsub($va->available_balance, $amount, 8);
+            $va->save();
+
+            // 5) lock/create user account and credit NGN
+            $ua = UserAccount::where('user_id', $userId)->lockForUpdate()->first();
+            if (!$ua) {
+                $ua = new UserAccount(['user_id' => $userId, 'naira_balance' => '0.00000000']);
+            }
+            $ua->naira_balance = bcadd($ua->naira_balance, $amountNaira, 8);
+            $ua->save();
+
+            // 6) flip statuses atomically
+            $updated = SwapTransaction::where('id', $id)->where('status', 'pending')
+                ->update(['status' => 'completed']);
+            if ($updated !== 1) throw new Exception('Swap completion lost the status race.');
+
+            // If you also have a transactions row:
+            // Transaction::where('id', $swap->transaction_id)->where('status', 'pending')
+            //     ->update(['status' => 'completed']);
+
+            DB::afterCommit(function () use ($id) {
+                $fresh = SwapTransaction::find($id);
+                app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($fresh);
+            });
+
+            return $swap->fresh();
+        });
+    } catch (QueryException $e) {
+        if (str_contains($e->getMessage(), 'Deadlock found') && $attempts++ < 3) {
+            usleep(100000);
+            goto retry;
         }
-        $user = Auth::user();
-        $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
-            ->where('currency', $swap->currency)
-            ->where('blockchain', $swap->network)
-            ->firstOrFail();
-        $amountNaira = $swap->amount_naira;
-        $amount = $swap->amount;
-
-        Log::info("bcsub inputs", [
-            'available_balance' => $userVirtualAccount->available_balance,
-            'amount_raw' => $amount,
-            'amount_dump' => var_export($amount, true)
-        ]);
-        if (strpos(strtolower($amount), 'e') !== false) {
-            $amount = sprintf('%.8f', (float) $amount); // or more decimal precision as needed
-        }
-
-        $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
-
-
-        $userVirtualAccount->save();
-        $userAccount = UserAccount::where('user_id', $user->id)->first();
-        if ($userAccount) {
-            $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
-            $userAccount->save();
-        }
-        $swap->status = 'completed';
-        $swap->save();
-        app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($swap);
-
-        return $swap;
+        throw $e;
     }
+}
 }
