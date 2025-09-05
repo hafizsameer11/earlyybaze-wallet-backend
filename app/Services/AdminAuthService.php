@@ -32,8 +32,9 @@ class AdminAuthService
 
         $user = User::where('email', $email)->first();
         if (!$user) throw new Exception('User not found.');
-        if (!in_array($user->role, ['admin','super_admin'])) throw new Exception('User is not an admin.');
-        if (!Hash::check($password, $user->password)) throw new Exception('Invalid credentials.');
+if ($user->role === 'user') {
+    throw new Exception('User is not an admin.');
+}        if (!Hash::check($password, $user->password)) throw new Exception('Invalid credentials.');
 
         // create limited temp token
         $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
