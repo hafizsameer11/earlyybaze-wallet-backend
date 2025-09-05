@@ -107,7 +107,7 @@ Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
-Route::middleware(['auth:sanctum','abilities:2fa:pending'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/2fa/resend', [AuthController::class, 'resendOtpAdmin']);
     Route::post('/admin/2fa/verify', [AuthController::class, 'verifyOtpAdmin']);
 });
