@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 
 namespace App\Services;
@@ -32,9 +32,10 @@ class AdminAuthService
 
         $user = User::where('email', $email)->first();
         if (!$user) throw new Exception('User not found.');
-if ($user->role === 'user') {
-    throw new Exception('User is not an admin.');
-}        if (!Hash::check($password, $user->password)) throw new Exception('Invalid credentials.');
+        if ($user->role === 'user') {
+            throw new Exception('User is not an admin.');
+        }
+        if (!Hash::check($password, $user->password)) throw new Exception('Invalid credentials.');
 
         // create limited temp token
         $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
@@ -55,9 +56,9 @@ if ($user->role === 'user') {
                 new AdminLoginOtpMail($user->name ?? 'Admin', $otpPlain, self::OTP_TTL_MIN)
             );
         } catch (\Throwable $e) {
-            Log::error('Failed to send admin login OTP: '.$e->getMessage());
+            Log::error('Failed to send admin login OTP: ' . $e->getMessage());
             // rollback artifacts
-            $user->tokens()->where('name','2fa_temp')->delete();
+            $user->tokens()->where('name', '2fa_temp')->delete();
             $otp->delete();
             throw new Exception('Failed to send OTP. Try again.');
         }
@@ -73,9 +74,9 @@ if ($user->role === 'user') {
     public function resendOtp(User $user, ?string $ip = null, ?string $ua = null): void
     {
         // throttle: max 3 active OTPs within TTL window
-        $recent = OtpCode::where('user_id',$user->id)
+        $recent = OtpCode::where('user_id', $user->id)
             ->where('purpose', self::PURPOSE)
-            ->where('created_at','>=', now()->subMinutes(self::OTP_TTL_MIN))
+            ->where('created_at', '>=', now()->subMinutes(self::OTP_TTL_MIN))
             ->count();
 
         if ($recent >= 3) {
@@ -103,7 +104,7 @@ if ($user->role === 'user') {
      */
     public function verifyOtpAndIssueToken(User $user, string $otpInput): array
     {
-        $otp = OtpCode::where('user_id',$user->id)
+        $otp = OtpCode::where('user_id', $user->id)
             ->where('purpose', self::PURPOSE)
             ->where('consumed', false)
             ->latest()
@@ -122,7 +123,7 @@ if ($user->role === 'user') {
 
         // mark consumed and revoke temp tokens
         $otp->update(['consumed' => true]);
-        $user->tokens()->where('name','2fa_temp')->delete();
+        $user->tokens()->where('name', '2fa_temp')->delete();
 
         // issue real admin token
         $token = $user->createToken('auth_token', ['admin'])->plainTextToken;
