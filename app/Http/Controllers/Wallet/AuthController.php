@@ -11,9 +11,11 @@ use App\Http\Requests\OtpVerificationRequst;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Models\UserNotification;
+use App\Services\AdminAuthService;
 use App\Services\NotificationService;
 use App\Services\ResetPasswordService;
 use App\Services\UserService;
+use Dotenv\Exception\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -21,7 +23,7 @@ class AuthController extends Controller
 {
     protected $userService;
     protected $resetPasswordService,$notificationService;
-    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService)
+    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService,private AdminAuthService $service)
     {
         $this->userService = $userService;
         $this->resetPasswordService = $resetPasswordService;
@@ -83,15 +85,60 @@ class AuthController extends Controller
         }
     }
 // app/Http/Controllers/AuthController.php (excerpt)
-public function adminLogin(Request $request)
-{
-    try {
-        $data = $this->userService->adminLogin($request->all());
-        return ResponseHelper::success($data, $data['message'] ?? 'OK', 200);
-    } catch (\Exception $e) {
-        return ResponseHelper::error($e->getMessage());
+   public function adminLogin(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'email'    => ['required','email'],
+                'password' => ['required','string','min:6'],
+            ]);
+
+            // enrich payload with context (no Request in service)
+            $payload = array_merge($data, [
+                'ip'         => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            $resp = $this->service->adminLogin($payload); 
+            return ResponseHelper::success($resp, $resp['message'] ?? 'OTP sent', 200);
+        } catch (ValidationException $e) {
+            return ResponseHelper::error($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return ResponseHelper::error('Admin login failed: '.$e->getMessage(), 422);
+        }
     }
-}
+
+    /** Step 1b: Resend OTP (authorized by temp token with ability 2fa:pending) */
+    public function resendOtpAdmin(Request $request)
+    {
+        try {
+            $this->service->resendOtp(
+                $request->user(),           // Sanctum user from temp token
+                $request->ip(),
+                $request->userAgent()
+            );
+            return ResponseHelper::success(['ok' => true], 'OTP resent to email', 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::error($e->getMessage(), 429);
+        }
+    }
+
+    /** Step 2: Verify OTP, revoke temp tokens, issue real admin token */
+    public function verifyOtpAdmin(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'otp' => ['required','digits:6'],
+            ]);
+
+            $resp = $this->service->verifyOtpAndIssueToken($request->user(), $validated['otp']);
+            return ResponseHelper::success($resp, $resp['message'] ?? 'Logged in', 200);
+        } catch (ValidationException $e) {
+            return ResponseHelper::error($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return ResponseHelper::error('OTP verification failed: '.$e->getMessage(), 422);
+        }
+    }
 
 
     public function resendOtp(Request $request)
