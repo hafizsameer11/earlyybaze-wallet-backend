@@ -118,7 +118,7 @@ public function all()
             'sendtransaction',
             'recievetransaction',
             'buytransaction',
-            'swaptransaction',
+            'swaptransaction','withdraw_transaction.withdraw_request.bankAccount'
                     ])->orderBy('created_at', 'desc')->get();
 
         // Graphical Data (monthly grouped by type)
