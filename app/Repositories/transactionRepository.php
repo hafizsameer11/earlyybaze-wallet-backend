@@ -6,36 +6,96 @@ use App\Models\Transaction;
 use App\Models\TransactionIcon;
 use App\Models\VirtualAccount;
 use Illuminate\Support\Facades\DB;
+ use Carbon\Carbon;
 
 class transactionRepository
 {
-public function all()
+public function all(\Illuminate\Http\Request $request)
 {
-    $totalTransactions = Transaction::count();
-    $totalWallets      = VirtualAccount::count();
-    $totalRevenue      = Transaction::sum('amount');
+   
 
-    $transactions = Transaction::with([
+    // -------- Anchors
+    $now            = Carbon::now();
+    $todayStart     = $now->copy()->startOfDay();
+    $todayEnd       = $now->copy()->endOfDay();
+
+    $thisMonthStart = $now->copy()->startOfMonth();
+    $thisMonthEnd   = $now->copy()->endOfMonth();
+
+    $lastMonthStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
+    $lastMonthEnd   = $now->copy()->subMonthNoOverflow()->endOfMonth();
+
+    $thisYearStart  = $now->copy()->startOfYear();
+    $thisYearEnd    = $now->copy()->endOfYear();
+
+    // -------- Base eager loads (kept identical to your original)
+    $with = [
         'user',
         'sendtransaction',
         'recievetransaction',
         'buytransaction',
-        // filter swaptransaction by status
         'swaptransaction' => function ($query) {
             $query->where('status', 'completed');
         },
         'withdraw_transaction.withdraw_request.bankAccount',
-    ])
-    ->orderBy('created_at', 'desc')
-    ->get();
+    ];
+
+    // -------- Overall totals (all-time)
+    $totalTransactions = \App\Models\Transaction::count();
+    $totalWallets      = \App\Models\VirtualAccount::count();
+    $totalRevenue      = \App\Models\Transaction::sum('amount');
+
+    // -------- Original full list (all-time, desc)
+    $transactions = \App\Models\Transaction::with($with)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // -------- Helper to compute period stats
+    $periodStats = function (\Carbon\Carbon $start, \Carbon\Carbon $end) {
+        return [
+            'transactions_count' => \App\Models\Transaction::whereBetween('created_at', [$start, $end])->count(),
+            'wallets_count'      => \App\Models\VirtualAccount::whereBetween('created_at', [$start, $end])->count(),
+            'revenue'            => (float) \App\Models\Transaction::whereBetween('created_at', [$start, $end])->sum('amount'),
+        ];
+    };
+
+    // -------- Helper to fetch transactions for a period (same eager loads)
+    $periodTx = function (\Carbon\Carbon $start, \Carbon\Carbon $end) use ($with) {
+        return \App\Models\Transaction::with($with)
+            ->whereBetween('created_at', [$start, $end])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    };
+
+    // -------- Build by_period stats
+    $byPeriod = [
+        'today' => $periodStats($todayStart, $todayEnd),
+        'this_month' => $periodStats($thisMonthStart, $thisMonthEnd),
+        'last_month' => $periodStats($lastMonthStart, $lastMonthEnd),
+        'this_year' => $periodStats($thisYearStart, $thisYearEnd),
+    ];
+
+    // -------- Also return transactions grouped by period
+    $transactionsByPeriod = [
+        'today' => $periodTx($todayStart, $todayEnd),
+        'this_month' => $periodTx($thisMonthStart, $thisMonthEnd),
+        'last_month' => $periodTx($lastMonthStart, $lastMonthEnd),
+        'this_year' => $periodTx($thisYearStart, $thisYearEnd),
+    ];
 
     return [
+        // original keys
         'transactions'       => $transactions,
         'totalTransactions'  => $totalTransactions,
         'totalWallets'       => $totalWallets,
-        'totalRevenue'       => $totalRevenue,
+        'totalRevenue'       => (float) $totalRevenue,
+
+        // new keys
+        'by_period'          => $byPeriod,
+        'transactions_by_period' => $transactionsByPeriod,
     ];
 }
+
 
 
     public function find($id)
