@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class transactionRepository
 {
-public function all(\Illuminate\Http\Request $request)
+public function all()
 {
    
 
