@@ -76,6 +76,7 @@ class SwapTransactionRepository
 
             // Check user balance
             $totalToDeduct = bcadd($amount, $feeCurrency, 8);
+            Log::info("total to deduct", [$totalToDeduct]);
             if (bccomp($userVirtualAccount->available_balance, $totalToDeduct, 8) < 0) {
                 throw new Exception('Insufficient balance for swap.');
             }
