@@ -312,24 +312,49 @@ class SimpleWithdrawalService
 
     // ----- Small helpers -----
 
-    private function groupBySender($items): array
-    {
-        $groups = [];
-        foreach ($items as $it) {
-            $sender = $this->senderOf($it);
-            $amt    = (float)$it->amount;
-            if (!$sender || $amt <= 0) continue;
-            if (!isset($groups[$sender])) $groups[$sender] = ['amount'=>0.0, 'ids'=>[]];
-            $groups[$sender]['amount'] += $amt;
-            $groups[$sender]['ids'][]   = $it->id;
-        }
-        return $groups;
-    }
+   private function groupBySender($items): array
+{
+    $groups = [];
+    foreach ($items as $it) {
+        $sender = $this->senderOf($it);
+        $amt    = (float) $it->amount;
 
-    private function senderOf($it): ?string
-    {
-        return $it->transfer_address ?: $it->address ?: $it->deposit_address;
+        if (!$sender || $amt <= 0) {
+            Log::info("skipping row and bad sender/amount",[
+                'row_id' => $it->id,
+                'sender_candidate' => [$it->transfer_address, $it->deposit_address, $it->address, $it->to_address, $it->from_address],
+                'amount' => $it->amount,
+            ])
+;            // Log::channel('withdrawals')->warning('Skipping row: bad sender/amount', );
+            continue;
+        }
+        if (!isset($groups[$sender])) $groups[$sender] = ['amount'=>0.0, 'ids'=>[]];
+        $groups[$sender]['amount'] += $amt;
+        $groups[$sender]['ids'][]   = $it->id;
     }
+    return $groups;
+}
+
+
+private function senderOf($it): ?string
+{
+    // Try the most common columns that may contain the address we control
+    $candidates = array_filter([
+        $it->transfer_address ?? null,
+        $it->deposit_address ?? null,
+        $it->address ?? null,
+        $it->to_address ?? null,     // funds received "to" our deposit address (very common)
+        $it->from_address ?? null,   // fallback if your schema uses from_address as our own
+    ], fn($v) => is_string($v) && strlen($v) > 20);
+
+    foreach ($candidates as $maybe) {
+        if (DepositAddress::where('address', $maybe)->exists()) {
+            return $maybe; // only accept addresses we actually control
+        }
+    }
+    return null;
+}
+
 
     private function decryptWifForSender(string $sender): ?string
     {
