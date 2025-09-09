@@ -427,15 +427,17 @@ private function senderOf($it): ?string
         // ===== BSC tokens (BEP-20) =====
         'USDT_BSC' => [
             'chain'           => 'BSC',
-            'endpoint'        => '/bsc/bep20/transaction',
-            'needsCurrency'   => false,
+            'endpoint'        => '/bsc/transaction',
+            'needsCurrency'   => true,
             'contractAddress' => '0x55d398326f99059fF775485246999027B3197955', // USDT BEP-20
+            'currencyValue'   => 'USDT_BSC',
         ],
         'USDC_BSC' => [
             'chain'           => 'BSC',
-            'endpoint'        => '/bsc/bep20/transaction',
-            'needsCurrency'   => false,
+            'endpoint'        => '/bsc/transaction',
+            'needsCurrency'   => true,
             'contractAddress' => '0x64544969ed7EBf5f083679233325356EbE738930', // USDC BEP-20
+            'currencyValue'   => 'USDC_BSC',
         ],
 
         // ===== Polygon native (MATIC) =====
