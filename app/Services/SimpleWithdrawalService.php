@@ -267,7 +267,7 @@ class SimpleWithdrawalService
         $payload = [
             'fromPrivateKey' => $pk,
             'to'             => $destination,
-            'amount'         => (float)$agg['amount'],
+            'amount'         => (string)$agg['amount'],
         ];
 
         if (!empty($map['needsCurrency']) && !empty($map['currencyValue'])) {
