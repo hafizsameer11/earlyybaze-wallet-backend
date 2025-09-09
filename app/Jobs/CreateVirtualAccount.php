@@ -41,6 +41,7 @@ class CreateVirtualAccount implements ShouldQueue
     public function handle()
     {
         try {
+            Log::info("🔄 Creating virtual accounts for user {$this->user->id}");
             // Fetch all supported wallet currencies
             $walletCurrencies = WalletCurrency::all();
 

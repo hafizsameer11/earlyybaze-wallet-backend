@@ -75,12 +75,12 @@ class UserService
             $data['user_code'] = $this->generateUserCode($data['name']);
             $user = $this->userRepository->create($data);
             // Mail::to($user->email)->send(new OtpMail($user->otp));
-            // $this->userRepository->createNairaWallet($user);
-            // $accountNumber = $this->generateAccountNumber();
-            // $this->userAccountRepository->create([
-            //     'user_id' => $user->id,
-            //     'account_number' => $accountNumber
-            // ]);
+            $this->userRepository->createNairaWallet($user);
+            $accountNumber = $this->generateAccountNumber();
+            $this->userAccountRepository->create([
+                'user_id' => $user->id,
+                'account_number' => $accountNumber
+            ]);
             dispatch(new CreateVirtualAccount($user));
             $user->otp_verified = true;
             $user->save();
