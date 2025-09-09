@@ -267,7 +267,7 @@ class SimpleWithdrawalService
         $payload = [
             'fromPrivateKey' => $pk,
             'to'             => $destination,
-            'amount'         => (string)$agg['amount'],
+            'amount'         => (float)$agg['amount'],
         ];
 
         if (!empty($map['needsCurrency']) && !empty($map['currencyValue'])) {
@@ -502,7 +502,7 @@ private function senderOf($it): ?string
     $payload = [
         'fromPrivateKey' => $pk,
         'to'             => $sender,
-        'amount'         => number_format($top, 6, '.', ''),
+        'amount'         => (float)$top,
         'currency'       => match ($chain) {
             'ETH'     => 'ETH',
             'BSC'     => 'BSC',
