@@ -129,7 +129,7 @@ class UserManagementController extends Controller
     {
         try {
             $user = $this->userService->createUser($request->validated());
-            $user=[];
+            // $user;
             return ResponseHelper::success($user, 'User created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

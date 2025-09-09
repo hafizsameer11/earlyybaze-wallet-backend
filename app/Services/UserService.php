@@ -81,6 +81,7 @@ class UserService
                 'user_id' => $user->id,
                 'account_number' => $accountNumber
             ]);
+            Log::info("🔄 Creating virtual accounts for user {$user->id}");
             dispatch(new CreateVirtualAccount($user));
             $user->otp_verified = true;
             $user->save();
