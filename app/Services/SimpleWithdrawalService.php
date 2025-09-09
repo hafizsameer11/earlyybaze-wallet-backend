@@ -78,7 +78,7 @@ class SimpleWithdrawalService
         }
 
         // simple fee heuristic
-        $fee  = max(0.00002, round(count($fromAddress) * 0.000003, 8));
+        $fee  = max(0.00004320, round(count($fromAddress) * 0.000003, 8));
         $send = round($total - $fee, 8);
         $dust = 0.00000546;
         if ($send <= $dust) {
