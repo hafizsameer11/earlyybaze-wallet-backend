@@ -10,6 +10,6 @@ return [
     'LTC'        => 'ltc1q2t55e53fx9r9lfws43wnr8mmhc9tgc095xt7dj',
     'BSC'        => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
     'USDT_BSC'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
-    'USDT_ETH'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
+    'USDT'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
     'USDC_ETH'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
 ];
