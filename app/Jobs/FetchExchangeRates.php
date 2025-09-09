@@ -51,7 +51,7 @@ class FetchExchangeRates implements ShouldQueue
         ]);
 
         if (!$response->ok()) {
-            logger()->error('CoinMarketCap API error: ' . $response->body());
+            // logger()->error('CoinMarketCap API error: ' . $response->body());
             return;
         }
 

@@ -14,7 +14,7 @@ class UserActivityHelper
         $userActivity->content = $activity;
         $userActivity->save();
         // Log user activity to the database or a log file
-        Log::info("User ID: {$userId}, Activity: {$activity}");
+        // Log::info("User ID: {$userId}, Activity: {$activity}");
     }
     public static function LoggedInUserActivity($activity)
     {

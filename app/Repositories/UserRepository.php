@@ -105,7 +105,7 @@ class UserRepository
                     $rate = sprintf('%.10f', (float)$rate);
                 }
 
-                Log::info('Balance: ' . $balance);
+         //       Log::info('Balance: ' . $balance);
                 if (is_numeric($balance) && is_numeric($rate)) {
                     $amountUsd = bcmul($balance, $rate, 2);
                 } else {
