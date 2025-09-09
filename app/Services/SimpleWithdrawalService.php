@@ -403,13 +403,13 @@ private function senderOf($it): ?string
         // ===== ETH tokens (ERC-20) =====
         'USDT', 'USDT_ETH' => [
             'chain'           => 'ETH',
-            'endpoint'        => '/ethereum/erc20/transaction',
+            'endpoint'        => '/ethereum/transaction',
             'needsCurrency'   => false,
             'contractAddress' => '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT ERC-20
         ],
         'USDC', 'USDC_ETH' => [
             'chain'           => 'ETH',
-            'endpoint'        => '/ethereum/erc20/transaction',
+            'endpoint'        => '/ethereum/transaction',
             'needsCurrency'   => false,
             'contractAddress' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC ERC-20
         ],
