@@ -29,6 +29,7 @@ use App\Http\Controllers\MarketDataController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
 use App\Http\Controllers\RefferalEarningController;
+use App\Http\Controllers\SimpleWithdrawalController;
 use App\Http\Controllers\TronController;
 use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\Wallet\AuthController;
@@ -201,6 +202,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/send-from-virtual-to-external-tron', [BlockChainController::class, 'sendFromVirtualToExternalTron']);
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
+    Route::post('/admin/withdrawals/flush', [SimpleWithdrawalController::class, 'flush']);
+
     Route::prefix('admin')->middleware(['admin'])->group(function () {
 //    Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
 //     Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
