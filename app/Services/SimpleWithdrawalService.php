@@ -488,7 +488,7 @@ private function senderOf($it): ?string
     $mw = MasterWallet::where('blockchain', $mwKey)->first();
     if (!$mw) return;
 
-    $pk = Crypt::decryptString($mw->private_key);
+    $pk = Crypt::decrypt($mw->private_key);
     $top = $min * 1.2;
 
     $txEndpoint = match ($chain) {
