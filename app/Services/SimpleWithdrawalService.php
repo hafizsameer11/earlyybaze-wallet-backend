@@ -387,7 +387,7 @@ private function senderOf($it): ?string
             // ETH
             'ETH'        => ['chain'=>'ETH', 'endpoint'=>'/ethereum/transaction'],
             'USDT'   => ['chain'=>'ETH', 'endpoint'=>'/ethereum/erc20/transaction', 'tokenAddress'=>env('USDT_ETH_CONTRACT')],
-            'USDC_ETH'   => ['chain'=>'ETH', 'endpoint'=>'/ethereum/erc20/transaction', 'tokenAddress'=>env('USDC_ETH_CONTRACT')],
+            'USDC'   => ['chain'=>'ETH', 'endpoint'=>'/ethereum/erc20/transaction', 'tokenAddress'=>env('USDC_ETH_CONTRACT')],
 
             // BSC
             'BNB','BSC'  => ['chain'=>'BSC', 'endpoint'=>'/bsc/transaction'],
