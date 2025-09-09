@@ -21,7 +21,7 @@ class SimpleWithdrawalService
         // 1) Load candidates (simple, no reservations; keep it single-run)
         $q = ReceivedAsset::query()
             ->where('currency', $currency)
-            ->whereIn('status', ['wallet','pending'])
+            ->whereIn('status', ['inWallet','pending'])
             ->orderBy('id');
 
         if ($limit > 0) $q->limit($limit);
@@ -153,7 +153,7 @@ class SimpleWithdrawalService
 
         $isToken      = ($currency === 'USDT_TRON');
         $usdtContract = config('tatum.tron.usdt_contract', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
-        $feeLimitSun  = (int)config('tatum.tron.default_fee_limit_sun', 15_000_000);
+        $feeLimitSun  = (int)config('tatum.tron.default_fee_limit_sun', 17);
         $minTrx       = (float)config('tatum.tron.gas_topup_min_trx', 18);
         $topupTrx     = (float)config('tatum.tron.gas_topup_amount_trx', 20);
 
@@ -443,7 +443,7 @@ class SimpleWithdrawalService
     {
         $mw = MasterWallet::where('blockchain','TRON')->first();
         if (!$mw) { Log::warning('TRON master wallet missing'); return false; }
-        $pk = Crypt::decryptString($mw->private_key);
+        $pk = Crypt::decrypt($mw->private_key);
 
         $payload = [
             'fromPrivateKey' => $pk,
