@@ -239,76 +239,83 @@ class SimpleWithdrawalService
 
     // ----- Account-based generic (ETH / BSC / Polygon + tokens) -----
 
-    private function flushAccountBased(string $currency, array $groups, $items, string $destination, bool $dryRun): array
-    {
-        $apiKey = $this->apiKey();
-        $base   = $this->baseUrl();
+ private function flushAccountBased(string $currency, array $groups, $items, string $destination, bool $dryRun): array
+{
+    $apiKey = $this->apiKey();
+    $base   = $this->baseUrl();
 
-        $map = $this->endpointFor($currency); // endpoint + optional tokenAddress
-        if (!$map) {
-            return ['success'=>false, 'message'=>"Unsupported currency {$currency}"];
-        }
-
-        $plan = ['chain'=>$map['chain'], 'currency'=>$currency, 'destination'=>$destination, 'groups'=>[], 'dry_run'=>$dryRun];
-        foreach ($groups as $sender => $agg) {
-            $plan['groups'][] = ['from'=>$sender, 'amount'=>$agg['amount'], 'rows'=>count($agg['ids'])];
-        }
-        if ($dryRun) return ['success'=>true, 'message'=>'Dry run', 'plan'=>$plan];
-
-        $ok=0; $fail=0; $txs=[];
-
-        foreach ($groups as $sender => $agg) {
-            $pk = $this->decryptPkForSender($sender);
-            if (!$pk) { Log::warning('AB: missing key', ['sender'=>$sender]); $fail++; continue; }
-
-            // Make sure native gas exists (simple threshold per chain)
-            $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
-
-            $payload = [
-                'fromPrivateKey' => $pk,
-                'to'             => $destination,
-                'amount'         => (string)$agg['amount'],
-            ];
-            if (!empty($map['tokenAddress'])) $payload['tokenAddress'] = $map['tokenAddress'];
-
-            $resp = Http::withHeaders($this->headers($apiKey))
-                ->timeout(90)->post($base.$map['endpoint'], $payload);
-
-            if ($resp->failed()) {
-                Log::warning('AB send failed', ['sender'=>$sender, 'http'=>$resp->status(), 'body'=>$resp->json()]);
-                $fail++; continue;
-            }
-
-            $body = $resp->json();
-            $txId = $body['txId'] ?? $body['hash'] ?? null;
-            $txs[] = $txId;
-
-            DB::transaction(function () use ($items, $sender, $destination, $currency, $agg, $body, $txId) {
-                TransferLog::create([
-                    'from_address' => $sender,
-                    'to_address'   => $destination,
-                    'amount'       => (float)$agg['amount'],
-                    'currency'     => $currency,
-                    'tx'           => json_encode($body),
-                ]);
-
-                foreach ($items as $it) {
-                    if ($this->senderOf($it) !== $sender) continue;
-                    $it->status            = 'completed';
-                    $it->transfer_address  = $sender;
-                    $it->transfered_tx     = $txId;
-                    $it->transfered_amount = (float)$it->amount;
-                    $it->gas_fee           = null;
-                    $it->address_to_send   = $destination;
-                    $it->save();
-                }
-            });
-
-            $ok++;
-        }
-
-        return ['success'=>$ok>0, 'message'=>"Account flush ok={$ok} fail={$fail}", 'txIds'=>$txs, 'plan'=>$plan];
+    $map = $this->endpointFor($currency);
+    if (!$map) {
+        return ['success'=>false, 'message'=>"Unsupported currency {$currency}"];
     }
+
+    $plan = ['chain'=>$map['chain'], 'currency'=>$currency, 'destination'=>$destination, 'groups'=>[], 'dry_run'=>$dryRun];
+    foreach ($groups as $sender => $agg) {
+        $plan['groups'][] = ['from'=>$sender, 'amount'=>$agg['amount'], 'rows'=>count($agg['ids'])];
+    }
+    if ($dryRun) return ['success'=>true, 'message'=>'Dry run', 'plan'=>$plan];
+
+    $ok=0; $fail=0; $txs=[];
+
+    foreach ($groups as $sender => $agg) {
+        $pk = $this->decryptPkForSender($sender);
+        if (!$pk) { Log::warning('AB: missing key', ['sender'=>$sender]); $fail++; continue; }
+
+        // ensure gas on sender for native/tokens
+        $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
+
+        $payload = [
+            'fromPrivateKey' => $pk,
+            'to'             => $destination,
+            'amount'         => (string)$agg['amount'],
+        ];
+
+        if (!empty($map['needsCurrency']) && !empty($map['currencyValue'])) {
+            $payload['currency'] = $map['currencyValue']; // ETH / BSC / MATIC
+        }
+        if (!empty($map['contractAddress'])) {
+            $payload['contractAddress'] = $map['contractAddress']; // exact name for Tatum
+        }
+
+        $resp = Http::withHeaders($this->headers($apiKey))
+            ->timeout(90)->post($base.$map['endpoint'], $payload);
+
+        if ($resp->failed()) {
+            Log::warning('AB send failed', ['sender'=>$sender, 'http'=>$resp->status(), 'body'=>$resp->json(), 'payload'=>$payload]);
+            $fail++; continue;
+        }
+
+        $body = $resp->json();
+        $txId = $body['txId'] ?? $body['hash'] ?? null;
+        $txs[] = $txId;
+
+        DB::transaction(function () use ($items, $sender, $destination, $currency, $agg, $body, $txId) {
+            TransferLog::create([
+                'from_address' => $sender,
+                'to_address'   => $destination,
+                'amount'       => (float)$agg['amount'],
+                'currency'     => $currency,
+                'tx'           => json_encode($body),
+            ]);
+
+            foreach ($items as $it) {
+                if ($this->senderOf($it) !== $sender) continue;
+                $it->status            = 'completed';
+                $it->transfer_address  = $sender;
+                $it->transfered_tx     = $txId;
+                $it->transfered_amount = (float)$it->amount;
+                $it->gas_fee           = null;
+                $it->address_to_send   = $destination;
+                $it->save();
+            }
+        });
+
+        $ok++;
+    }
+
+    return ['success'=>$ok>0, 'message'=>"Account flush ok={$ok} fail={$fail}", 'txIds'=>$txs, 'plan'=>$plan];
+}
+
 
     // ----- Small helpers -----
 
@@ -380,81 +387,138 @@ private function senderOf($it): ?string
         }
     }
 
-    private function endpointFor(string $currency): ?array
-    {
-        // Map the currencies you use; add token contracts via .env if you like
-        return match ($currency) {
-            // ETH
-            'ETH'        => ['chain'=>'ETH', 'endpoint'=>'/ethereum/transaction'],
-            'USDT'   => ['chain'=>'ETH', 'endpoint'=>'/ethereum/erc20/transaction', 'tokenAddress'=>env('USDT_ETH_CONTRACT')],
-            'USDC'   => ['chain'=>'ETH', 'endpoint'=>'/ethereum/erc20/transaction', 'tokenAddress'=>env('USDC_ETH_CONTRACT')],
+   private function endpointFor(string $currency): ?array
+{
+    $c = strtoupper($currency);
 
-            // BSC
-            'BNB','BSC'  => ['chain'=>'BSC', 'endpoint'=>'/bsc/transaction'],
-            'USDT_BSC'   => ['chain'=>'BSC', 'endpoint'=>'/bsc/bep20/transaction', 'tokenAddress'=>env('USDT_BSC_CONTRACT')],
-            'USDC_BSC'   => ['chain'=>'BSC', 'endpoint'=>'/bsc/bep20/transaction', 'tokenAddress'=>env('USDC_BSC_CONTRACT')],
+    return match ($c) {
+        // ===== ETH native =====
+        'ETH' => [
+            'chain'         => 'ETH',
+            'endpoint'      => '/ethereum/transaction',
+            'needsCurrency' => true,
+            'currencyValue' => 'ETH',
+        ],
 
-            // Polygon
-            'MATIC','POLYGON' => ['chain'=>'POLYGON', 'endpoint'=>'/polygon/transaction'],
-            'USDT_POLYGON'    => ['chain'=>'POLYGON', 'endpoint'=>'/polygon/erc20/transaction', 'tokenAddress'=>env('USDT_POLYGON_CONTRACT')],
-            'USDC_POLYGON'    => ['chain'=>'POLYGON', 'endpoint'=>'/polygon/erc20/transaction', 'tokenAddress'=>env('USDC_POLYGON_CONTRACT')],
+        // ===== ETH tokens (ERC-20) =====
+        'USDT', 'USDT_ETH' => [
+            'chain'           => 'ETH',
+            'endpoint'        => '/ethereum/erc20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT ERC-20
+        ],
+        'USDC', 'USDC_ETH' => [
+            'chain'           => 'ETH',
+            'endpoint'        => '/ethereum/erc20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC ERC-20
+        ],
 
-            default => null,
-        };
-    }
+        // ===== BSC native (BNB) =====
+        'BNB', 'BSC' => [
+            'chain'         => 'BSC',
+            'endpoint'      => '/bsc/transaction',
+            'needsCurrency' => true,
+            'currencyValue' => 'BSC',
+        ],
 
-    private function ensureNativeGas(string $chain, string $sender, string $apiKey, string $base): void
-    {
-        // super simple thresholds; tune as needed
-        [$endpoint, $min] = match ($chain) {
-            'ETH'     => ['/ethereum/account/balance/', 0.002],   // ~ gas for simple transfer
-            'BSC'     => ['/bsc/account/balance/',      0.01],
-            'POLYGON' => ['/polygon/account/balance/',  1.0],
-            default   => [null, 0],
-        };
-        if (!$endpoint) return;
+        // ===== BSC tokens (BEP-20) =====
+        'USDT_BSC' => [
+            'chain'           => 'BSC',
+            'endpoint'        => '/bsc/bep20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0x55d398326f99059fF775485246999027B3197955', // USDT BEP-20
+        ],
+        'USDC_BSC' => [
+            'chain'           => 'BSC',
+            'endpoint'        => '/bsc/bep20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0x64544969ed7EBf5f083679233325356EbE738930', // USDC BEP-20
+        ],
 
-        $res = Http::withHeaders(['x-api-key'=>$apiKey])->get($base.$endpoint.$sender);
-        $bal = $res->ok() ? (float)($res->json('balance') ?? 0) : 0.0;
+        // ===== Polygon native (MATIC) =====
+        'MATIC', 'POLYGON' => [
+            'chain'         => 'POLYGON',
+            'endpoint'      => '/polygon/transaction',
+            'needsCurrency' => true,
+            'currencyValue' => 'MATIC',
+        ],
 
-        if ($bal >= $min) return;
+        // ===== Polygon tokens (ERC-20 on Polygon) =====
+        'USDT_POLYGON' => [
+            'chain'           => 'POLYGON',
+            'endpoint'        => '/polygon/erc20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0xc2132D05D31c914a87C6611C10748AaCB9fC6fC', // USDT on Polygon
+        ],
+        'USDC_POLYGON' => [
+            'chain'           => 'POLYGON',
+            'endpoint'        => '/polygon/erc20/transaction',
+            'needsCurrency'   => false,
+            'contractAddress' => '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', // USDC.e on Polygon
+        ],
 
-        // top up from master
-        $mwKey = match ($chain) {
-            'ETH' => 'ETHEREUM',
-            'BSC' => 'BSC',
-            'POLYGON' => 'POLYGON',
-            default => null,
-        };
-        if (!$mwKey) return;
+        default => null,
+    };
+}
 
-        $mw = MasterWallet::where('blockchain', $mwKey)->first();
-        if (!$mw) return;
 
-        $pk = Crypt::decryptString($mw->private_key);
-        $top = $min * 1.2; // small buffer
+ private function ensureNativeGas(string $chain, string $sender, string $apiKey, string $base): void
+{
+    [$endpoint, $min] = match ($chain) {
+        'ETH'     => ['/ethereum/account/balance/', 0.002],
+        'BSC'     => ['/bsc/account/balance/',      0.010],
+        'POLYGON' => ['/polygon/account/balance/',  1.000],
+        default   => [null, 0],
+    };
+    if (!$endpoint) return;
 
-        $txEndpoint = match ($chain) {
-            'ETH'     => '/ethereum/transaction',
-            'BSC'     => '/bsc/transaction',
-            'POLYGON' => '/polygon/transaction',
+    $res = Http::withHeaders(['x-api-key'=>$apiKey])->get($base.$endpoint.$sender);
+    $bal = $res->ok() ? (float)($res->json('balance') ?? 0) : 0.0;
+    if ($bal >= $min) return;
+
+    $mwKey = match ($chain) {
+        'ETH' => 'ETHEREUM',
+        'BSC' => 'BSC',
+        'POLYGON' => 'POLYGON',
+        default => null,
+    };
+    if (!$mwKey) return;
+
+    $mw = MasterWallet::where('blockchain', $mwKey)->first();
+    if (!$mw) return;
+
+    $pk = Crypt::decryptString($mw->private_key);
+    $top = $min * 1.2;
+
+    $txEndpoint = match ($chain) {
+        'ETH'     => '/ethereum/transaction',
+        'BSC'     => '/bsc/transaction',
+        'POLYGON' => '/polygon/transaction',
+        default   => null,
+    };
+    if (!$txEndpoint) return;
+
+    $payload = [
+        'fromPrivateKey' => $pk,
+        'to'             => $sender,
+        'amount'         => number_format($top, 6, '.', ''),
+        'currency'       => match ($chain) {
+            'ETH'     => 'ETH',
+            'BSC'     => 'BSC',
+            'POLYGON' => 'MATIC',
             default   => null,
-        };
-        if (!$txEndpoint) return;
+        },
+    ];
 
-        $payload = [
-            'fromPrivateKey' => $pk,
-            'to'             => $sender,
-            'amount'         => number_format($top, 6, '.', ''),
-        ];
+    $resp = Http::withHeaders($this->headers($apiKey))
+        ->timeout(90)->post($base.$txEndpoint, $payload);
 
-        $resp = Http::withHeaders($this->headers($apiKey))
-            ->timeout(90)->post($base.$txEndpoint, $payload);
-
-        if ($resp->failed()) {
-            Log::warning('Gas top-up failed', ['chain'=>$chain, 'sender'=>$sender, 'resp'=>$resp->json()]);
-        }
+    if ($resp->failed()) {
+        Log::warning('Gas top-up failed', ['chain'=>$chain, 'sender'=>$sender, 'resp'=>$resp->json()]);
     }
+}
+
 
     private function getTrxBalance(string $address, string $apiKey, string $base): float
     {
