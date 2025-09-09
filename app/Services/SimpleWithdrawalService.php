@@ -43,7 +43,7 @@ class SimpleWithdrawalService
                 return $this->flushBtcBatch($groups, $items, $destination, $dryRun);
             }
 
-            if (in_array($currency, ['TRX','USDT_TRON'], true)) {
+            if (in_array($currency, ['TRON','USDT_TRON'], true)) {
                 return $this->flushTron($currency, $groups, $items, $destination, $dryRun);
             }
 
