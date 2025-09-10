@@ -118,7 +118,9 @@ public function all()
             'sendtransaction',
             'recievetransaction',
             'buytransaction',
-            'swaptransaction','withdraw_transaction.withdraw_request.bankAccount'
+            'swaptransaction' => function ($query) {
+            $query->where('status', 'completed');},
+            'withdraw_transaction.withdraw_request.bankAccount'
                     ])->orderBy('created_at', 'desc')->get();
 
         // Graphical Data (monthly grouped by type)
