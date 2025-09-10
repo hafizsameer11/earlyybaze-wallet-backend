@@ -609,7 +609,7 @@ private function senderOf($it): ?string
     $payload = [
         'fromPrivateKey' => $pk,
         'to'             => $sender,
-        'amount'         => (float)$top,
+        'amount'         => (string)$top,
         'currency'       => match ($chain) {
             'ETH'     => 'ETH',
             'BSC'     => 'BSC',
