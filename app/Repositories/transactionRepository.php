@@ -112,7 +112,6 @@ public function all()
 
         // Transaction list
         $transactions = Transaction::where('user_id', $user_id)
-        ->whereNotIn('type', ['withdrawTransaction'])
         ->with([
             'user',
             'sendtransaction',
@@ -121,7 +120,7 @@ public function all()
             'swaptransaction' => function ($query) {
             $query->where('status', 'completed');},
             'withdraw_transaction.withdraw_request.bankAccount'
-                    ])->orderBy('created_at', 'desc')->get();
+             ])->orderBy('created_at', 'desc')->get();
 
         // Graphical Data (monthly grouped by type)
         $rawStats = DB::table('transactions')
