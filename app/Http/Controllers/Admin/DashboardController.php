@@ -19,7 +19,8 @@ class DashboardController extends Controller
     {
         $data = [
             'statsCardData' => $this->statsCardData(),
-            'recentTransactions' => $this->recentTransactions()
+            'recentTransactions' => $this->recentTransactions(),
+             'charts'             => $this->chartBundle(),   // <--- NEW
         ];
         return response()->json($data, 200);
     }
