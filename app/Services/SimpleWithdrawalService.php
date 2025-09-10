@@ -42,7 +42,9 @@ class SimpleWithdrawalService
             if ($currency === 'BTC') {
                 return $this->flushBtcBatch($groups, $items, $destination, $dryRun);
             }
-
+             if ($currency === 'LTC') {
+        return $this->flushLtcBatch($groups, $items, $destination, $dryRun);
+    }
             if (in_array($currency, ['TRON','USDT_TRON'], true)) {
                 return $this->flushTron($currency, $groups, $items, $destination, $dryRun);
             }
@@ -56,6 +58,107 @@ class SimpleWithdrawalService
     }
 
     // ----- BTC (UTXO) -----
+    /**
+ * Litecoin batch sweep (UTXO), same plan shape as BTC so your UI works.
+ * Tatum endpoint: /v3/litecoin/transaction
+ */
+private function flushLtcBatch(array $groups, $items, string $destination, bool $dryRun): array
+{
+    $apiKey = $this->apiKey();
+    $base   = $this->baseUrl();
+
+    // Build inputs & sum total
+    $fromAddress = [];
+    $total = 0.0;
+
+    foreach ($groups as $sender => $agg) {
+        $wif = $this->decryptWifForSender($sender);
+        if (!$wif) { Log::warning('LTC: missing/bad key for sender', ['sender'=>$sender]); continue; }
+        $fromAddress[] = ['address' => $sender, 'privateKey' => $wif];
+        $total += (float)$agg['amount'];
+    }
+
+    if (empty($fromAddress)) {
+        return ['success'=>false, 'message'=>'LTC: No decryptable inputs'];
+    }
+
+    /**
+     * Fee heuristic:
+     *  - Litecoin fees are cheaper than BTC; still keep a safety floor.
+     *  - Use a small per-input bump. Tune these to your network conditions.
+     */
+    $minFee = 0.00010; // floor
+    $perIn  = 0.00001; // per-input bump
+    $fee    = round(max($minFee, count($fromAddress) * $perIn), 8);
+
+    $send = round($total - $fee, 8);
+
+    // dust threshold (conservative)
+    $dust = 0.00001;
+    if ($send <= $dust) {
+        return ['success'=>false, 'message'=>'LTC: total after fee below dust'];
+    }
+
+    $payload = [
+        'fromAddress'   => $fromAddress,
+        'to'            => [[ 'address' => $destination, 'value' => $send ]],
+        'fee'           => number_format($fee, 8, '.', ''),
+        'changeAddress' => $destination,
+    ];
+
+    $plan = [
+        'chain'       => 'LTC',
+        'uniqSenders' => count($fromAddress),
+        'rows'        => $items->count(),
+        'totalIn'     => round($total, 8),
+        'fee'         => round($fee,   8),
+        'toSend'      => $send,
+        'destination' => $destination,
+        'dry_run'     => $dryRun,
+    ];
+
+    if ($dryRun) {
+        return ['success'=>true, 'message'=>'Dry run', 'plan'=>$plan];
+    }
+
+    $resp = Http::withHeaders($this->headers($apiKey))
+        ->timeout(120)->post($base.'/litecoin/transaction', $payload);
+
+    if ($resp->failed()) {
+        Log::error('LTC batch failed', ['http'=>$resp->status(), 'body'=>$resp->json()]);
+        return ['success'=>false, 'message'=>'LTC batch failed', 'tatum'=>$resp->json(), 'plan'=>$plan];
+    }
+
+    $body = $resp->json();
+    $txId = $body['txId'] ?? null;
+    if (!$txId) {
+        return ['success'=>false, 'message'=>'LTC: missing txId in response', 'tatum'=>$body, 'plan'=>$plan];
+    }
+
+    DB::transaction(function () use ($items, $destination, $txId, $body) {
+        TransferLog::create([
+            'from_address' => 'BATCH',
+            'to_address'   => $destination,
+            'amount'       => (float) array_reduce($items->all(), fn($c,$i)=>$c+(float)$i->amount, 0),
+            'currency'     => 'LTC',
+            'tx'           => json_encode($body),
+        ]);
+
+        foreach ($items as $it) {
+            $sender = $this->senderOf($it);
+            if (!$sender) continue;
+            $it->status            = 'completed';
+            $it->transfer_address  = $sender;
+            $it->transfered_tx     = $txId;
+            $it->transfered_amount = (float)$it->amount;
+            $it->gas_fee           = null;
+            $it->address_to_send   = $destination;
+            $it->save();
+        }
+    });
+
+    return ['success'=>true, 'message'=>'LTC batch submitted', 'txId'=>$txId, 'plan'=>$plan];
+}
 
     private function flushBtcBatch(array $groups, $items, string $destination, bool $dryRun): array
     {
