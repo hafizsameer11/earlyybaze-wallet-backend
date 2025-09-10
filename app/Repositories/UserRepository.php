@@ -243,7 +243,14 @@ class UserRepository
     }
     public function userDetails($userId)
     {
-        $user = User::where('id', $userId)->with('userAccount', 'userActivity')->first();
+$user = User::where('id', $userId)
+    ->with([
+        'userAccount',
+        'userActivity' => function ($query) {
+            $query->orderBy('created_at', 'desc'); // latest first
+        },
+    ])
+    ->first();
         $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
         $notifications = InAppNotification::all();
                 $userVirtualAccounts = VirtualAccount::where('user_id', $userId)
