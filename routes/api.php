@@ -192,6 +192,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
+            Route::get('/banners', [InAppBannerController::class, 'index']);
+
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -239,7 +241,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/block-user/{id}', [UserManagementController::class, 'blockUser']);
         Route::post('/create-user', [UserManagementController::class, 'createUser']);
         //banners
-        Route::get('/banners', [InAppBannerController::class, 'index']);
         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
         Route::post('/banners', [InAppBannerController::class, 'create']);
         Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
