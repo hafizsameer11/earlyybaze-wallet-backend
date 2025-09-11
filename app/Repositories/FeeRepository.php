@@ -9,7 +9,7 @@ class FeeRepository
 {
     public function all()
     {
-        return Fee::all();
+        return Fee::orderBy('id', 'desc')->get();
     }
 
     public function find($id)
