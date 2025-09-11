@@ -34,6 +34,7 @@ class User extends Authenticatable
         'kyc_status',
         'is_freezon',
         'fullName',
+        'bvn'
     ];
 
     /**
