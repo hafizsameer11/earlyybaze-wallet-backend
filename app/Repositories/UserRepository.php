@@ -241,92 +241,112 @@ class UserRepository
             ];
         });
     }
-    public function userDetails($userId)
-    {
-$user = User::where('id', $userId)
-    ->with([
-        'userAccount',
-        'userActivity' => function ($query) {
-            $query->orderBy('created_at', 'desc'); // latest first
-        },
-    ])
-    ->first();
-        $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
-        $notifications = InAppNotification::all();
-                $userVirtualAccounts = VirtualAccount::where('user_id', $userId)
-            ->with('walletCurrency')
+public function userDetails($userId)
+{
+    // helper: normalize any numeric (incl. scientific) to a plain decimal string
+    $toDecimal = function ($value, int $scale = 8): string {
+        if ($value === null) return '0';
+        $s = trim((string) $value);
+        if ($s === '') return '0';
 
-            ->get();
-                    $userAccount = UserAccount::where('user_id', $userId)->first();
-        if(!$userAccount){
-            //create user account
-            $userAccount = UserAccount::create([
-                'user_id' => $userId,
-                'naira_balance' => '0',
-                'crypto_balance' => '0'
-            ]);
+        // sanitize (keep digits, dot, minus, and 'e/E')
+        $s = preg_replace('/[^0-9eE\.\-]+/', '', $s) ?? '0';
+
+        // if scientific notation, convert via float -> string with scale
+        if (stripos($s, 'e') !== false) {
+            // NOTE: using float may lose ultra-tiny precision; for balances this is usually acceptable.
+            // If you need exact big-decimal parsing, switch to Brick\Math BigDecimal.
+            $f = (float) $s;
+            return number_format($f, $scale, '.', '');
         }
 
+        // ensure it's a valid decimal and force scale using bcadd
+        // (bcadd returns with exactly $scale fractional digits)
+        // strip any leading zeros artifacts like "--"
+        $s = preg_replace('/[^0-9\.\-]/', '', $s) ?? '0';
+        if ($s === '' || $s === '-' || $s === '.' || $s === '-.') {
+            $s = '0';
+        }
+        // If there's no dot, bcadd still works, but ensure it's a numeric-looking string
+        return bcadd($s, '0', $scale);
+    };
 
-        $totalCryptoUsd = '0';
-      
-        $userVirtualAccounts = $userVirtualAccounts->map(function ($account) use (&$totalCryptoUsd) {
-            $currency = $account->currency;
-            $accountBalance = $account->available_balance ?? '0';
+    $user = User::where('id', $userId)
+        ->with([
+            'userAccount',
+            'userActivity' => function ($query) {
+                $query->orderBy('created_at', 'desc');
+            },
+        ])
+        ->first();
 
-            $exchangeRate = ExchangeRate::where('currency', $currency)->first();
-            if (!$exchangeRate || bccomp($exchangeRate->rate_usd, '0', 8) === 0) {
-                // Log::info("Exchange rate missing or invalid for currency: $currency");
+    $kycdetails     = Kyc::where('user_id', $userId)->latest()->first();
+    $notifications  = InAppNotification::all();
+    $userVirtualAccounts = VirtualAccount::where('user_id', $userId)
+        ->with('walletCurrency')
+        ->get();
+
+    $userAccount = UserAccount::where('user_id', $userId)->first();
+    if (!$userAccount) {
+        $userAccount = UserAccount::create([
+            'user_id'        => $userId,
+            'naira_balance'  => '0',
+            'crypto_balance' => '0',
+        ]);
+    }
+
+    $totalCryptoUsd = '0';
+
+    $userVirtualAccounts->each(function ($account) use (&$totalCryptoUsd, $toDecimal) {
+        $currency       = $account->currency;
+        // normalize available balance (handles "8.393E-5" etc.)
+        $accountBalance = $toDecimal($account->available_balance ?? '0', 8);
+
+        $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+
+        if (!$exchangeRate) {
+            $usdValue = '0';
+        } else {
+            // normalize rates too (in case they come as floats/strings)
+            $rateUsd = $toDecimal($exchangeRate->rate_usd ?? '0', 8);
+
+            if (bccomp($rateUsd, '0', 8) === 0 || bccomp($accountBalance, '0', 8) === 0) {
                 $usdValue = '0';
             } else {
-                $usdValue = bcmul($accountBalance, $exchangeRate->rate_usd, 8); // token * USD rate
+                // token * USD rate -> scale 8
+                $usdValue = bcmul($accountBalance, $rateUsd, 8);
             }
-              $user=Auth::user();
-            $totalCryptoUsd = bcadd($totalCryptoUsd, $usdValue, 8);
+        }
 
-            // return [
-            //     'id' => $account->id,
-            //     'name' => $account->walletCurrency->name,
-            //     'currency' => $currency,
-            //     'blockchain' => $account->blockchain,
-            //     'currency_id' => $account->currency_id,
-            //     'available_balance' => $account->available_balance,
-            //     'account_balance' => $accountBalance,
-            //     'account_balance_usd' => $usdValue,
-            //     'deposit_addresses' => $account->depositAddresses,
-            //     'status' => $account->active == true ? 'active' : 'inactive',
-            //     'wallet_currency' => [
-            //         'id' => $account->walletCurrency->id,
-            //         'price' => $exchangeRate->rate_usd,
-            //         'symbol' => $account->walletCurrency->symbol,
-            //         'naira_price' => $exchangeRate->rate_naira,
-            //         'name' => $account->walletCurrency->name
-            //     ]
-            // ];
-        });
+        $totalCryptoUsd = bcadd($totalCryptoUsd, $usdValue, 8);
+    });
 
-        // Save USD sum to crypto_balance
-        $userAccount->crypto_balance = $totalCryptoUsd;
-        $userAccount->save();
-        $user = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'status' => $user->is_active,
-            'created_at' => $user->created_at,
-            'updated_at' => $user->updated_at,
-            'img' => asset('storage/' . $user->profile_picture),
-            'total_amount_in_dollar' => $user->userAccount->crypto_balance ?? '0',
-            'total_amount_in_naira' => $user->userAccount->naira_balance ?? '0',
-            'kyc_status' => $user->kyc_status,
-            'user_activity' => $user->userActivity,
-            'kycDetails' => $kycdetails,
-            'notifcations' => $notifications,
-            'role' => $user->role
-        ];
-        return $user;
-    }
+    // Save USD sum to crypto_balance
+    $userAccount->crypto_balance = $toDecimal($totalCryptoUsd, 8);
+    $userAccount->save();
+
+    // build response (avoid overwriting $user earlier)
+    $resp = [
+        'id'                     => $user->id,
+        'name'                   => $user->name,
+        'email'                  => $user->email,
+        'phone'                  => $user->phone,
+        'status'                 => $user->is_active,
+        'created_at'             => $user->created_at,
+        'updated_at'             => $user->updated_at,
+        'img'                    => asset('storage/' . $user->profile_picture),
+        'total_amount_in_dollar' => $user->userAccount->crypto_balance ?? '0',
+        'total_amount_in_naira'  => $user->userAccount->naira_balance ?? '0',
+        'kyc_status'             => $user->kyc_status,
+        'user_activity'          => $user->userActivity,
+        'kycDetails'             => $kycdetails,
+        'notifcations'           => $notifications,
+        'role'                   => $user->role,
+    ];
+
+    return $resp;
+}
+
 
     public function getNonUsers()
     {
