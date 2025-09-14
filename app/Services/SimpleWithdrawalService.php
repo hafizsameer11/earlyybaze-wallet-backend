@@ -186,6 +186,7 @@ private function flushBtcBatch(array $groups, $items, string $destination, bool 
         }
         $fromAddress[] = ['address' => $sender, 'privateKey' => $wif];
         $total += (float) $agg['amount'];
+        Log::info('BTC: adding input', ['sender' => $sender, 'amount' => $agg['amount']]);
     }
 
     if (empty($fromAddress)) {
