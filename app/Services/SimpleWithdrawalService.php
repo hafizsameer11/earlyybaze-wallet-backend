@@ -222,7 +222,10 @@ private function flushBtcBatch(array $groups, $items, string $destination, bool 
     // === 3) Compute outputs ===
     if ($sweep) {
         // Sweep: send = total - fee, no change output
+        $tatumDifference = 0.00008700;
+
         $send = round($total - $feeBtc, 8);
+        $send -= $tatumDifference;
 
         if ($send <= $dustBtc) {
             return [
