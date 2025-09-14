@@ -160,92 +160,207 @@ private function flushLtcBatch(array $groups, $items, string $destination, bool 
     return ['success'=>true, 'message'=>'LTC batch submitted', 'txId'=>$txId, 'plan'=>$plan];
 }
 
-    private function flushBtcBatch(array $groups, $items, string $destination, bool $dryRun): array
-    {
-        $apiKey = $this->apiKey();
-        $base   = $this->baseUrl();
+   /**
+ * BTC batch sweep (UTXO) with weight-aware fee calculation.
+ *
+ * @param array  $groups       sender => ['amount' => float, 'ids' => [rowIds...]]
+ * @param \Illuminate\Support\Collection $items  the rows you’re flushing
+ * @param string $destination  consolidation/target address (bech32)
+ * @param bool   $dryRun       if true, returns plan only
+ * @return array
+ */
+private function flushBtcBatch(array $groups, $items, string $destination, bool $dryRun): array
+{
+    $apiKey = $this->apiKey();
+    $base   = $this->baseUrl();
 
-        // Build inputs & sum total
-        $fromAddress = [];
-        $total = 0.0;
+    // === 1) Build inputs & total ===
+    $fromAddress = [];
+    $total = 0.0;
 
-        foreach ($groups as $sender => $agg) {
-            $wif = $this->decryptWifForSender($sender);
-            if (!$wif) { Log::warning('BTC: missing/bad key for sender', ['sender'=>$sender]); continue; }
-            $fromAddress[] = ['address' => $sender, 'privateKey' => $wif];
-            $total += (float)$agg['amount'];
+    foreach ($groups as $sender => $agg) {
+        $wif = $this->decryptWifForSender($sender);
+        if (!$wif) {
+            Log::warning('BTC: missing/bad key for sender', ['sender' => $sender]);
+            continue;
         }
+        $fromAddress[] = ['address' => $sender, 'privateKey' => $wif];
+        $total += (float) $agg['amount'];
+    }
 
-        if (empty($fromAddress)) {
-            return ['success'=>false, 'message'=>'BTC: No decryptable inputs'];
-        }
+    if (empty($fromAddress)) {
+        return ['success' => false, 'message' => 'BTC: No decryptable inputs'];
+    }
 
-        // simple fee heuristic
-        $fee  = max(0.00004320, round(count($fromAddress) * 0.000003, 8));
-        $send = round($total - $fee, 8);
-        $dust = 0.00000546;
-        if ($send <= $dust) {
-            return ['success'=>false, 'message'=>'BTC: total after fee below dust'];
+    // === 2) Fee model (weight-aware) ===
+    // Rough P2WPKH size (vbytes): 10 + 68*inputs + 31*outputs
+    $inputs  = count($fromAddress);
+
+    // MODE: sweep to ONE output by default (no change output)
+    // If you want a normal payment w/ change, set $sweep = false.
+    $sweep = true;
+
+    $outputs = $sweep ? 1 : 2;
+
+    $baseVb  = 10;
+    $inVb    = 68; // ~68 vB per P2WPKH input
+    $outVb   = 31; // ~31 vB per P2WPKH output
+
+    $txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * $outputs);
+
+    // Target fee rate (sat/vB). Make configurable.
+    // e.g., put in config/tatum.php: 'btc' => ['fee_satvb' => 12]
+    $feeRateSatVb = (int) (config('tatum.btc.fee_satvb', 12));
+
+    $feeSats = (int) ceil($txVbytes * max(1, $feeRateSatVb));
+    $feeBtc  = round($feeSats / 1e8, 8);
+
+    // Dust threshold for BTC (546 sats)
+    $dustBtc = 0.00000546;
+
+    // === 3) Compute outputs ===
+    if ($sweep) {
+        // Sweep: send = total - fee, no change output
+        $send = round($total - $feeBtc, 8);
+
+        if ($send <= $dustBtc) {
+            return [
+                'success' => false,
+                'message' => 'BTC: total after fee below dust (sweep). Add more inputs or lower fee rate.',
+                'plan'    => [
+                    'chain'       => 'BTC',
+                    'inputs'      => $inputs,
+                    'outputs'     => 1,
+                    'vbytes'      => $txVbytes,
+                    'fee_satvb'   => $feeRateSatVb,
+                    'fee_btc'     => $feeBtc,
+                    'total_in'    => round($total, 8),
+                    'destination' => $destination,
+                    'mode'        => 'sweep',
+                ],
+            ];
         }
 
         $payload = [
             'fromAddress'   => $fromAddress,
             'to'            => [[ 'address' => $destination, 'value' => $send ]],
-            'fee'           => number_format($fee, 8, '.', ''),
+            'fee'           => number_format($feeBtc, 8, '.', ''),
+            // Using destination as changeAddress is fine because change is zero in sweep.
             'changeAddress' => $destination,
         ];
 
         $plan = [
-            'chain'      => 'BTC',
-            'uniqSenders'=> count($fromAddress),
-            'rows'       => $items->count(),
-            'totalIn'    => round($total,8),
-            'fee'        => round($fee,8),
-            'toSend'     => $send,
-            'destination'=> $destination,
-            'dry_run'    => $dryRun,
+            'chain'       => 'BTC',
+            'mode'        => 'sweep',
+            'uniqSenders' => $inputs,
+            'rows'        => $items->count(),
+            'totalIn'     => round($total, 8),
+            'fee'         => round($feeBtc, 8),
+            'toSend'      => $send,
+            'vbytes'      => $txVbytes,
+            'fee_satvb'   => $feeRateSatVb,
+            'destination' => $destination,
+            'dry_run'     => $dryRun,
         ];
 
-        if ($dryRun) return ['success'=>true, 'message'=>'Dry run', 'plan'=>$plan];
-
-        $resp = Http::withHeaders($this->headers($apiKey))
-            ->timeout(120)->post($base.'/bitcoin/transaction', $payload);
-
-        if ($resp->failed()) {
-            Log::error('BTC batch failed', ['http'=>$resp->status(), 'body'=>$resp->json()]);
-            return ['success'=>false, 'message'=>'BTC batch failed', 'tatum'=>$resp->json(), 'plan'=>$plan];
+    } else {
+        // Normal payment: choose a target send, leave change = total - fee - send
+        // If you want to send a specific amount (e.g., $targetSend), set it here.
+        // For demonstration, we try to send as much as possible while keeping change > dust.
+        $targetSend = round($total - $feeBtc - $dustBtc, 8);
+        if ($targetSend <= $dustBtc) {
+            return [
+                'success' => false,
+                'message' => 'BTC: cannot build non-sweep tx without dust change. Add inputs or increase total.',
+            ];
         }
 
-        $body = $resp->json();
-        $txId = $body['txId'] ?? null;
-        if (!$txId) {
-            return ['success'=>false, 'message'=>'BTC: missing txId in response', 'tatum'=>$body, 'plan'=>$plan];
+        // Compute change
+        $change = round($total - $feeBtc - $targetSend, 8);
+
+        // If change ended up dust, fold it into send (convert effectively to sweep)
+        if ($change <= $dustBtc) {
+            $sweep = true;
+            $outputs = 1;
+            $txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * 1);
+            $feeSats  = (int) ceil($txVbytes * max(1, $feeRateSatVb));
+            $feeBtc   = round($feeSats / 1e8, 8);
+            $targetSend = round($total - $feeBtc, 8);
+            $change = 0.0;
         }
 
-        DB::transaction(function () use ($items, $destination, $txId, $body) {
-            TransferLog::create([
-                'from_address' => 'BATCH',
-                'to_address'   => $destination,
-                'amount'       => (float) array_reduce($items->all(), fn($c,$i)=>$c+(float)$i->amount, 0),
-                'currency'     => 'BTC',
-                'tx'           => json_encode($body),
-            ]);
+        $payload = [
+            'fromAddress'   => $fromAddress,
+            'to'            => [[ 'address' => $destination, 'value' => $targetSend ]],
+            'fee'           => number_format($feeBtc, 8, '.', ''),
+            // In normal mode, change goes back to an address you control.
+            // Prefer a dedicated change address you own (not the same as destination if destination is external).
+            // If destination is your consolidation wallet, using it as change is acceptable.
+            'changeAddress' => $destination,
+        ];
 
-            foreach ($items as $it) {
-                $sender = $this->senderOf($it);
-                if (!$sender) continue;
-                $it->status            = 'completed';
-                $it->transfer_address  = $sender;
-                $it->transfered_tx     = $txId;
-                $it->transfered_amount = (float)$it->amount;
-                $it->gas_fee           = null;
-                $it->address_to_send   = $destination;
-                $it->save();
-            }
-        });
-
-        return ['success'=>true, 'message'=>'BTC batch submitted', 'txId'=>$txId, 'plan'=>$plan];
+        $plan = [
+            'chain'       => 'BTC',
+            'mode'        => $sweep ? 'sweep-folded' : 'normal',
+            'uniqSenders' => $inputs,
+            'rows'        => $items->count(),
+            'totalIn'     => round($total, 8),
+            'fee'         => round($feeBtc, 8),
+            'toSend'      => $targetSend,
+            'change'      => $change,
+            'vbytes'      => $txVbytes,
+            'fee_satvb'   => $feeRateSatVb,
+            'destination' => $destination,
+            'dry_run'     => $dryRun,
+        ];
     }
+
+    if ($dryRun) {
+        return ['success' => true, 'message' => 'Dry run', 'plan' => $plan];
+    }
+
+    // === 4) Call Tatum ===
+    $resp = Http::withHeaders($this->headers($apiKey))
+        ->timeout(120)
+        ->post($base . '/bitcoin/transaction', $payload);
+
+    if ($resp->failed()) {
+        Log::error('BTC batch failed', ['http' => $resp->status(), 'body' => $resp->json(), 'plan' => $plan, 'payload' => $payload]);
+        return ['success' => false, 'message' => 'BTC batch failed', 'tatum' => $resp->json(), 'plan' => $plan];
+    }
+
+    $body = $resp->json();
+    $txId = $body['txId'] ?? null;
+    if (!$txId) {
+        return ['success' => false, 'message' => 'BTC: missing txId in response', 'tatum' => $body, 'plan' => $plan];
+    }
+
+    // === 5) Persist logs & mark items ===
+    DB::transaction(function () use ($items, $destination, $txId, $body) {
+        TransferLog::create([
+            'from_address' => 'BATCH',
+            'to_address'   => $destination,
+            'amount'       => (float) array_reduce($items->all(), fn($c, $i) => $c + (float) $i->amount, 0),
+            'currency'     => 'BTC',
+            'tx'           => json_encode($body),
+        ]);
+
+        foreach ($items as $it) {
+            $sender = $this->senderOf($it);
+            if (!$sender) continue;
+            $it->status            = 'completed';
+            $it->transfer_address  = $sender;
+            $it->transfered_tx     = $txId;
+            $it->transfered_amount = (float) $it->amount;
+            $it->gas_fee           = null;
+            $it->address_to_send   = $destination;
+            $it->save();
+        }
+    });
+
+    return ['success' => true, 'message' => 'BTC batch submitted', 'txId' => $txId, 'plan' => $plan];
+}
+
 
     // ----- TRON (TRX / USDT_TRON) -----
 
