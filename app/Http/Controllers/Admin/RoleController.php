@@ -12,10 +12,7 @@ class RoleController extends Controller
 {
     public function index()
     {
-        $roles=Role::with('modules')->get();
-        $customRole=['id'=>7,'name'=>'user'];
-        $roles->push($customRole);
-        return response()->json($roles);
+        return response()->json(Role::with('modules')->get());
     }
 
     public function show($id)
