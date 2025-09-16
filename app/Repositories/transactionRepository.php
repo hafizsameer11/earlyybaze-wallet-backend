@@ -88,7 +88,8 @@ public function all()
         'transactions'       => $transactions,
         'totalTransactions'  => $totalTransactions,
         'totalWallets'       => $totalWallets,
-        'totalRevenue'       => (float) $totalRevenue,
+      'totalRevenue' => number_format((float) $totalRevenue, 0, '.', ','),
+
 
         // new keys
         'by_period'          => $byPeriod,
