@@ -58,9 +58,9 @@ class AuthController extends Controller
             $user = $this->userService->login($request->validated());
             $userd = $user['user'];
 
-            if (count($user['virtual_accounts']) <= 7) {
-                return ResponseHelper::error('Please try again after 5-10 minutes', 401);
-            }
+            // if (count($user['virtual_accounts']) <= 7) {
+            //     return ResponseHelper::error('Please try again after 5-10 minutes', 401);
+            // }
             // Log::info('User Logged In:', [
             //     'user' => $user,
             //     'request_headers' => request()->headers->all()
