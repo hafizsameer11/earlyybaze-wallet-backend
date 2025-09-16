@@ -69,7 +69,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+'timezone' => 'Africa/Lagos',   // or 'Europe/Berlin' or any other GMT+1 city
 
     /*
     |--------------------------------------------------------------------------
