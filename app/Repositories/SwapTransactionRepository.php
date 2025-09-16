@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\ExchangeRate;
 use App\Models\Fee;
+use App\Models\MinimumTrade;
 use App\Models\SwapTransaction;
 use App\Models\Transaction;
 use App\Models\User;
@@ -49,11 +50,15 @@ class SwapTransactionRepository
             $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
             Log::info("exchange rate", [$exchangeRate]);
             // Fee in token and converted currencies
+            $miniumumTrade=MinimumTrade::where('type', 'swap')->latest()->first();
+            $miniumumTradeAmount=$miniumumTrade->amount;
             $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
             $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
             $amountNaira = bcmul($amountUsd, $exchangeRatenaira->rate_naira, 8);
             $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
-
+            if($amountUsd<$miniumumTradeAmount){
+                throw new Exception('Minimum trade amount is '. $miniumumTradeAmount);
+            }
             // Add calculated values to data
             $data['amount_usd'] = $amountUsd;
             $data['amount_naira'] = $amountNaira;
