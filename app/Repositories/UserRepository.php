@@ -226,11 +226,11 @@ class UserRepository
     }
     public function getFomatedUsers()
     {
-        $users = User::with('kyc')->orderBy('created_at', 'desc')->get();
+        $users = User::where('otp_verified', true)->where('role', 'user')->with('kyc')->orderBy('created_at', 'desc')->get();
         return $users->map(function ($user) {
             return [
                 'id' => $user->id,
-                'name' => $user->name,
+                'name' => $user->fullName,
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'status' => $user->is_active,
