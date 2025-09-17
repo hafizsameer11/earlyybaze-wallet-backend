@@ -73,10 +73,10 @@ Route::get('/migrate', function () {
     Artisan::call('migrate');
     return response()->json(['message' => 'Migration successful'], 200);
 });
-Route::get('/migrate/rollback', function () {
-    Artisan::call('migrate:rollback');
-    return response()->json(['message' => 'Migration rollback successfully'], 200);
-});
+// Route::get('/migrate/rollback', function () {
+//     Artisan::call('migrate:rollback');
+//     return response()->json(['message' => 'Migration rollback successfully'], 200);
+// });
 
 Route::get('/unath', function () {
     return response()->json(['message' => 'Unauthenticated'], 401);
