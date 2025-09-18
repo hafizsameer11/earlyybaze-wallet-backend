@@ -50,7 +50,7 @@ public function getRefferalManagement()
     ];
 
     // === RAW EARNINGS LIST (with user + referral + swap tx) ===
-    $earnings = \App\Models\ReferalEarning::with(['user:id,name', 'referal:id,name', 'swapTransaction:id,amount'])
+    $earnings = \App\Models\ReferalEarning::with(['user:id,name', 'referal:id,name', 'swapTransaction:id,amount,amount_usd'])
         ->orderByDesc('created_at')
         ->get()
         ->map(function ($earning) {
