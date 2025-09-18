@@ -110,6 +110,7 @@ public function getRefferalManagement()
 
 
 
+
     public function markAsPaid($userId)
     {
         $monthKey = Carbon::now()->format('Y-m');
