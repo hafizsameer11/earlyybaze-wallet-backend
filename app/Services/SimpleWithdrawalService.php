@@ -198,126 +198,162 @@ private function flushBtcBatch(array $groups, $items, string $destination, bool 
     $inputs  = count($fromAddress);
 
     // MODE: sweep to ONE output by default (no change output)
-    // If you want a normal payment w/ change, set $sweep = false.
-    $sweep = true;
+// If you want a normal payment w/ change, set $sweep = false.
+$sweep = true;
 
-    $outputs = $sweep ? 1 : 2;
+$outputs = $sweep ? 1 : 2;
 
-    $baseVb  = 10;
-    $inVb    = 68; // ~68 vB per P2WPKH input
-    $outVb   = 31; // ~31 vB per P2WPKH output
+$baseVb  = 10;
+$inVb    = 68; // ~68 vB per P2WPKH input
+$outVb   = 31; // ~31 vB per P2WPKH output
 
-    $txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * $outputs);
+$txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * $outputs);
 
-    // Target fee rate (sat/vB). Make configurable.
-    // e.g., put in config/tatum.php: 'btc' => ['fee_satvb' => 12]
-    $feeRateSatVb = (int) (config('tatum.btc.fee_satvb', 12));
+// Target fee rate (sat/vB). Make configurable.
+// e.g., config/tatum.php: 'btc' => ['fee_satvb' => 12]
+$feeRateSatVb = (int) (config('tatum.btc.fee_satvb', 12));
 
-    $feeSats = (int) ceil($txVbytes * max(1, $feeRateSatVb));
-    $feeBtc  = round($feeSats / 1e8, 8);
+$feeSats = (int) ceil($txVbytes * max(1, $feeRateSatVb));
+$feeBtc  = round($feeSats / 1e8, 8);
 
-    // Dust threshold for BTC (546 sats)
-    $dustBtc = 0.00000546;
+// Dust threshold for BTC (546 sats)
+$dustBtc = 0.00000546;
 
-    // === 3) Compute outputs ===
-    if ($sweep) {
-        // Sweep: send = total - fee, no change output
-        $tatumDifference = 0.00008700;
+// ---- NEW: 25% platform/tatum difference based on total input ----
+$platformCutBtc = round($total * 0.25, 8);
 
-        $send = round($total - $feeBtc, 8);
-        $send -= $tatumDifference;
-
-        if ($send <= $dustBtc) {
-            return [
-                'success' => false,
-                'message' => 'BTC: total after fee below dust (sweep). Add more inputs or lower fee rate.',
-                'plan'    => [
-                    'chain'       => 'BTC',
-                    'inputs'      => $inputs,
-                    'outputs'     => 1,
-                    'vbytes'      => $txVbytes,
-                    'fee_satvb'   => $feeRateSatVb,
-                    'fee_btc'     => $feeBtc,
-                    'total_in'    => round($total, 8),
-                    'destination' => $destination,
-                    'mode'        => 'sweep',
-                ],
-            ];
-        }
-
-        $payload = [
-            'fromAddress'   => $fromAddress,
-            'to'            => [[ 'address' => $destination, 'value' => $send ]],
-            'fee'           => number_format($feeBtc, 8, '.', ''),
-            // Using destination as changeAddress is fine because change is zero in sweep.
-            'changeAddress' => $destination,
-        ];
-
-        $plan = [
+// sanity: if platformCut eats everything, fail early
+if ($platformCutBtc >= round($total - $feeBtc, 8)) {
+    return [
+        'success' => false,
+        'message' => 'BTC: 25% platform cut + fee leaves no spendable amount.',
+        'plan' => [
             'chain'       => 'BTC',
-            'mode'        => 'sweep',
-            'uniqSenders' => $inputs,
-            'rows'        => $items->count(),
-            'totalIn'     => round($total, 8),
-            'fee'         => round($feeBtc, 8),
-            'toSend'      => $send,
+            'inputs'      => $inputs,
+            'outputs'     => $outputs,
             'vbytes'      => $txVbytes,
             'fee_satvb'   => $feeRateSatVb,
+            'fee_btc'     => $feeBtc,
+            'total_in'    => round($total, 8),
+            'platform_cut'=> $platformCutBtc,
+            'mode'        => $sweep ? 'sweep' : 'normal',
             'destination' => $destination,
-            'dry_run'     => $dryRun,
-        ];
+        ],
+    ];
+}
 
-    } else {
-        // Normal payment: choose a target send, leave change = total - fee - send
-        // If you want to send a specific amount (e.g., $targetSend), set it here.
-        // For demonstration, we try to send as much as possible while keeping change > dust.
-        $targetSend = round($total - $feeBtc - $dustBtc, 8);
-        if ($targetSend <= $dustBtc) {
-            return [
-                'success' => false,
-                'message' => 'BTC: cannot build non-sweep tx without dust change. Add inputs or increase total.',
-            ];
-        }
+// === 3) Compute outputs ===
+if ($sweep) {
+    // Sweep: send = total - fee - platformCut, no change output
+    $send = round($total - $feeBtc - $platformCutBtc, 8);
 
-        // Compute change
-        $change = round($total - $feeBtc - $targetSend, 8);
-
-        // If change ended up dust, fold it into send (convert effectively to sweep)
-        if ($change <= $dustBtc) {
-            $sweep = true;
-            $outputs = 1;
-            $txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * 1);
-            $feeSats  = (int) ceil($txVbytes * max(1, $feeRateSatVb));
-            $feeBtc   = round($feeSats / 1e8, 8);
-            $targetSend = round($total - $feeBtc, 8);
-            $change = 0.0;
-        }
-
-        $payload = [
-            'fromAddress'   => $fromAddress,
-            'to'            => [[ 'address' => $destination, 'value' => $targetSend ]],
-            'fee'           => number_format($feeBtc, 8, '.', ''),
-            // In normal mode, change goes back to an address you control.
-            // Prefer a dedicated change address you own (not the same as destination if destination is external).
-            // If destination is your consolidation wallet, using it as change is acceptable.
-            'changeAddress' => $destination,
-        ];
-
-        $plan = [
-            'chain'       => 'BTC',
-            'mode'        => $sweep ? 'sweep-folded' : 'normal',
-            'uniqSenders' => $inputs,
-            'rows'        => $items->count(),
-            'totalIn'     => round($total, 8),
-            'fee'         => round($feeBtc, 8),
-            'toSend'      => $targetSend,
-            'change'      => $change,
-            'vbytes'      => $txVbytes,
-            'fee_satvb'   => $feeRateSatVb,
-            'destination' => $destination,
-            'dry_run'     => $dryRun,
+    if ($send <= $dustBtc) {
+        return [
+            'success' => false,
+            'message' => 'BTC: total after 25% cut & fee is dust (sweep). Add inputs or lower fee rate.',
+            'plan'    => [
+                'chain'        => 'BTC',
+                'inputs'       => $inputs,
+                'outputs'      => 1,
+                'vbytes'       => $txVbytes,
+                'fee_satvb'    => $feeRateSatVb,
+                'fee_btc'      => $feeBtc,
+                'platform_cut' => $platformCutBtc,
+                'total_in'     => round($total, 8),
+                'destination'  => $destination,
+                'mode'         => 'sweep',
+            ],
         ];
     }
+
+    $payload = [
+        'fromAddress'   => $fromAddress,
+        'to'            => [[ 'address' => $destination, 'value' => $send ]],
+        'fee'           => number_format($feeBtc, 8, '.', ''),
+        // change is zero in sweep; safe to set to destination
+        'changeAddress' => $destination,
+    ];
+
+    $plan = [
+        'chain'        => 'BTC',
+        'mode'         => 'sweep',
+        'uniqSenders'  => $inputs,
+        'rows'         => $items->count(),
+        'totalIn'      => round($total, 8),
+        'fee'          => round($feeBtc, 8),
+        'platform_cut' => $platformCutBtc,
+        'toSend'       => $send,
+        'vbytes'       => $txVbytes,
+        'fee_satvb'    => $feeRateSatVb,
+        'destination'  => $destination,
+        'dry_run'      => $dryRun,
+    ];
+
+} else {
+    // Normal payment: maximize send while keeping non-dust change
+    // Now also subtract 25% cut from the spendable pool.
+    $spendable = round($total - $feeBtc - $platformCutBtc, 8);
+
+    $targetSend = round($spendable - $dustBtc, 8);
+    if ($targetSend <= $dustBtc) {
+        return [
+            'success' => false,
+            'message' => 'BTC: cannot build non-sweep tx (25% cut + fee leaves dust). Add inputs or increase total.',
+            'plan'    => [
+                'chain'        => 'BTC',
+                'mode'         => 'normal',
+                'inputs'       => $inputs,
+                'outputs'      => 2,
+                'vbytes'       => $txVbytes,
+                'fee_satvb'    => $feeRateSatVb,
+                'fee_btc'      => $feeBtc,
+                'platform_cut' => $platformCutBtc,
+                'total_in'     => round($total, 8),
+                'destination'  => $destination,
+            ],
+        ];
+    }
+
+    $change = round($spendable - $targetSend, 8);
+
+    // If change became dust, fold change into send (convert to sweep)
+    if ($change <= $dustBtc) {
+        $sweep   = true;
+        $outputs = 1;
+        $txVbytes = $baseVb + ($inVb * $inputs) + ($outVb * 1);
+        $feeSats  = (int) ceil($txVbytes * max(1, $feeRateSatVb));
+        $feeBtc   = round($feeSats / 1e8, 8);
+
+        $spendable = round($total - $feeBtc - $platformCutBtc, 8);
+        $targetSend = max(0, round($spendable, 8));
+        $change = 0.0;
+    }
+
+    $payload = [
+        'fromAddress'   => $fromAddress,
+        'to'            => [[ 'address' => $destination, 'value' => $targetSend ]],
+        'fee'           => number_format($feeBtc, 8, '.', ''),
+        // Prefer a dedicated change address you control
+        'changeAddress' => $destination,
+    ];
+
+    $plan = [
+        'chain'        => 'BTC',
+        'mode'         => $sweep ? 'sweep-folded' : 'normal',
+        'uniqSenders'  => $inputs,
+        'rows'         => $items->count(),
+        'totalIn'      => round($total, 8),
+        'fee'          => round($feeBtc, 8),
+        'platform_cut' => $platformCutBtc,
+        'toSend'       => $targetSend,
+        'change'       => $change,
+        'vbytes'       => $txVbytes,
+        'fee_satvb'    => $feeRateSatVb,
+        'destination'  => $destination,
+        'dry_run'      => $dryRun,
+    ];
+}
+
 
     if ($dryRun) {
         return ['success' => true, 'message' => 'Dry run', 'plan' => $plan];
