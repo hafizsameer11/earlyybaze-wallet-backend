@@ -23,211 +23,79 @@ class RefferalManagementController extends Controller
     }
 
 
-  public function getRefferalManagement()
+public function getReferralEarnings()
 {
-    // ---- Period anchors
-    $now            = Carbon::now();
-    $todayStart     = $now->copy()->startOfDay();
-    $todayEnd       = $now->copy()->endOfDay();
+    $now = Carbon::now();
 
-    $thisMonthStart = $now->copy()->startOfMonth();
-    $thisMonthEnd   = $now->copy()->endOfMonth();
-    $thisMonthKey   = $now->format('Y-m');
+    // Monthly keys
+    $thisMonthKey = $now->format('Y-m');
+    $lastMonthKey = $now->copy()->subMonthNoOverflow()->format('Y-m');
 
-    $lastMonthStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
-    $lastMonthEnd   = $now->copy()->subMonthNoOverflow()->endOfMonth();
-    $lastMonthKey   = $now->copy()->subMonthNoOverflow()->format('Y-m');
-
-    $thisYearStart  = $now->copy()->startOfYear();
-    $thisYearEnd    = $now->copy()->endOfYear();
-
-    // Keep your original vars for existing "stats"
-    $startOfMonth = $thisMonthStart;
-    $endOfMonth   = $thisMonthEnd;
-    $monthKey     = $thisMonthKey;
-
-    $users = \App\Models\User::with('userAccount')->get();
-
-    // === ADMIN TABLE DATA (PER USER) — unchanged logic, just using $monthKey ===
-    $managementData = $users
-        ->filter(function ($user) {
-            // Only users who have actually referred at least one user
-            return \App\Models\User::where('invite_code', $user->user_code)->count() > 0;
-        })
-        ->map(function ($user) use ($monthKey) {
-            $referrals = \App\Models\User::where('invite_code', $user->user_code)->count();
-
-            // Current month payout row (any status)
-            $currentMonthPayout = \App\Models\ReferalPayOut::where('user_id', $user->id)
-                ->where('month', $monthKey)
-                ->orderByDesc('id')
-                ->first();
-
-            $currentStatus = $currentMonthPayout->status ?? '';
-            $currentPaidAt = ($currentMonthPayout && $currentMonthPayout->status === 'paid')
-                ? $currentMonthPayout->paid_at
-                : null;
-
-            // Paid totals this month
-            $paidThisMonth = \App\Models\ReferalPayOut::where('user_id', $user->id)
-                ->where('month', $monthKey)
-                ->where('status', 'paid')
-                ->get();
-
-            $totalPaidUsd = $paidThisMonth->sum('amount');
-            $totalPaidNaira = $paidThisMonth->sum(function ($payout) {
-                return $payout->exchange_rate ? ($payout->amount * $payout->exchange_rate) : 0;
-            });
-
-            // Pending totals this month
-            $pendingThisMonth = \App\Models\ReferalPayOut::where('user_id', $user->id)
-                ->where('month', $monthKey)
-                ->where('status', 'pending')
-                ->get();
-
-            $pendingUsd = $pendingThisMonth->sum('amount');
-            $pendingNaira = $pendingThisMonth->sum(function ($payout) {
-                return $payout->exchange_rate ? ($payout->amount * $payout->exchange_rate) : 0;
-            });
-
-            // Withdrawn (only if current payout is actually paid)
-            $withdrawnUsd = ($currentMonthPayout && $currentMonthPayout->status === 'paid')
-                ? $currentMonthPayout->amount
-                : 0;
-
-            $withdrawnNaira = ($currentMonthPayout && $currentMonthPayout->status === 'paid' && $currentMonthPayout->exchange_rate)
-                ? $currentMonthPayout->amount * $currentMonthPayout->exchange_rate
-                : 0;
-
-            return [
-                'id'   => $user->id,
-                'name' => $user->name,
-                'referrals' => $referrals,
-
-                'earned_usd' => $totalPaidUsd ?? 0,
-                'earned_naira' => $totalPaidNaira ?? 0,
-
-                'pending_payout_usd' => $pendingUsd ?? 0,
-                'pending_payout_naira' => $pendingNaira ?? 0,
-
-                'status' => $currentStatus,
-                'paidAt' => $currentPaidAt,
-
-                'total_payout_usd' => $totalPaidUsd,
-                'total_payout_naira' => $totalPaidNaira,
-
-                'withdrawn_this_month_usd' => $withdrawnUsd,
-                'withdrawn_this_month_naira' => $withdrawnNaira,
-
-                'referrer' => $user->user_code,
-                'img' => $user->profile_picture,
-            ];
-        });
-
-    // === EXISTING DASHBOARD CARDS (overall + this month) ===
-    $referrersCount = \App\Models\User::whereIn('user_code', function ($query) {
-        $query->select('invite_code')->from('users')->whereNotNull('invite_code');
-    })->count();
-
-    $totalReferrals = \App\Models\User::whereNotNull('invite_code')->count();
-
-    $totalEarnings = \App\Models\ReferalEarning::sum('amount');
-
-    $totalPaidUsd = \App\Models\ReferalPayOut::where('status', 'paid')->sum('amount');
-
-    $totalPaidNaira = \App\Models\ReferalPayOut::where('status', 'paid')
-        ->sum(DB::raw('amount * IFNULL(exchange_rate, 0)'));
-
-    $pendingThisMonth = \App\Models\ReferalEarning::where('status', 'pending')
-        ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-        ->sum('amount');
-
-    $payoutCountThisMonth = \App\Models\ReferalPayOut::where('month', $monthKey)->count();
-
-    $stats = [
-        'referrers'               => $referrersCount,
-        'total_referrals'         => $totalReferrals,
-        'total_earned_usd'        => round($totalEarnings, 2),
-        'total_paid_usd'          => round($totalPaidUsd, 2),
-        'total_paid_naira'        => round($totalPaidNaira, 2),
-        'pending_this_month_usd'  => round($pendingThisMonth, 2),
-        'payouts_this_month'      => $payoutCountThisMonth,
-    ];
-
-    // === NEW: PERIODIZED STATS ===
     $periods = [
-        'today' => [
-            'start' => $todayStart, 'end' => $todayEnd,
-            'monthKey' => $now->format('Y-m'), // not used for count, here for consistency
-        ],
         'this_month' => [
-            'start' => $thisMonthStart, 'end' => $thisMonthEnd,
+            'start' => $now->copy()->startOfMonth(),
+            'end'   => $now->copy()->endOfMonth(),
             'monthKey' => $thisMonthKey,
         ],
         'last_month' => [
-            'start' => $lastMonthStart, 'end' => $lastMonthEnd,
+            'start' => $now->copy()->subMonthNoOverflow()->startOfMonth(),
+            'end'   => $now->copy()->subMonthNoOverflow()->endOfMonth(),
             'monthKey' => $lastMonthKey,
         ],
         'this_year' => [
-            'start' => $thisYearStart, 'end' => $thisYearEnd,
-            'monthKey' => null, // year not tied to monthKey
+            'start' => $now->copy()->startOfYear(),
+            'end'   => $now->copy()->endOfYear(),
+            'monthKey' => null,
         ],
     ];
 
+    // === RAW EARNINGS LIST (with user + referral + swap tx) ===
+    $earnings = \App\Models\ReferalEarning::with(['user:id,name', 'referal:id,name', 'swapTransaction:id,amount'])
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(function ($earning) {
+            return [
+                'id'             => $earning->id,
+                'earner_name'    => $earning->user->name ?? null,     // who earned
+                'referred_name'  => $earning->referal->name ?? null,  // who was referred (swapped)
+                'amount_usd'     => $earning->amount,
+                'status'         => $earning->status,
+                'swap_id'        => $earning->swap_transaction_id,
+                'swapped_amount' => $earning->swapTransaction->amount ?? null, // how much was swapped
+                'created_at'     => $earning->created_at,
+                'month_key'      => $earning->created_at->format('Y-m'),
+            ];
+        });
+
+    // === SUMMARY BY swap_transaction_id ===
+    $summaryBySwap = \App\Models\ReferalEarning::select(
+            'swap_transaction_id',
+            DB::raw('SUM(amount) as total_amount'),
+            DB::raw('COUNT(id) as earnings_count')
+        )
+        ->groupBy('swap_transaction_id')
+        ->get();
+
+    // === PERIOD STATS ===
     $byPeriod = [];
     foreach ($periods as $label => $p) {
         $start = $p['start'];
         $end   = $p['end'];
 
-        // Earnings (by created_at)
-        $earnedUsd = \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])
-            ->sum('amount');
-
-        // Pending earnings (by created_at)
-        $pendingUsdPeriod = \App\Models\ReferalEarning::where('status', 'pending')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('amount');
-
-        // Paid payouts (by paid_at)
-        $paidUsd = \App\Models\ReferalPayOut::where('status', 'paid')
-            ->whereBetween('paid_at', [$start, $end])
-            ->sum('amount');
-
-        $paidNaira = \App\Models\ReferalPayOut::where('status', 'paid')
-            ->whereBetween('paid_at', [$start, $end])
-            ->sum(DB::raw('amount * IFNULL(exchange_rate, 0)'));
-
-        // Count of users who used an invite code in this period
-        $referralsCount = \App\Models\User::whereNotNull('invite_code')
-            ->whereBetween('created_at', [$start, $end])
-            ->count();
-
-        // Payouts count (paid) by paid_at (universal)
-        $payoutsCount = \App\Models\ReferalPayOut::where('status', 'paid')
-            ->whereBetween('paid_at', [$start, $end])
-            ->count();
-
-        // For month views, also add the legacy monthKey-based count (creation-insensitive)
-        $payoutsByMonthKey = null;
-        if (in_array($label, ['this_month', 'last_month'], true) && $p['monthKey']) {
-            $payoutsByMonthKey = \App\Models\ReferalPayOut::where('month', $p['monthKey'])->count();
-        }
-
         $byPeriod[$label] = [
-            'total_earned_usd'    => round((float)$earnedUsd, 2),
-            'total_paid_usd'      => round((float)$paidUsd, 2),
-            'total_paid_naira'    => round((float)$paidNaira, 2),
-            'pending_usd'         => round((float)$pendingUsdPeriod, 2),
-            'referrals_count'     => $referralsCount,
-            'payouts_count'       => $payoutsCount,          // by paid_at
-            'payouts_by_month_key'=> $payoutsByMonthKey,     // only for month scopes
+            'monthKey'       => $p['monthKey'],
+            'total_earned'   => (float)\App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->sum('amount'),
+            'pending'        => (float)\App\Models\ReferalEarning::where('status', 'pending')
+                                    ->whereBetween('created_at', [$start, $end])
+                                    ->sum('amount'),
+            'records_count'  => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->count(),
         ];
     }
 
     return response()->json([
-        'stats'      => $stats,          // existing overall cards (unchanged)
-        'by_period'  => $byPeriod,       // NEW: today / this_month / last_month / this_year
-        'management' => $managementData->values(), // per-user table stays same
+        'earnings'       => $earnings,       // every record with both users + swap info
+        'by_period'      => $byPeriod,       // summary stats per period
+        'by_swap'        => $summaryBySwap,  // sum grouped by swap_transaction_id
     ]);
 }
 
