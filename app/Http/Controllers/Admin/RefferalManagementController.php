@@ -49,19 +49,19 @@ public function getRefferalManagement()
         ],
     ];
 
-    // === RAW EARNINGS LIST (with user + referral + swap tx) ===
+    // === RAW EARNINGS LIST ===
     $earnings = \App\Models\ReferalEarning::with(['user:id,name', 'referal:id,name', 'swapTransaction:id,amount,amount_usd'])
         ->orderByDesc('created_at')
         ->get()
         ->map(function ($earning) {
             return [
                 'id'             => $earning->id,
-                'earner_name'    => $earning->user->name ?? null,     // who earned
-                'referred_name'  => $earning->referal->name ?? null,  // who was referred (swapped)
+                'earner_name'    => $earning->user->name ?? null,
+                'referred_name'  => $earning->referal->name ?? null,
                 'amount_usd'     => $earning->amount,
                 'status'         => $earning->status,
                 'swap_id'        => $earning->swap_transaction_id,
-                'swapped_amount' => $earning->swapTransaction->amount_usd ?? $earning->swapTransaction->amount, // how much was swapped
+                'swapped_amount' => $earning->swapTransaction->amount_usd ?? $earning->swapTransaction->amount,
                 'created_at'     => $earning->created_at,
                 'month_key'      => $earning->created_at->format('Y-m'),
             ];
@@ -84,18 +84,27 @@ public function getRefferalManagement()
 
         $byPeriod[$label] = [
             'monthKey'       => $p['monthKey'],
-            'total_earned'   => (float)\App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->sum('amount'),
-            'pending'        => (float)\App\Models\ReferalEarning::where('status', 'pending')
+            'total_earned_usd' => (float)\App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->sum('amount'),
+            'pending_usd'    => (float)\App\Models\ReferalEarning::where('status', 'pending')
                                     ->whereBetween('created_at', [$start, $end])
                                     ->sum('amount'),
             'records_count'  => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->count(),
         ];
     }
 
+    // === OVERALL SUMMARY STATS FOR CARDS ===
+    $stats = [
+        'referrers'        => \App\Models\User::whereIn('id', \App\Models\ReferalEarning::pluck('user_id'))->count(),
+        'total_referrals'  => \App\Models\ReferalEarning::count(),
+        'total_earned_usd' => (float)\App\Models\ReferalEarning::sum('amount'),
+        'pending_usd'      => (float)\App\Models\ReferalEarning::where('status', 'pending')->sum('amount'),
+    ];
+
     return response()->json([
-        'earnings'       => $earnings,       // every record with both users + swap info
-        'by_period'      => $byPeriod,       // summary stats per period
-        'by_swap'        => $summaryBySwap,  // sum grouped by swap_transaction_id
+        'stats'         => $stats,       // ✅ for summary cards
+        'earnings'      => $earnings,    // ✅ table data
+        'by_period'     => $byPeriod,    // ✅ period summary
+        'by_swap'       => $summaryBySwap, // ✅ transaction grouping
     ]);
 }
 
