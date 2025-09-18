@@ -205,8 +205,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
     Route::post('/admin/withdrawals/flush', [SimpleWithdrawalController::class, 'flush']);
-
-    Route::prefix('admin')->middleware(['admin'])->group(function () {
+Route::get('referall-wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
+Route::get('top-up-referall-wallet-balance', [RefferalManagementController::class, 'topUpRefferalWallet']);
+    Route::prefix('admin')->middleware(['admin'])->group(function (): void {
 //    Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
 //     Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
 //     Route::post('/2fa/disable', [TwoFactorController::class, 'disable']); // admin token

@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\ReferalEarning;
 use App\Models\ReferalPayOut;
 use App\Models\ReferralExchangeRate;
+use App\Models\ReferralWallet;
+use App\Models\ReferralWalletTopUp;
 use App\Models\User;
 use App\Models\WithdrawTransaction;
 use App\Services\RefferalEarningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RefferalManagementController extends Controller
@@ -108,8 +111,52 @@ public function getRefferalManagement()
     ]);
 }
 
+  public function topUpRefferalWallet(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
 
+        $amount = $request->input('amount');
+        $userId = Auth::id();
 
+        $walletTopup = ReferralWalletTopUp::create([
+            'user_id' => $userId,
+            'amount' => $amount,
+            'status' => 'completed',
+        ]);
+
+        $wallet = ReferralWallet::first();
+        if (!$wallet) {
+            $wallet = ReferralWallet::create([
+                'title' => 'Referral Wallet',
+                'amount' => 0,
+            ]);
+        }
+
+        $wallet->amount += $amount;
+        $wallet->save();
+
+        return response()->json([
+            'message' => 'Wallet topup created successfully',
+            'wallet' => $wallet,
+            'wallet_topup' => $walletTopup,
+        ]);
+    }
+
+    public function referralwalletBalance()
+    {
+        $wallet = ReferralWallet::first();
+        $history = ReferralWalletTopUp::with('user:id,name')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'wallet' => $wallet,
+            'history' => $history,
+        ]);
+    }
 
     public function markAsPaid($userId)
     {
