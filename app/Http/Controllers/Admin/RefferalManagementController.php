@@ -61,7 +61,7 @@ public function getRefferalManagement()
                 'amount_usd'     => $earning->amount,
                 'status'         => $earning->status,
                 'swap_id'        => $earning->swap_transaction_id,
-                'swapped_amount' => $earning->swapTransaction->amount_usd ?? null, // how much was swapped
+                'swapped_amount' => $earning->swapTransaction->amount_usd ?? $earning->swapTransaction->amount, // how much was swapped
                 'created_at'     => $earning->created_at,
                 'month_key'      => $earning->created_at->format('Y-m'),
             ];
