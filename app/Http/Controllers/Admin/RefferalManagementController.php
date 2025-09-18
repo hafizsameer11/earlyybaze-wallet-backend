@@ -23,7 +23,7 @@ class RefferalManagementController extends Controller
     }
 
 
-public function getReferralEarnings()
+public function getRefferalManagement()
 {
     $now = Carbon::now();
 
