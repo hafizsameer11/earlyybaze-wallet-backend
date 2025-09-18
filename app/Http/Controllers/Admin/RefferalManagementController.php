@@ -48,8 +48,8 @@ public function getRefferalManagement()
         ],
     ];
 
-    // preload earnings
-   $allEarnings = \App\Models\ReferalEarning::with([
+    // preload earnings with relations
+    $allEarnings = \App\Models\ReferalEarning::with([
         'user:id,name',
         'referal:id,name',
         'swapTransaction:id,amount,amount_usd'
@@ -57,66 +57,89 @@ public function getRefferalManagement()
     ->orderByDesc('created_at')
     ->get();
 
-$summaryByUser = $allEarnings->groupBy('user_id')->map(function ($rows, $userId) {
-    $totalEarned = $rows->sum('amount');
-    $totalReferrals = $rows->count();
-    $uniqueReferred = $rows->pluck('referal_id')->unique()->count();
-    $totalSwapped = $rows->sum(function ($e) {
-        return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
-    });
+    // build per-user summary
+    $summaryByUser = $allEarnings->groupBy('user_id')->map(function ($rows) {
+        $totalEarned   = $rows->sum('amount');
+        $totalReferrals = $rows->count();
+        $uniqueReferred = $rows->pluck('referal_id')->unique()->count();
+        $totalSwapped   = $rows->sum(function ($e) {
+            return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
+        });
 
-    // build referred users list
-    $referredUsers = $rows->map(function ($e) {
+        // build referred users list
+        $referredUsers = $rows->map(function ($e) {
+            return [
+                'referred_id'    => $e->referal_id,
+                'referred_name'  => $e->referal->name ?? '',
+                'swap_id'        => $e->swap_transaction_id,
+                'swapped_amount' => $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0,
+                'earned_amount'  => $e->amount,
+                'created_at'     => $e->created_at,
+            ];
+        });
+
         return [
-            'referred_id'   => $e->referal_id,
-            'referred_name' => $e->referal->name ?? '',
-            'swap_id'       => $e->swap_transaction_id,
-            'swapped_amount'=> $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0,
-            'earned_amount' => $e->amount,
-            'created_at'    => $e->created_at,
+            'total_earned_usd' => (float) $totalEarned,
+            'total_referrals'  => (int) $totalReferrals,
+            'unique_referred'  => (int) $uniqueReferred,
+            'total_swapped'    => (float) $totalSwapped,
+            'referred_users'   => $referredUsers->values(),
         ];
     });
 
-    return [
-        'total_earned_usd' => (float) $totalEarned,
-        'total_referrals'  => (int) $totalReferrals,
-        'unique_referred'  => (int) $uniqueReferred,
-        'total_swapped'    => (float) $totalSwapped,
-        'referred_users'   => $referredUsers->values(), // tabular list
-    ];
-});
+    // attach summary data into each earning row
+    $earnings = $allEarnings->map(function ($earning) use ($summaryByUser) {
+        $summary = $summaryByUser[$earning->user_id] ?? [
+            'total_earned_usd' => 0,
+            'total_referrals'  => 0,
+            'unique_referred'  => 0,
+            'total_swapped'    => 0,
+            'referred_users'   => [],
+        ];
 
-$earnings = $allEarnings->map(function ($earning) use ($summaryByUser) {
-    $summary = $summaryByUser[$earning->user_id] ?? [
-        'total_earned_usd' => 0,
-        'total_referrals'  => 0,
-        'unique_referred'  => 0,
-        'total_swapped'    => 0,
-        'referred_users'   => [],
-    ];
+        return [
+            'id'               => $earning->id,
+            'earner_id'        => $earning->user_id,
+            'earner_name'      => $earning->user->name ?? null,
+            'referred_id'      => $earning->referal_id,
+            'referred_name'    => $earning->referal->name ?? null,
+            'amount_usd'       => $earning->amount,
+            'status'           => $earning->status,
+            'swap_id'          => $earning->swap_transaction_id,
+            'swapped_amount'   => $earning->swapTransaction->amount_usd ?? $earning->swapTransaction->amount,
+            'created_at'       => $earning->created_at,
+            'month_key'        => $earning->created_at->format('Y-m'),
 
-    return [
-        'id'               => $earning->id,
-        'earner_id'        => $earning->user_id,
-        'earner_name'      => $earning->user->name ?? null,
-        'referred_id'      => $earning->referal_id,
-        'referred_name'    => $earning->referal->name ?? null,
-        'amount_usd'       => $earning->amount,
-        'status'           => $earning->status,
-        'swap_id'          => $earning->swap_transaction_id,
-        'swapped_amount'   => $earning->swapTransaction->amount_usd ?? $earning->swapTransaction->amount,
-        'created_at'       => $earning->created_at,
-        'month_key'        => $earning->created_at->format('Y-m'),
+            // summary attached
+            'total_earned_usd' => $summary['total_earned_usd'],
+            'total_referrals'  => $summary['total_referrals'],
+            'unique_referred'  => $summary['unique_referred'],
+            'total_swapped'    => $summary['total_swapped'],
+            'referred_users'   => $summary['referred_users'],
+        ];
+    });
 
-        // attach summary
-        'total_earned_usd' => $summary['total_earned_usd'],
-        'total_referrals'  => $summary['total_referrals'],
-        'unique_referred'  => $summary['unique_referred'],
-        'total_swapped'    => $summary['total_swapped'],
-        'referred_users'   => $summary['referred_users'],
-    ];
-});
+    // build per-period stats
+    $byPeriod = [];
+    foreach ($periods as $label => $p) {
+        $start = $p['start'];
+        $end   = $p['end'];
 
+        $byPeriod[$label] = [
+            'start'            => $start,
+            'end'              => $end,
+            'monthKey'         => $p['monthKey'],
+            'total_referrals'  => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->count(),
+            'total_earned_usd' => (float) \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->sum('amount'),
+            'unique_referrers' => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->distinct('user_id')->count('user_id'),
+            'total_swapped'    => (float) \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])
+                                        ->with('swapTransaction')
+                                        ->get()
+                                        ->sum(function ($e) {
+                                            return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
+                                        }),
+        ];
+    }
 
     return response()->json([
         'earnings' => $earnings,
@@ -125,9 +148,10 @@ $earnings = $allEarnings->map(function ($earning) use ($summaryByUser) {
             'total_referrals'  => $allEarnings->count(),
             'total_earned_usd' => (float) $allEarnings->sum('amount'),
         ],
-        'by_period' => $periods,
+        'by_period' => $byPeriod,
     ]);
 }
+
 
 
   public function topUpRefferalWallet(Request $request)
