@@ -112,7 +112,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/2fa/resend', [AuthController::class, 'resendOtpAdmin']);
     Route::post('/admin/2fa/verify', [AuthController::class, 'verifyOtpAdmin']);
 });
-    Route::get('admin/banners', [InAppBannerController::class, 'index']);
+Route::get('admin/banners', [InAppBannerController::class, 'index']);
 
 //Authenticated routes for user
 Route::middleware('auth:sanctum')->group(function () {
@@ -193,7 +193,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
-
 });
 //non auth routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -205,15 +204,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transfer-to-external-address', [BlockChainController::class, 'transferToExternalAddress']);
     });
     Route::post('/admin/withdrawals/flush', [SimpleWithdrawalController::class, 'flush']);
-Route::get('referall-wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
-Route::get('top-up-referall-wallet-balance', [RefferalManagementController::class, 'topUpRefferalWallet']);
+    Route::get('referall-wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
+    Route::post('top-up-referall-wallet-balance', [RefferalManagementController::class, 'topUpRefferalWallet']);
     Route::prefix('admin')->middleware(['admin'])->group(function (): void {
-//    Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
-//     Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
-//     Route::post('/2fa/disable', [TwoFactorController::class, 'disable']); // admin token
+        //    Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
+        //     Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
+        //     Route::post('/2fa/disable', [TwoFactorController::class, 'disable']); // admin token
 
-    // --- 2FA verify (only with temp token ability 2fa:pending) ---
-    // Route::post('/2fa/verify', [TwoFactorController::class, 'verify']);
+        // --- 2FA verify (only with temp token ability 2fa:pending) ---
+        // Route::post('/2fa/verify', [TwoFactorController::class, 'verify']);
         Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);
         Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
         Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
