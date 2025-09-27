@@ -169,8 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
-        Route::post('/
-        exchange-rate/{id}', [ExchangeRateController::class, 'update']);
+        Route::post('/update-exchange-rate/{id}', [ExchangeRateController::class, 'update']);
         Route::get('/get-ngn-exchange-rate', [ExchangeRateController::class, 'getNgNexchangeRate']);
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
