@@ -32,23 +32,23 @@ public function getRefferalManagement()
 
     $periods = [
         'this_month' => [
-            'start' => $now->copy()->startOfMonth(),
-            'end'   => $now->copy()->endOfMonth(),
+            'start'    => $now->copy()->startOfMonth(),
+            'end'      => $now->copy()->endOfMonth(),
             'monthKey' => $now->format('Y-m'),
         ],
         'last_month' => [
-            'start' => $now->copy()->subMonthNoOverflow()->startOfMonth(),
-            'end'   => $now->copy()->subMonthNoOverflow()->endOfMonth(),
+            'start'    => $now->copy()->subMonthNoOverflow()->startOfMonth(),
+            'end'      => $now->copy()->subMonthNoOverflow()->endOfMonth(),
             'monthKey' => $now->copy()->subMonthNoOverflow()->format('Y-m'),
         ],
         'this_year' => [
-            'start' => $now->copy()->startOfYear(),
-            'end'   => $now->copy()->endOfYear(),
+            'start'    => $now->copy()->startOfYear(),
+            'end'      => $now->copy()->endOfYear(),
             'monthKey' => null,
         ],
     ];
 
-    // preload earnings with relations
+    // preload all earnings with relations
     $allEarnings = \App\Models\ReferalEarning::with([
         'user:id,name',
         'referal:id,name',
@@ -59,7 +59,7 @@ public function getRefferalManagement()
 
     // build per-user summary
     $summaryByUser = $allEarnings->groupBy('user_id')->map(function ($rows) {
-        $totalEarned   = $rows->sum('amount');
+        $totalEarned    = $rows->sum('amount');
         $totalReferrals = $rows->count();
         $uniqueReferred = $rows->pluck('referal_id')->unique()->count();
         $totalSwapped   = $rows->sum(function ($e) {
@@ -119,38 +119,39 @@ public function getRefferalManagement()
         ];
     });
 
-    // build per-period stats
+    // build per-period stats including total_swapped_count
     $byPeriod = [];
     foreach ($periods as $label => $p) {
         $start = $p['start'];
         $end   = $p['end'];
 
+        // preload earnings for this period
+        $periodEarnings = \App\Models\ReferalEarning::with('swapTransaction')
+                            ->whereBetween('created_at', [$start, $end])
+                            ->get();
+
         $byPeriod[$label] = [
-            'start'            => $start,
-            'end'              => $end,
-            'monthKey'         => $p['monthKey'],
-            'total_referrals'  => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->count(),
-            'total_earned_usd' => (float) \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->sum('amount'),
-            'unique_referrers' => \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])->distinct('user_id')->count('user_id'),
-            'total_swapped'    => (float) \App\Models\ReferalEarning::whereBetween('created_at', [$start, $end])
-                                        ->with('swapTransaction')
-                                        ->get()
-                                        ->sum(function ($e) {
-                                            return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
-                                        }),
+            'start'               => $start,
+            'end'                 => $end,
+            'monthKey'            => $p['monthKey'],
+            'total_referrals'     => $periodEarnings->count(),
+            'total_earned_usd'    => (float) $periodEarnings->sum('amount'),
+            'unique_referrers'    => $periodEarnings->pluck('user_id')->unique()->count(),
+            'total_swapped'       => (float) $periodEarnings->sum(function ($e) {
+                                        return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
+                                    }),
+            // ✅ Count of swap transactions within this period
+            'total_swapped_count' => $periodEarnings->whereNotNull('swap_transaction_id')->count(),
         ];
     }
 
     return response()->json([
         'earnings' => $earnings,
         'stats'    => [
-            'referrers'        => $summaryByUser->count(),
-            'total_referrals'  => $allEarnings->count(),
-         'total_swapped_count' => $allEarnings
-    ->filter(fn ($e) => $e->swapTransaction) // keep only rows with a swap transaction
-    ->count(),
-
-            'total_earned_usd' => (float) $allEarnings->sum('amount'),
+            'referrers'          => $summaryByUser->count(),
+            'total_referrals'    => $allEarnings->count(),
+            'total_swapped_count'=> $allEarnings->whereNotNull('swap_transaction_id')->count(),
+            'total_earned_usd'   => (float) $allEarnings->sum('amount'),
         ],
         'by_period' => $byPeriod,
     ]);
