@@ -334,6 +334,8 @@ public function userDetails($userId)
         'status'                 => $user->is_active,
         'created_at'             => $user->created_at,
         'updated_at'             => $user->updated_at,
+        'user_code'              => $user->user_code,
+        'referral_amount'       => $user->referral_amount,
         'img'                    => asset('storage/' . $user->profile_picture),
         'total_amount_in_dollar' => $user->userAccount->crypto_balance ?? '0',
         'total_amount_in_naira'  => $user->userAccount->naira_balance ?? '0',
