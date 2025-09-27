@@ -146,9 +146,10 @@ public function getRefferalManagement()
         'stats'    => [
             'referrers'        => $summaryByUser->count(),
             'total_referrals'  => $allEarnings->count(),
-            'total_swapped'    => (float) $allEarnings->sum(function ($e) {
-                return $e->swapTransaction->amount_usd ?? $e->swapTransaction->amount ?? 0;
-            }),
+         'total_swapped_count' => $allEarnings
+    ->filter(fn ($e) => $e->swapTransaction) // keep only rows with a swap transaction
+    ->count(),
+
             'total_earned_usd' => (float) $allEarnings->sum('amount'),
         ],
         'by_period' => $byPeriod,
