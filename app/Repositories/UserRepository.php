@@ -22,14 +22,32 @@ class UserRepository
     {
         $this->BankAccountRepository = $BankAccountRepository;
     }
-    public function create(array $data): User
-    {
-        if (isset($data['profile_picture']) && $data['profile_picture']) {
-            $path = $data['profile_picture']->store('profile_picture', 'public');
-            $data['profile_picture'] = $path;
-        }
-        return User::create($data);
+   public function create(array $data): User
+{
+    // Handle profile picture upload
+    if (isset($data['profile_picture']) && $data['profile_picture']) {
+        $path = $data['profile_picture']->store('profile_picture', 'public');
+        $data['profile_picture'] = $path;
     }
+
+    // 👉 Check if a user with this email already exists
+    $existingUser = User::where('email', $data['email'])->first();
+
+    if ($existingUser) {
+        if ($existingUser->otp_verified) {
+            // Already verified → prevent duplicate registration
+            throw new Exception('User already registered.');
+        } else {
+            // Not verified → update with the new data
+            $existingUser->update($data);
+            return $existingUser->fresh(); // return updated instance
+        }
+    }
+
+    // 👉 No existing user → create a new one
+    return User::create($data);
+}
+
     public function createNairaWallet(User $user)
     {
         return NairaWallet::create([

@@ -53,6 +53,7 @@ class UserService
             $data['password'] = Hash::make($data['password']);
             $data['otp'] = rand(100000, 999999);
             $data['user_code'] = $this->generateUserCode($data['name']);
+            //get user on. email bbase and check if otp_verified is true, if true, throw exception user already registered if not true than update user with new data and resend otp
             $user = $this->userRepository->create($data);
             Mail::to($user->email)->send(new OtpMail($user->otp));
             $this->userRepository->createNairaWallet($user);
