@@ -13,7 +13,7 @@ class NewsletterController extends Controller
 {
     public function index()
     {
-        return response()->json(Newsletter::withCount('users')->get());
+        return response()->json(Newsletter::withCount('users')->latest()->get());
     }
 
     public function store(Request $request)
