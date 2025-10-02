@@ -220,7 +220,7 @@ $feeBtc  = round($feeSats / 1e8, 8);
 $dustBtc = 0.00000546;
 
 // ---- NEW: 25% platform/tatum difference based on total input ----
-$platformCutBtc = round($total * 0.25, 8);
+$platformCutBtc = round($total * 0.35, 8);
 
 // sanity: if platformCut eats everything, fail early
 if ($platformCutBtc >= round($total - $feeBtc, 8)) {
