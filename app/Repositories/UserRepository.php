@@ -190,20 +190,35 @@ class UserRepository
         });
         return $walletCurrency;
     }
-    public function updateUserProfile(string $userId, array $data): User
-    {
+public function updateUserProfile(string $userId, array $data): User
+{
+    $user = User::findOrFail($userId);
 
-        $user = User::find($userId);
-        if (isset($data['profile_picture']) && $data['profile_picture']) {
-            $path = $data['profile_picture']->store('profile_picture', 'public');
-            $data['profile_picture'] = $path;
-        }
-        if (isset($data['password']) && $data['password']) {
-            $data['password'] = Hash::make($data['password']);
-        }
-        $user->update($data);
-        return $user;
+    // ✅ Handle profile picture upload
+    if (isset($data['profile_picture']) && $data['profile_picture']) {
+        $path = $data['profile_picture']->store('profile_picture', 'public');
+        $data['profile_picture'] = $path;
     }
+
+    // ✅ Handle password hashing
+    if (isset($data['password']) && $data['password']) {
+        $data['password'] = Hash::make($data['password']);
+    }
+
+    // ✅ Handle user_code change (cascade update)
+    if (isset($data['user_code']) && $data['user_code'] && $data['user_code'] !== $user->user_code) {
+        $oldCode = $user->user_code;
+        $newCode = $data['user_code'];
+
+        // Update all users who were invited by this user
+        User::where('invite_code', $oldCode)->update(['invite_code' => $newCode]);
+    }
+
+    // ✅ Finally update the user itself
+    $user->update($data);
+
+    return $user;
+}
 
     public function getUserManagementData()
     {
