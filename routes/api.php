@@ -381,7 +381,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     
 
-                Route::get('admin/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
+                Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 
 });
 Route::prefix('transaction-icons')->group(function () {
