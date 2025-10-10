@@ -39,7 +39,7 @@ class RefferalEarningController extends Controller
         'referal:id,name,profile_picture',
         'swapTransaction:id,amount,amount_usd,status,created_at'
     ])
-        ->where('user_id', $userId)
+        ->where('referal_id', $userId)
         ->orderByDesc('created_at')
         ->get();
 
