@@ -381,7 +381,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-     Route::get('devices/user/devices', [UserDeviceController::class, 'index']);
+     Route::get('devices', [UserDeviceController::class, 'index']);
 
     Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 });
