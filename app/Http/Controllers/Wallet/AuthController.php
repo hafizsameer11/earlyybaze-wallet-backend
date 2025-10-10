@@ -22,16 +22,17 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     protected $userService;
-    protected $resetPasswordService,$notificationService;
-    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService,private AdminAuthService $service)
+    protected $resetPasswordService, $notificationService;
+    public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService, private AdminAuthService $service)
     {
         $this->userService = $userService;
         $this->resetPasswordService = $resetPasswordService;
         $this->notificationService = $notificationService;
     }
-    public function sendNotification($userId){
-     $notification=   $this->notificationService->sendToUserById($userId,'Notification Title','Notification Body');
-     return $notification;
+    public function sendNotification($userId)
+    {
+        $notification =   $this->notificationService->sendToUserById($userId, 'Notification Title', 'Notification Body');
+        return $notification;
     }
     public function register(RegisterRequest $request)
     {
@@ -65,32 +66,64 @@ class AuthController extends Controller
             //     'user' => $user,
             //     'request_headers' => request()->headers->all()
             // ]);
+            // Detect device info
+            $deviceId = $request->header('Device-ID'); // you can send this from app or frontend
+            $userAgent = $request->header('User-Agent') ?? request()->userAgent();
+            $ipAddress = $request->ip();
 
-            $data = [
-                'user' => $user['user'],
-                'assets' => $user['virtual_accounts'],
-                'token' => $user['token']
-            ];
-            $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
-            UserNotification::create([
-                'user_id' => $userd['id'],
-                'title' => 'Login Notification',
-                'message' => 'You logged in successfully'
-            ]);
-            UserActivityHelper::LoggedInUserActivity('User logged in');
-            return ResponseHelper::success($data, 'User logged in successfully', 200);
+            // Fallback if no device_id passed
+            if (!$deviceId) {
+                $deviceId = sha1($userAgent . $ipAddress . $userd['id']);
+            }
+
+            // Check if this device already exists
+            $existingDevice = \App\Models\UserDevice::where('device_id', $deviceId)
+                ->where('user_id', $userd['id'])
+                ->first();
+
+            if (!$existingDevice) {
+                \App\Models\UserDevice::create([
+                    'user_id' => $userd['id'],
+                    'device_id' => $deviceId,
+                    'device_name' => $request->header('Device-Name') ?? 'Unknown Device',
+                    'device_type' => $request->header('Device-Type') ?? 'Unknown',
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                ]);
+
+                // Send notification for new device
+                $this->notificationService->sendToUserById($userd['id'], 'New Device Login', 'Your account was accessed from a new device.');
+                \App\Models\UserNotification::create([
+                    'user_id' => $userd['id'],
+                    'title' => 'New Device Login',
+                    'message' => 'Your account was accessed from a new device.',
+                ]);
+                $data = [
+                    'user' => $user['user'],
+                    'assets' => $user['virtual_accounts'],
+                    'token' => $user['token']
+                ];
+                $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
+                UserNotification::create([
+                    'user_id' => $userd['id'],
+                    'title' => 'Login Notification',
+                    'message' => 'You logged in successfully'
+                ]);
+                UserActivityHelper::LoggedInUserActivity('User logged in');
+                return ResponseHelper::success($data, 'User logged in successfully', 200);
+            }
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
             return ResponseHelper::error($e->getMessage());
         }
     }
-// app/Http/Controllers/AuthController.php (excerpt)
-   public function adminLogin(Request $request)
+    // app/Http/Controllers/AuthController.php (excerpt)
+    public function adminLogin(Request $request)
     {
         try {
             $data = $request->validate([
-                'email'    => ['required','email'],
-                'password' => ['required','string','min:6'],
+                'email'    => ['required', 'email'],
+                'password' => ['required', 'string', 'min:6'],
             ]);
 
             // enrich payload with context (no Request in service)
@@ -99,12 +132,12 @@ class AuthController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            $resp = $this->service->adminLogin($payload); 
+            $resp = $this->service->adminLogin($payload);
             return ResponseHelper::success($resp, $resp['message'] ?? 'OTP sent', 200);
         } catch (ValidationException $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return ResponseHelper::error('Admin login failed: '.$e->getMessage(), 422);
+            return ResponseHelper::error('Admin login failed: ' . $e->getMessage(), 422);
         }
     }
 
@@ -128,7 +161,7 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'otp' => ['required','digits:6'],
+                'otp' => ['required', 'digits:6'],
             ]);
 
             $resp = $this->service->verifyOtpAndIssueToken($request->user(), $validated['otp']);
@@ -136,7 +169,7 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return ResponseHelper::error('OTP verification failed: '.$e->getMessage(), 422);
+            return ResponseHelper::error('OTP verification failed: ' . $e->getMessage(), 422);
         }
     }
 

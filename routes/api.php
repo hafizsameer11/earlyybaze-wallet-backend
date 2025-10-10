@@ -379,10 +379,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);
         });
     });
-    
 
-                Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 
+    Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 });
 Route::prefix('transaction-icons')->group(function () {
     Route::get('/', [TransactionIconController::class, 'index']);
