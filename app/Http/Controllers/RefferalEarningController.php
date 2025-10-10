@@ -47,6 +47,7 @@ class RefferalEarningController extends Controller
         return response()->json([
             'user_id' => $user->id,
             'user_name' => $user->name,
+            'user_code' => $user->user_code,
             'referral_summary' => [
                 'total_earned_usd' => 0,
                 'total_referrals' => 0,
