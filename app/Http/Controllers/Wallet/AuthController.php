@@ -110,8 +110,8 @@ class AuthController extends Controller
                     'message' => 'You logged in successfully'
                 ]);
                 UserActivityHelper::LoggedInUserActivity('User logged in');
-                return ResponseHelper::success($data, 'User logged in successfully', 200);
             }
+            return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
             return ResponseHelper::error($e->getMessage());
