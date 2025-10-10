@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\WalletManagementController;
 use App\Http\Controllers\Api\MinimumTradeController;
 use App\Http\Controllers\api\OnChainTransferLogController;
 use App\Http\Controllers\Api\TransactionIconController;
+use App\Http\Controllers\Api\UserDeviceController;
 use App\Http\Controllers\BitcoinController;
 use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\DepositAddressController;
@@ -380,6 +381,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
+     Route::get('/user/devices', [UserDeviceController::class, 'index']);
 
     Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 });
