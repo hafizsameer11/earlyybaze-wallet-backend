@@ -65,7 +65,7 @@ class UserService
             return $user;
         } catch (Exception $e) {
             Log::error('User registration error: ' . $e->getMessage());
-            throw new Exception('User registration failed.');
+            throw new Exception('User registration failed.' . $e->getMessage());
         }
     }
     public function createUser(array $data): ?User
