@@ -43,10 +43,37 @@ class TwilioService
     }
 
     private function formatNumber(string $number, string $type)
-    {
-        if ($type === 'whatsapp' && !str_starts_with($number, 'whatsapp:')) {
-            return 'whatsapp:' . $number;
-        }
-        return preg_match('/^\+/', $number) ? $number : '+' . $number;
+{
+    $number = preg_replace('/\s+/', '', $number); // remove spaces
+
+    // Already in correct format
+    if (str_starts_with($number, '+')) {
+        return $type === 'whatsapp' && !str_starts_with($number, 'whatsapp:')
+            ? 'whatsapp:' . $number
+            : $number;
     }
+
+    // Remove any leading zeros
+    $number = ltrim($number, '0');
+
+    // Auto-detect country (Pakistan or Nigeria)
+    if (preg_match('/^3\d{8,}$/', $number)) {
+        // Starts with 3 (Pakistan pattern)
+        $number = '+92' . $number;
+    } elseif (preg_match('/^8\d{8,}$/', $number) || preg_match('/^70\d{7,}$/', $number)) {
+        // Nigeria MTN/Glo prefixes (simplified)
+        $number = '+234' . $number;
+    } elseif (!str_starts_with($number, '+')) {
+        // Default fallback (Pakistan)
+        $number = '+92' . $number;
+    }
+
+    // WhatsApp formatting
+    if ($type === 'whatsapp' && !str_starts_with($number, 'whatsapp:')) {
+        return 'whatsapp:' . $number;
+    }
+
+    return $number;
+}
+
 }
