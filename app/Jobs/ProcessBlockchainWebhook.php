@@ -16,6 +16,7 @@ use App\Services\BitcoinService;
 use App\Services\BscService;
 use App\Services\EthereumService;
 use App\Services\LitecoinService;
+use App\Services\NotificationService;
 use App\Services\SolanaService;
 use App\Services\TronTransferService;
 use Carbon\Carbon;
@@ -37,7 +38,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
 
     protected $data;
 
-    protected $transactionRepository;
+    protected $transactionRepository,$notificationService;
     protected $EthService, $BscService, $BitcoinService, $SolanaService, $LitecoinService, $TronTransferService;
 
     public function __construct(array $data)
@@ -45,7 +46,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
         $this->data = $data;
     }
 
-    public function handle(transactionRepository $transactionRepository, EthereumService $EthService, TronTransferService $TronTransferService, BscService $BscService, BitcoinService $BitcoinService, SolanaService $SolanaService, LitecoinService $LitecoinService)
+    public function handle(transactionRepository $transactionRepository, EthereumService $EthService, TronTransferService $TronTransferService, BscService $BscService, BitcoinService $BitcoinService, SolanaService $SolanaService, LitecoinService $LitecoinService, NotificationService $notificationService)
     {
         $this->transactionRepository = $transactionRepository;
         $this->EthService = $EthService;
@@ -54,6 +55,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
         $this->SolanaService = $SolanaService;
         $this->LitecoinService = $LitecoinService;
         $this->TronTransferService = $TronTransferService;
+        $this->notificationService = $notificationService;
 
 
         $data = $this->data;
@@ -139,7 +141,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'user_id'           => $userId,
         ]);
 
-
+        $this->notificationService->sendToUserById($userId, 'You have received {$amount} {$currency}', "Your amount is being processed");
         try {
             Log::info('💡 Virtual Account:', ['account' => $account]);
 

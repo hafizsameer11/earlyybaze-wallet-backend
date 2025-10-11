@@ -22,6 +22,7 @@ use App\Services\BscService;
 use App\Services\BuyTransactionService;
 use App\Services\EthereumService;
 use App\Services\LitecoinService;
+use App\Services\NotificationService;
 use App\Services\SwapTransactionService;
 use App\Services\TransactionSendService;
 use App\Services\transactionService;
@@ -32,10 +33,11 @@ use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
-    protected $transactionSendService, $transactionService, $swapTransactionService, $buyTransactionService, $EthService, $LitecoinService, $BscService, $BitcoinService;
+    protected $transactionSendService, $transactionService, $swapTransactionService, $buyTransactionService, $EthService, $LitecoinService, $BscService, $BitcoinService,$notificationService;
 
-    public function __construct(TransactionSendService $transactionSendService, transactionService $transactionService, SwapTransactionService $swapTransactionService, BuyTransactionService $buyTransactionService, EthereumService $EthService, LitecoinService $LitecoinService, BscService $BscService, BitcoinService $BitcoinService)
+    public function __construct(TransactionSendService $transactionSendService, transactionService $transactionService, SwapTransactionService $swapTransactionService, BuyTransactionService $buyTransactionService, EthereumService $EthService, LitecoinService $LitecoinService, BscService $BscService, BitcoinService $BitcoinService, NotificationService $notificationService)
     {
+        $this->notificationService = $notificationService;
         $this->transactionSendService = $transactionSendService;
         $this->transactionService = $transactionService;
         $this->swapTransactionService = $swapTransactionService;
@@ -126,6 +128,8 @@ class TransactionController extends Controller
                 $transacton['currency'] = $validated['currency'];
                 $transaction['transaction_id'] = $senderTransaction->id;
             }
+        
+            $this->notificationService->sendToUserById($user->id, 'Internal Transfer', 'You have received an internal transfer');
 
 
 
@@ -198,6 +202,8 @@ class TransactionController extends Controller
             $data = $request->validated();
             $userActivit->content = "You have successfully swapped {$data['amount']}{$data['currency']}";
             $userActivit->save();
+
+            $this->notificationService->sendToUserById($user->id, 'Swap', 'You have successfully swapped');
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
