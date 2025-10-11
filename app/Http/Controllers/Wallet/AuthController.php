@@ -53,6 +53,34 @@ class AuthController extends Controller
             return ResponseHelper::error($e->getMessage());
         }
     }
+    public function verifyPhoneOtp(Request $request)
+{
+    $validated = $request->validate([
+        'email' => 'required|email',
+        'sms_code' => 'required|digits:6',
+    ]);
+
+    try {
+        $user = \App\Models\User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return ResponseHelper::error('User not found', 404);
+        }
+
+        if ($user->sms_code !== $validated['sms_code']) {
+            return ResponseHelper::error('Invalid verification code');
+        }
+
+        $user->is_number_verified = true;
+        $user->sms_code = null;
+        $user->save();
+
+        return ResponseHelper::success($user, 'Phone number verified successfully', 200);
+    } catch (\Throwable $e) {
+        Log::error('Phone OTP verify error: ' . $e->getMessage());
+        return ResponseHelper::error('Phone verification failed');
+    }
+}
+
     public function login(LoginRequest $request)
     {
         try {

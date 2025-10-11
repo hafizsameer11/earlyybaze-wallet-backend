@@ -35,7 +35,10 @@ class User extends Authenticatable
         'is_freezon',
         'fullName',
         'bvn',
-        'referral_amount'
+        'referral_amount',
+        'sms_type',
+        'sms_code',
+        'is_number_verified',
     ];
 
     /**
@@ -56,9 +59,9 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-            'two_factor_enabled' => 'boolean',
-    'two_factor_recovery_codes' => 'array',
-    'two_factor_confirmed_at' => 'datetime',
+        'two_factor_enabled' => 'boolean',
+        'two_factor_recovery_codes' => 'array',
+        'two_factor_confirmed_at' => 'datetime',
     ];
     public function transactions()
     {

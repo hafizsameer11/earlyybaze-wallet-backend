@@ -19,7 +19,7 @@ class UserService
     protected $userRepository;
     protected $userAccountRepository;
     protected  $tatumService;
-    public function __construct(UserRepository $userRepository, UserAccountRepository $userAccountRepository, TatumService $tatumService,private AdminAuthService $service)
+    public function __construct(UserRepository $userRepository, UserAccountRepository $userAccountRepository, TatumService $tatumService, private AdminAuthService $service)
     {
         $this->userRepository = $userRepository;
         $this->userAccountRepository = $userAccountRepository;
@@ -111,16 +111,59 @@ class UserService
             if ($user->otp !== $data['otp']) {
                 throw new Exception('Invalid OTP.');
             }
+
             $user->otp = null;
             $user->otp_verified = true;
             $user->save();
+
+            // ✅ After email verified → send SMS/WhatsApp OTP
+            if ($user->phone) {
+                $smsCode = rand(100000, 999999);
+                $smsType = $this->detectSmsType($user->phone);
+
+                $user->sms_type = $smsType;
+                $user->sms_code = $smsCode;
+                $user->is_number_verified = false;
+                $user->save();
+
+                $message = "Your Wallet verification code is {$smsCode}";
+                $twilio = new \App\Services\TwilioService();
+                $twilio->sendVerification($user->phone, $message, $smsType);
+            }
+
             dispatch(new CreateVirtualAccount($user));
+
             return $user;
         } catch (Exception $e) {
             Log::error('OTP verification error: ' . $e->getMessage());
             throw new Exception('OTP verification failed.');
         }
     }
+
+    /**
+     * Try WhatsApp first, fallback to SMS.
+     */
+    private function detectSmsType(string $phone): string
+    {
+        try {
+            $client = new \Twilio\Rest\Client(
+                config('services.twilio.sid'),
+                config('services.twilio.token')
+            );
+
+            // send a test WhatsApp message (will only work if number joined sandbox)
+            $client->messages->create('whatsapp:' . $phone, [
+                'from' => 'whatsapp:' . config('services.twilio.from'),
+                'body' => 'Verifying WhatsApp availability (ignore this)',
+            ]);
+
+            return 'whatsapp';
+        } catch (Exception $e) {
+            Log::warning("WhatsApp not available for {$phone}, using SMS.");
+            return 'sms';
+        }
+    }
+
 
     public function login(array $data): ?array
     {
@@ -154,84 +197,84 @@ class UserService
             throw new Exception('Login failed ' . $e->getMessage());
         }
     }
-// public function adminLogin(array $data): ?array
-// {
-//     try {
-//         $user = $this->userRepository->findByEmail($data['email']);
-//         if (!$user) {
-//             throw new Exception('User not found.');
-//         }
-//         if ($user->role === 'user') {
-//             throw new Exception('User is not an admin.');
-//         }
-//         if (!Hash::check($data['password'], $user->password)) {
-//             throw new Exception('Invalid password.');
-//         }
+    // public function adminLogin(array $data): ?array
+    // {
+    //     try {
+    //         $user = $this->userRepository->findByEmail($data['email']);
+    //         if (!$user) {
+    //             throw new Exception('User not found.');
+    //         }
+    //         if ($user->role === 'user') {
+    //             throw new Exception('User is not an admin.');
+    //         }
+    //         if (!Hash::check($data['password'], $user->password)) {
+    //             throw new Exception('Invalid password.');
+    //         }
 
-//         // if admin has 2FA enabled, issue a TEMP token with ability 2fa:pending
-//         if ($user->two_factor_enabled) {
-//             $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
+    //         // if admin has 2FA enabled, issue a TEMP token with ability 2fa:pending
+    //         if ($user->two_factor_enabled) {
+    //             $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
 
-//             return [
-//                 'user' => $user,
-//                 'twoFARequired' => true,
-//                 'temp_token' => $tempToken,      // use only for /api/2fa/verify
-//                 'message' => 'Two-factor authentication required',
-//             ];
-//         }
+    //             return [
+    //                 'user' => $user,
+    //                 'twoFARequired' => true,
+    //                 'temp_token' => $tempToken,      // use only for /api/2fa/verify
+    //                 'message' => 'Two-factor authentication required',
+    //             ];
+    //         }
 
-//         // otherwise issue normal admin token
-//         $token = $user->createToken('auth_token', ['admin'])->plainTextToken;
+    //         // otherwise issue normal admin token
+    //         $token = $user->createToken('auth_token', ['admin'])->plainTextToken;
 
-//         return [
-//             'user' => $user,
-//             'token' => $token,
-//             'twoFARequired' => false,
-//             'message' => 'Admin logged in successfully',
-//         ];
-//     } catch (Exception $e) {
-//         Log::error('Admin login error: ' . $e->getMessage());
-//         throw new Exception('Admin login failed ' . $e->getMessage());
-//     }
-// }
+    //         return [
+    //             'user' => $user,
+    //             'token' => $token,
+    //             'twoFARequired' => false,
+    //             'message' => 'Admin logged in successfully',
+    //         ];
+    //     } catch (Exception $e) {
+    //         Log::error('Admin login error: ' . $e->getMessage());
+    //         throw new Exception('Admin login failed ' . $e->getMessage());
+    //     }
+    // }
 
-//  public function adminLogin(Request $request)
-//     {
-//         $data = $request->validate([
-//             'email' => ['required','email'],
-//             'password' => ['required','string','min:6'],
-//         ]);
+    //  public function adminLogin(Request $request)
+    //     {
+    //         $data = $request->validate([
+    //             'email' => ['required','email'],
+    //             'password' => ['required','string','min:6'],
+    //         ]);
 
-//         try {
-//             $resp = $this->service->loginAndSendOtp($data, $request->ip(), $request->userAgent());
-//             return response()->json($resp, 200);
-//         } catch (Exception $e) {
-//             return response()->json(['message' => 'Admin login failed: '.$e->getMessage()], 422);
-//         }
-//     }
+    //         try {
+    //             $resp = $this->service->loginAndSendOtp($data, $request->ip(), $request->userAgent());
+    //             return response()->json($resp, 200);
+    //         } catch (Exception $e) {
+    //             return response()->json(['message' => 'Admin login failed: '.$e->getMessage()], 422);
+    //         }
+    //     }
 
-//     public function resendOtpAdmin(Request $request)
-//     {
-//         // must have temp token with 2fa:pending
-//         try {
-//             $this->service->resendOtp($request->user(), $request->ip(), $request->userAgent());
-//             return response()->json(['message' => 'OTP resent to email'], 200);
-//         } catch (Exception $e) {
-//             return response()->json(['message' => $e->getMessage()], 429);
-//         }
-//     }
+    //     public function resendOtpAdmin(Request $request)
+    //     {
+    //         // must have temp token with 2fa:pending
+    //         try {
+    //             $this->service->resendOtp($request->user(), $request->ip(), $request->userAgent());
+    //             return response()->json(['message' => 'OTP resent to email'], 200);
+    //         } catch (Exception $e) {
+    //             return response()->json(['message' => $e->getMessage()], 429);
+    //         }
+    //     }
 
-//     public function verifyOtpAdmin(Request $request)
-//     {
-//         $data = $request->validate(['otp' => ['required','digits:6']]);
+    //     public function verifyOtpAdmin(Request $request)
+    //     {
+    //         $data = $request->validate(['otp' => ['required','digits:6']]);
 
-//         try {
-//             $resp = $this->service->verifyOtpAndIssueToken($request->user(), $data['otp']);
-//             return response()->json($resp, 200);
-//         } catch (Exception $e) {
-//             return response()->json(['message' => 'OTP verification failed: '.$e->getMessage()], 422);
-//         }
-//     }
+    //         try {
+    //             $resp = $this->service->verifyOtpAndIssueToken($request->user(), $data['otp']);
+    //             return response()->json($resp, 200);
+    //         } catch (Exception $e) {
+    //             return response()->json(['message' => 'OTP verification failed: '.$e->getMessage()], 422);
+    //         }
+    //     }
     public function setPin(string $email, string $pin): ?User
     {
         try {
