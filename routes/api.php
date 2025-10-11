@@ -266,7 +266,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-for-user/{id}', [TransactionManagementController::class, 'getTransactionsForUser']);
             Route::get('/get-singe/swap/{id}', [TransactionManagementController::class, 'getSingleSwapTransaction']);
             Route::get('/get-singe/buy/{id}', [TransactionManagementController::class, 'getSingleBuyTransaction']);
-            Route::get('/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
             Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
             //withdraw single
             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
@@ -381,7 +380,9 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-     Route::get('devices', [UserDeviceController::class, 'index']);
+    Route::get('devices', [UserDeviceController::class, 'index']);
+    Route::get('admin/transactions/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
+
 
     Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 });
