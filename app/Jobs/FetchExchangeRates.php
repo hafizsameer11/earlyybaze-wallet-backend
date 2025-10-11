@@ -56,8 +56,8 @@ class FetchExchangeRates implements ShouldQueue
         }
 
         $data = $response->json('data');    
-        Log::info('api response is for exchange rate',[
-            'data' => $data]);
+        // Log::info('api response is for exchange rate',[
+        //     'data' => $data]);
 
         foreach ($symbolMap as $apiSymbol => $dbCurrency) {
             // Log::info("Updating rate_usd for {$dbCurrency}");
