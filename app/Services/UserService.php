@@ -136,7 +136,7 @@ class UserService
             return $user;
         } catch (Exception $e) {
             Log::error('OTP verification error: ' . $e->getMessage());
-            throw new Exception('OTP verification failed.');
+            throw new Exception('OTP verification failed.' . $e->getMessage());
         }
     }
 
