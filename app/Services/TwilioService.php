@@ -52,7 +52,7 @@ class TwilioService
     $number = ltrim($number, '0'); // remove leading zeros
 
     // ✅ Always use Nigerian prefix (+234)
-    $formatted = '+234' . $number;
+    $formatted = '+92' . $number;
 
     // ✅ Add WhatsApp format if needed
     if ($type === 'whatsapp' && !str_starts_with($formatted, 'whatsapp:')) {
