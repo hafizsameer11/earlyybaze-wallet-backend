@@ -105,18 +105,18 @@ public function all()
     }
     // use Illuminate\Support\Facades\DB;
 
-   public function getTransactionsForUser($user_id)
+  public function getTransactionsForUser($user_id)
 {
     // ---- Anchors
     $now = Carbon::now();
-    $startWindow = $now->copy()->subMonths(11)->startOfMonth(); // include this month back to 11 months ago
+    $startWindow = $now->copy()->subMonths(11)->startOfMonth(); // 12-month window for other stats
     $endWindow   = $now->copy()->endOfMonth();
 
     // ---- Base totals
     $totalTransactions = Transaction::where('user_id', $user_id)->count();
     $totalWallets      = VirtualAccount::where('user_id', $user_id)->count();
 
-    // ---- Full list with eager loads (unchanged)
+    // ---- Full list with eager loads
     $transactions = Transaction::where('user_id', $user_id)
         ->with([
             'user',
@@ -129,20 +129,18 @@ public function all()
         ->orderBy('created_at', 'desc')
         ->get();
 
-    // ---- Canonical type keys you care about
-    // If your DB uses another spelling (e.g. 'withdrawTransaction'), we normalize below.
+    // ---- Canonical type keys
     $typeKeys = ['send', 'receive', 'buy', 'swap', 'withdraw'];
 
-    // Map any DB aliases -> canonical keys (adjust if your DB differs)
+    // ---- Normalization function
     $normalizeType = function (?string $t) {
         if (!$t) return null;
         $t = strtolower($t);
-        // common aliases
         if ($t === 'recieve' || $t === 'received' || $t === 'receive_transaction') return 'receive';
         if ($t === 'send_transaction') return 'send';
         if ($t === 'swap_transaction') return 'swap';
         if ($t === 'withdrawtransaction' || $t === 'withdraw_transaction') return 'withdraw';
-        return $t; // already canonical
+        return $t;
     };
 
     // ---- Totals by type (counts + sums)
@@ -152,7 +150,6 @@ public function all()
         ->get();
 
     $totalsByType = [];
-    // seed with zeros
     foreach ($typeKeys as $k) {
         $totalsByType[$k] = ['count' => 0, 'sum' => 0.0];
     }
@@ -164,59 +161,66 @@ public function all()
         }
     }
 
-    // ---- Monthly grouped data (last 12 months, per type)
-    // Use YYYY-MM for grouping for correct ordering
-    $rawMonthly = Transaction::where('user_id', $user_id)
-        ->whereBetween('created_at', [$startWindow, $endWindow])
+    // ============================================================
+    // ✅ DAILY GRAPHICAL DATA (for current month)
+    // ============================================================
+
+    $startOfMonth = $now->copy()->startOfMonth();
+    $endOfToday   = $now->copy()->endOfDay();
+
+    // Group by day
+    $rawDaily = Transaction::where('user_id', $user_id)
+        ->whereBetween('created_at', [$startOfMonth, $endOfToday])
         ->select(
-            DB::raw("DATE_FORMAT(created_at, '%Y-%m') as ym"),
+            DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d') as day"),
             'type',
             DB::raw('COUNT(*) as total')
         )
-        ->groupBy('ym', 'type')
-        ->orderBy('ym')
+        ->groupBy('day', 'type')
+        ->orderBy('day')
         ->get();
 
-    // Build a continuous month axis (12 months)
-    $months = [];
-    $cursor = $startWindow->copy();
-    while ($cursor->lte($endWindow)) {
-        $months[] = [
-            'ym'    => $cursor->format('Y-m'),
-            'label' => $cursor->format('M, y'), // e.g. "Sep, 25"
+    // Build full day list (1st → today)
+    $days = [];
+    $cursor = $startOfMonth->copy();
+    while ($cursor->lte($endOfToday)) {
+        $days[] = [
+            'day_key' => $cursor->format('Y-m-d'),
+            'label'   => $cursor->format('d M'), // e.g. "01 Oct"
         ];
-        $cursor->addMonth();
+        $cursor->addDay();
     }
 
-    // Seed structure with zeros
-    $byMonth = [];
-    foreach ($months as $m) {
-        $row = ['month' => $m['label']];
+    // Seed with zeros
+    $byDay = [];
+    foreach ($days as $d) {
+        $row = ['day' => $d['label']];
         foreach ($typeKeys as $k) $row[$k] = 0;
-        $byMonth[$m['ym']] = $row;
+        $byDay[$d['day_key']] = $row;
     }
 
-    // Fill counts from DB
-    foreach ($rawMonthly as $r) {
+    // Fill data
+    foreach ($rawDaily as $r) {
         $t = $normalizeType($r->type);
-        if (!$t || !isset($byMonth[$r->ym]) || !in_array($t, $typeKeys, true)) continue;
-        $byMonth[$r->ym][$t] = (int)$r->total;
+        if (!$t || !isset($byDay[$r->day]) || !in_array($t, $typeKeys, true)) continue;
+        $byDay[$r->day][$t] = (int)$r->total;
     }
 
-    // Final array in chronological order
-    $graphicalData = array_values($byMonth);
+    // Final daily array (chronological)
+    $dailyGraphicalData = array_values($byDay);
+
+    // ============================================================
 
     return [
         'transactions'       => $transactions,
         'totalTransactions'  => $totalTransactions,
         'totalWallets'       => $totalWallets,
 
-        // NEW: totals per type (count + sum)
+        // Totals by transaction type
         'totals_by_type'     => $totalsByType,
 
-        // Monthly series (last 12 months), each item:
-        // { month: "Sep, 25", send: 3, receive: 1, buy: 0, swap: 2, withdraw: 1 }
-        'graphicalData'      => $graphicalData,
+        // ✅ Daily graphical data for current month
+        'graphicalData'      => $dailyGraphicalData,
     ];
 }
 
