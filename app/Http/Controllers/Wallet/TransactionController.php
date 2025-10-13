@@ -134,7 +134,7 @@ class TransactionController extends Controller
 
 
 
-            // Log::info('Transaction Sendiind datya to backend', $transaction);
+            Log::info('Transaction Sendiind datya to backend', $transaction);
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             Log::error("Error in Internal Transfer: " . $e->getMessage());
