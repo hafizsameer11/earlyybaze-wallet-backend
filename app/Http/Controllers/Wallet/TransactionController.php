@@ -54,11 +54,11 @@ class TransactionController extends Controller
 
             $validated = $request->validated();
             $sendingType = filter_var($validated['email'], FILTER_VALIDATE_EMAIL) ? 'internal' : 'external';
-            // Log::info("Send data", $validated);
+            Log::info("Send data", $validated);
             // Log::info("Detected Sending Type: $sendingType");
                  $user = Auth::user();
             if ($sendingType == 'internal') {
-
+                Log::info("calling internal transaction");
                 $transaction = $this->transactionSendService->sendInternalTransaction(array_merge($validated, ['sending_type' => $sendingType]));
             } else {
            
