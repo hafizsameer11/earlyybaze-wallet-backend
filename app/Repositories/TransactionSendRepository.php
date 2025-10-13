@@ -115,6 +115,7 @@ class TransactionSendRepository
         try {
             $currency = $data['currency'];
             $network = $data['network'];
+            $network=WalletCurrency::where('currency', $currency)->first()->blockchain;
             $email = $data['email'];
             $amount = $data['amount'];
             $sendingType = $data['sending_type'];
