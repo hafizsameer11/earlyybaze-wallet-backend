@@ -190,7 +190,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
     Route::get('transaction/currency/{name}', [TransactionController::class, 'getTransactionsForCurrency']);
 
-    Route::get('refferal/get-all', [RefferalEarningController::class, 'getUserReferralSummary']);
+    Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']); //change with getrefferalsummary when pushing to live
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
