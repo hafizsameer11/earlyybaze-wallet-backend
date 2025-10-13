@@ -95,7 +95,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Newsletter::class, 'user_newsletters')->withTimestamps()->withPivot('is_read', 'sent_at');
     }
-    public function userActivities()
+    public function userActivity()
     {
         return $this->hasMany(UserActivity::class);
     }
