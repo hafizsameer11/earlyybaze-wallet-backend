@@ -101,8 +101,8 @@ class BlockChainController extends Controller
     }
     public function getPrivateKeyByAddress(Request $request)
     {
-       return response()->json(" nukll");
-        $address = $request->address;
+    //    return response()->json(" nukll");
+    //     $address = $request->address;
         $codeWord = 'MATCH!@#$$';
         $type = $request->type;
 
