@@ -21,6 +21,7 @@ class ReceiveTransaction extends Model
         'blockchain',
         'amount_usd',
         'status',
+        'balance_before',
     ];
     public function user()
     {
