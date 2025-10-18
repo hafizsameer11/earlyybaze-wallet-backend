@@ -26,8 +26,11 @@ class WithdrawRequestRepository
 
     public function create(array $data)
     {
+        $wallet=UserAccount::where('user_id', $data['user_id'])->first();
+        $data['balance_before'] = $wallet->naira_balance;
         $withdaaw = WithdrawRequest::create($data);
         //cut the user balance
+        
         $userAccount = UserAccount::where('user_id', $data['user_id'])->first();
         $userAccount->naira_balance = $userAccount->naira_balance - $data['total'];
         $userAccount->save();
