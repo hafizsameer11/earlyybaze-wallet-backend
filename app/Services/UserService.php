@@ -117,21 +117,21 @@ class UserService
             $user->save();
 
             // ✅ After email verified → send SMS/WhatsApp OTP
-            if ($user->phone) {
-                $smsCode = rand(100000, 999999);
-                $smsType = $this->detectSmsType($user->phone);
+            // if ($user->phone) {
+            //     $smsCode = rand(100000, 999999);
+            //     $smsType = $this->detectSmsType($user->phone);
 
-                $user->sms_type = $smsType;
-                $user->sms_code = $smsCode;
-                $user->is_number_verified = false;
-                $user->save();
+            //     $user->sms_type = $smsType;
+            //     $user->sms_code = $smsCode;
+            //     $user->is_number_verified = false;
+            //     $user->save();
 
-                $message = "Your Wallet verification code is {$smsCode}";
-                $twilio = new \App\Services\TwilioService();
-                $twilio->sendVerification($user->phone, $message, $smsType);
-            }
+            //     $message = "Your Wallet verification code is {$smsCode}";
+            //     $twilio = new \App\Services\TwilioService();
+            //     $twilio->sendVerification($user->phone, $message, $smsType);
+            // }
 
-            dispatch(new CreateVirtualAccount($user));
+            // dispatch(new CreateVirtualAccount($user));
 
             return $user;
         } catch (Exception $e) {
