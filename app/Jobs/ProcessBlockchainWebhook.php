@@ -141,7 +141,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'user_id'           => $userId,
         ]);
 
-        $this->notificationService->sendToUserById($userId, 'You have received {$amount} {$currency}', "Your amount is being processed");
+        $this->notificationService->sendToUserById($userId, "You have received $amount $currency", "Your amount is being processed");
         try {
             Log::info('💡 Virtual Account:', ['account' => $account]);
 
