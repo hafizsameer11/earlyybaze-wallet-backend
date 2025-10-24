@@ -131,7 +131,7 @@ class UserService
             //     $twilio->sendVerification($user->phone, $message, $smsType);
             // }
 
-            // dispatch(new CreateVirtualAccount($user));
+            dispatch(new CreateVirtualAccount($user));
 
             return $user;
         } catch (Exception $e) {
