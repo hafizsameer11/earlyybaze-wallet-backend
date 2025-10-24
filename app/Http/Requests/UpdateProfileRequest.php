@@ -31,7 +31,8 @@ class UpdateProfileRequest extends FormRequest
             'email' => 'nullable',
             'pin'=>'nullable','bvn'=>'nullable',
             'user_code'=>'nullable',
-            'referral_amount'=>'nullable'
+            'referral_amount'=>'nullable',
+            'fullName'=>'nullable',
 
         ];
     }
