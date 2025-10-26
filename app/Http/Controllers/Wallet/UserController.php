@@ -155,17 +155,36 @@ class UserController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function setFcmToken(Request $request)
-    {
-        $userId = Auth::user()->id;
-        // Log::info("FC token set: " . $request->fcmToken);
-        $fcmToken = $request->fcmToken;
+   public function setFcmToken(Request $request)
+{
+    $request->validate([
+        'fcmToken' => 'required|string',
+        'type' => 'required|in:fcm,expo', // must be 'fcm' or 'expo'
+    ]);
 
-        $user = User::where('id', $userId)->first();
-        $user->fcmToken = $fcmToken;
-        $user->save();
-        return response()->json(['status' => 'success', 'message' => 'FCM token set successfully'], 200);
+    $user = Auth::user();
+    $user=User::find($user->id);
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'User not authenticated',
+        ], 401);
     }
+
+    // Save based on token type
+    if ($request->type === 'fcm') {
+        $user->fcmToken = $request->fcmToken;
+    } elseif ($request->type === 'expo') {
+        $user->expoToken = $request->fcmToken;
+    }
+
+    $user->save();
+
+    return response()->json([
+        'status' => 'success',
+        'message' => ucfirst($request->type) . ' token set successfully',
+    ], 200);
+}
     public function validateEmail(Request $request)
     {
         try {
