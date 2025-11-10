@@ -48,7 +48,7 @@ class BankAccountRepository
         //check if bank account does have any withdraw requests
         $withdrawRequests =WithdrawRequest::where('bank_account_id', $id)->count();
         if($withdrawRequests >0){
-            throw new Exception('Cannot delete bank account with existing withdraw requests.');
+            throw new Exception('Cannot delete bank account with existing withdraw requests. Please edit the bank account instead.');
         }
         if (!$bankAccount) {
             throw new Exception('Bank Account Not Found.');
