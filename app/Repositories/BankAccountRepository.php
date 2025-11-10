@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\BankAccount;
+use App\Models\WithdrawRequest;
 use Exception;
 
 class BankAccountRepository
@@ -44,6 +45,11 @@ class BankAccountRepository
     public function delete($id)
     {
         $bankAccount = BankAccount::find($id);
+        //check if bank account does have any withdraw requests
+        $withdrawRequests =WithdrawRequest::where('bank_account_id', $id)->count();
+        if($withdrawRequests >0){
+            throw new Exception('Cannot delete bank account with existing withdraw requests.');
+        }
         if (!$bankAccount) {
             throw new Exception('Bank Account Not Found.');
         }
