@@ -35,4 +35,19 @@ class VirtualAccount extends Model
     {
         return $this->belongsTo(WalletCurrency::class, 'currency_id', 'id');
     }
+    public function getAvailableBalanceAttribute($value)
+{
+    if ($value === null) {
+        return null;
+    }
+
+    // If value is in scientific notation (e.g., 1.5526E-4)
+    if (stripos($value, 'e') !== false) {
+        return number_format((float)$value, 8, '.', ''); // you can increase decimals if needed
+    }
+
+    // Otherwise return as normal
+    return $value;
+}
+
 }
