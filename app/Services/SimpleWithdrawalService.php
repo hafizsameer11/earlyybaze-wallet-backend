@@ -540,7 +540,7 @@ class SimpleWithdrawalService
             $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
             $amount=(float)$agg['amount'];
             //cut down the amount by 0.35%
-            $amount=$amount*0.965;
+            // $amount=$amount;
             $payload = [
                 'fromPrivateKey' => $pk,
                 'to'             => $destination,
