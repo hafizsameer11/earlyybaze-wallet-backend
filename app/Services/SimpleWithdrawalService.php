@@ -538,11 +538,13 @@ class SimpleWithdrawalService
 
             // ensure gas on sender for native/tokens
             $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
-
+            $amount=(float)$agg['amount'];
+            //cut down the amount by 0.35%
+            $amount=$amount*0.965;
             $payload = [
                 'fromPrivateKey' => $pk,
                 'to'             => $destination,
-                'amount'         => (string)$agg['amount'],
+                'amount'         => number_format($amount, 8, '.', ''),
             ];
 
             if (!empty($map['needsCurrency']) && !empty($map['currencyValue'])) {
