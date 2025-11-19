@@ -2,14 +2,14 @@
 
 
 return [
-    'BTC'        => 'bc1qrsc6uwgwymzdry0yn8uks57nqn6st0mz4nstcx',
-    'ETH'        => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
-    'TRON'        => 'TF4fyyuH8aprNeKktsD4SLmRYSdoop2MQq',
-    'USDT_TRON'  => 'TF4fyyuH8aprNeKktsD4SLmRYSdoop2MQq',
+    'BTC'        => 'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9',
+    'ETH'        => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+    'TRON'        => 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S',
+    'USDT_TRON'  => 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S',
     'SOL'        => '9DVkUEJt1CiW4yDvsEkBPqzmLwp2d3jFFJaRgeR5teyF',
     'LTC'        => 'ltc1q2t55e53fx9r9lfws43wnr8mmhc9tgc095xt7dj',
-    'BSC'        => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
-    'USDT_BSC'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
-    'USDT'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
-    'USDC'   => '0xa2C9C0c725a6AbF8AF94b25bA0cF8ded172763d9',
+    'BSC'        => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+    'USDT_BSC'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+    'USDT'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+    'USDC'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
 ];
