@@ -57,6 +57,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 
+Route::get('/proxy-test', function (Request $request) {
+    return response()->json([
+        'client_ip'      => $request->ip(),
+        'real_ip'        => $request->header('X-Real-IP'),
+        'forwarded_for'  => $request->header('X-Forwarded-For'),
+        'user_agent'     => $request->userAgent(),
+        'server_ip'      => $_SERVER['SERVER_ADDR'] ?? null,
+        'method'         => $request->method(),
+        'url'            => $request->fullUrl(),
+        'all_headers'    => $request->headers->all(),
+    ]);
+});
 Route::get('/optimize-app', function () {
     Artisan::call('optimize:clear'); // Clears cache, config, route, and view caches
     Artisan::call('cache:clear');    // Clears application cache
