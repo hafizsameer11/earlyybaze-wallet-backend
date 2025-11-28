@@ -39,11 +39,10 @@ jobs:
 
             php artisan migrate --force
 
-            chown -R www-data:www-data storage bootstrap/cache
-            chmod -R 775 storage bootstrap/cache
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
 
-            systemctl restart php8.1-fpm
+            sudo systemctl restart php8.1-fpm
 
             echo "Deployment Successful!"
           EOF
-
