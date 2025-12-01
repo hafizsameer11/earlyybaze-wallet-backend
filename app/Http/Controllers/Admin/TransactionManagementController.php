@@ -43,9 +43,8 @@ class TransactionManagementController extends Controller
     try {
 
         $params = [
-            'search'   => $request->query('search'),
-            'per_page' => $request->query('per_page', 15),
-            'page'=> $request->query('page', 1),
+            'search' => $request->query('search'),
+            'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year'
         ];
 
         $data = $this->transactionService->all($params);

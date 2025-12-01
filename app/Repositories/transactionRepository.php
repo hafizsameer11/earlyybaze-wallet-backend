@@ -12,9 +12,8 @@ class transactionRepository
 {
 public function all(array $params)
 {
-    $search  = $params['search'] ?? null;
-    $perPage = $params['per_page'] ?? 15;
-    $page    = $params['page'] ?? 1;
+    $search = $params['search'] ?? null;
+    $period = $params['period'] ?? 'all'; // 'all', 'today', 'this_month', 'last_month', 'this_year'
 
     // -------- Anchors
     $now            = Carbon::now();
@@ -45,6 +44,27 @@ public function all(array $params)
     // -------- Query Builder
     $query = Transaction::with($with)->orderBy('created_at', 'desc');
 
+    // -------- Apply period filter based on frontend request
+    switch ($period) {
+        case 'today':
+            $query->whereBetween('created_at', [$todayStart, $todayEnd]);
+            break;
+        case 'this_month':
+            $query->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
+            break;
+        case 'last_month':
+            $query->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
+            break;
+        case 'this_year':
+            $query->whereBetween('created_at', [$thisYearStart, $thisYearEnd]);
+            break;
+        case 'all':
+        default:
+            // No date filter - load all transactions
+            break;
+    }
+
+    // -------- Apply search filter
     if ($search) {
         $query->whereHas('user', function ($q) use ($search) {
             $q->where('username', 'LIKE', "%{$search}%")
@@ -52,21 +72,15 @@ public function all(array $params)
         });
     }
 
-    // -------- CORRECT PAGINATION
-    $transactions = $query->paginate(
-        $perPage,
-        ['*'],
-        'page',
-        $page
-    );
+    // -------- GET ALL TRANSACTIONS FOR SELECTED PERIOD (no pagination)
+    $transactions = $query->get();
 
-    // -------- Overall totals (optimized - only calculate if needed)
-    // These are expensive queries, consider caching in production
+    // -------- Overall totals (for stats - always calculated)
     $totalTransactions = Transaction::count();
     $totalWallets      = VirtualAccount::count();
     $totalRevenue      = Transaction::sum('amount');
 
-    // -------- Helpers
+    // -------- Period statistics (for dashboard stats)
     $periodStats = function ($start, $end) {
         return [
             'transactions_count' => Transaction::whereBetween('created_at', [$start, $end])->count(),
@@ -75,40 +89,26 @@ public function all(array $params)
         ];
     };
 
-    // Limit transactions by period to prevent loading all data
-    // Only load top 10 transactions per period for summary
-    $periodTx = function ($start, $end) use ($with) {
-        return Transaction::with($with)
-            ->whereBetween('created_at', [$start, $end])
-            ->orderBy('created_at', 'desc')
-            ->limit(10) // Limit to top 10 per period
-            ->get();
-    };
-
+    // -------- Period statistics for all periods (for frontend filters)
     $byPeriod = [
         'today'      => $periodStats($todayStart, $todayEnd),
         'this_month' => $periodStats($thisMonthStart, $thisMonthEnd),
         'last_month' => $periodStats($lastMonthStart, $lastMonthEnd),
         'this_year'  => $periodStats($thisYearStart, $thisYearEnd),
-    ];
-
-    // Limit to top transactions per period to prevent loading all data
-    // This is much more performant than loading all transactions
-    $transactionsByPeriod = [
-        'today'      => $periodTx($todayStart, $todayEnd),
-        'this_month' => $periodTx($thisMonthStart, $thisMonthEnd),
-        'last_month' => $periodTx($lastMonthStart, $lastMonthEnd),
-        'this_year'  => $periodTx($thisYearStart, $thisYearEnd),
+        'all'        => [
+            'transactions_count' => $totalTransactions,
+            'wallets_count'      => $totalWallets,
+            'revenue'            => (float) $totalRevenue,
+        ],
     ];
 
     return [
-        'transactions'           => $transactions,
-        'totalTransactions'      => $totalTransactions,
-        'totalWallets'           => $totalWallets,
-        'totalRevenue'           => number_format($totalRevenue, 0, '.', ','),
-
-        'by_period'              => $byPeriod,
-        'transactions_by_period' => $transactionsByPeriod,
+        'transactions'      => $transactions,
+        'totalTransactions' => $totalTransactions,
+        'totalWallets'      => $totalWallets,
+        'totalRevenue'      => number_format($totalRevenue, 0, '.', ','),
+        'by_period'         => $byPeriod,
+        'current_period'    => $period, // Return selected period for frontend reference
     ];
 }
 
