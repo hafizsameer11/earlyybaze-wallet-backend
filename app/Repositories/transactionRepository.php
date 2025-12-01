@@ -14,6 +14,7 @@ public function all(array $params)
 {
     $search  = $params['search'] ?? null;
     $perPage = $params['per_page'] ?? 15;
+    $page    = $params['page'] ?? 1;
 
     // -------- Anchors
     $now            = Carbon::now();
@@ -41,10 +42,9 @@ public function all(array $params)
         'withdraw_transaction.withdraw_request.bankAccount',
     ];
 
-    // -------- Query Builder for main list
+    // -------- Query Builder
     $query = Transaction::with($with)->orderBy('created_at', 'desc');
 
-    // -------- SEARCH
     if ($search) {
         $query->whereHas('user', function ($q) use ($search) {
             $q->where('username', 'LIKE', "%{$search}%")
@@ -52,15 +52,20 @@ public function all(array $params)
         });
     }
 
-    // -------- Pagination
-    $transactions = $query->paginate($perPage);
+    // -------- CORRECT PAGINATION
+    $transactions = $query->paginate(
+        $perPage,
+        ['*'],
+        'page',
+        $page
+    );
 
     // -------- Overall totals
     $totalTransactions = Transaction::count();
     $totalWallets      = VirtualAccount::count();
     $totalRevenue      = Transaction::sum('amount');
 
-    // -------- Helper to compute period stats
+    // -------- Helpers
     $periodStats = function ($start, $end) {
         return [
             'transactions_count' => Transaction::whereBetween('created_at', [$start, $end])->count(),
@@ -69,7 +74,6 @@ public function all(array $params)
         ];
     };
 
-    // -------- Helper to fetch period transactions
     $periodTx = function ($start, $end) use ($with) {
         return Transaction::with($with)
             ->whereBetween('created_at', [$start, $end])
@@ -77,7 +81,6 @@ public function all(array $params)
             ->get();
     };
 
-    // -------- Build by_period stats
     $byPeriod = [
         'today'      => $periodStats($todayStart, $todayEnd),
         'this_month' => $periodStats($thisMonthStart, $thisMonthEnd),
@@ -85,7 +88,6 @@ public function all(array $params)
         'this_year'  => $periodStats($thisYearStart, $thisYearEnd),
     ];
 
-    // -------- transactions_by_period
     $transactionsByPeriod = [
         'today'      => $periodTx($todayStart, $todayEnd),
         'this_month' => $periodTx($thisMonthStart, $thisMonthEnd),
@@ -94,12 +96,12 @@ public function all(array $params)
     ];
 
     return [
-        'transactions'       => $transactions,
-        'totalTransactions'  => $totalTransactions,
-        'totalWallets'       => $totalWallets,
-        'totalRevenue'       => number_format($totalRevenue, 0, '.', ','),
+        'transactions'           => $transactions,
+        'totalTransactions'      => $totalTransactions,
+        'totalWallets'           => $totalWallets,
+        'totalRevenue'           => number_format($totalRevenue, 0, '.', ','),
 
-        'by_period'          => $byPeriod,
+        'by_period'              => $byPeriod,
         'transactions_by_period' => $transactionsByPeriod,
     ];
 }
