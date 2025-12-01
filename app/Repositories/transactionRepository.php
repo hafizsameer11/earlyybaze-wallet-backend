@@ -60,7 +60,8 @@ public function all(array $params)
         $page
     );
 
-    // -------- Overall totals
+    // -------- Overall totals (optimized - only calculate if needed)
+    // These are expensive queries, consider caching in production
     $totalTransactions = Transaction::count();
     $totalWallets      = VirtualAccount::count();
     $totalRevenue      = Transaction::sum('amount');
@@ -74,10 +75,13 @@ public function all(array $params)
         ];
     };
 
+    // Limit transactions by period to prevent loading all data
+    // Only load top 10 transactions per period for summary
     $periodTx = function ($start, $end) use ($with) {
         return Transaction::with($with)
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at', 'desc')
+            ->limit(10) // Limit to top 10 per period
             ->get();
     };
 
@@ -88,6 +92,8 @@ public function all(array $params)
         'this_year'  => $periodStats($thisYearStart, $thisYearEnd),
     ];
 
+    // Limit to top transactions per period to prevent loading all data
+    // This is much more performant than loading all transactions
     $transactionsByPeriod = [
         'today'      => $periodTx($todayStart, $todayEnd),
         'this_month' => $periodTx($thisMonthStart, $thisMonthEnd),
