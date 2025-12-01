@@ -38,15 +38,24 @@ class TransactionManagementController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function getAll()
-    {
-        try {
-            $data = $this->transactionService->all();
-            return ResponseHelper::success($data, 'Transactions fetched successfully', 200);
-        } catch (Exception $e) {
-            return ResponseHelper::error($e->getMessage(), 500);
-        }
+ public function getAll(Request $request)
+{
+    try {
+
+        $params = [
+            'search'   => $request->query('search'),
+            'per_page' => $request->query('per_page', 15),
+        ];
+
+        $data = $this->transactionService->all($params);
+
+        return ResponseHelper::success($data, 'Transactions fetched successfully', 200);
+
+    } catch (Exception $e) {
+        return ResponseHelper::error($e->getMessage(), 500);
     }
+}
+
     public function getTransactionsForUser($userId)
     {
         try {

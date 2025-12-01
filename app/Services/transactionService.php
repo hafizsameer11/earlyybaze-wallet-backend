@@ -14,10 +14,11 @@ class transactionService
         $this->transactionRepository = $transactionRepository;
     }
 
-    public function all()
-    {
-        return $this->transactionRepository->all();
-    }
+public function all(array $params)
+{
+    return $this->transactionRepository->all($params);
+}
+
     public function getTransactionsForUser($user_id)
     {
         try {
