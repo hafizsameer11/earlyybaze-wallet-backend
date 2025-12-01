@@ -49,7 +49,7 @@ class TransactionManagementController extends Controller
 
         $data = $this->transactionService->all($params);
 
-        return ResponseHelper::success($data, 'Transactions fetched successfully', 200);
+        return ResponseHelper::success($data, 'Transactions fetched successfully with params '.json_encode($params), 200);
 
     } catch (Exception $e) {
         return ResponseHelper::error($e->getMessage(), 500);
