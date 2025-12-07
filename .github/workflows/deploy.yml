@@ -27,21 +27,30 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             cd ${{ secrets.SERVER_PATH }}
 
+            # Fix permissions BEFORE git operations
+            sudo chown -R $USER:$USER storage bootstrap/cache
+
+            # Update code
             git fetch --all
             git reset --hard origin/main
 
-            composer install --no-interaction --prefer-dist --optimize-autoloader
+            # DO NOT RUN composer install because PHP 8.1 cannot install PHP 8.2 packages
+            # composer install --no-interaction --prefer-dist --optimize-autoloader
 
+            # Fix permissions for Laravel runtime
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+
+            # Clear caches
             php artisan config:clear
             php artisan cache:clear
             php artisan view:clear
             php artisan route:clear
 
+            # Run migrations
             php artisan migrate --force
 
-            sudo chown -R www-data:www-data storage bootstrap/cache
-            sudo chmod -R 775 storage bootstrap/cache
-
+            # Restart PHP
             sudo systemctl restart php8.1-fpm
 
             echo "Deployment Successful!"
