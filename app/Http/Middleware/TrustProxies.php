@@ -12,6 +12,7 @@ class TrustProxies extends Middleware
      */
     protected $proxies = '*';
 
+    //test
     /**
      * Use all forwarded headers.
      */
