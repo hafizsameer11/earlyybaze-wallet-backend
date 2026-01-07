@@ -20,10 +20,10 @@ class Kernel extends ConsoleKernel
                   ->appendOutputTo(storage_path('logs/schedule.log'));;
 
     // 2) Then run a worker to drain the queue (no overlap)
-    // $schedule->command('queue:work --stop-when-empty --sleep=3 --tries=3')
-    //     ->everyMinute()
-    //     ->withoutOverlapping()
-    //       ->appendOutputTo(storage_path('logs/queue_worker.log'));
+    $schedule->command('queue:work --stop-when-empty --sleep=3 --tries=3')
+        ->everyMinute()
+        ->withoutOverlapping()
+          ->appendOutputTo(storage_path('logs/queue_worker.log'));
 
     }
 
