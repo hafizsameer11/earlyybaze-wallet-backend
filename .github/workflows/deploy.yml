@@ -27,7 +27,7 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             cd ${{ secrets.SERVER_PATH }}
 
-            # Fix permissions BEFORE git operations
+            # Fix permissions BEFORE git operations (so git can write)
             sudo chown -R $USER:$USER storage bootstrap/cache
 
             # Update code
@@ -37,7 +37,13 @@ jobs:
             # DO NOT RUN composer install because PHP 8.1 cannot install PHP 8.2 packages
             # composer install --no-interaction --prefer-dist --optimize-autoloader
 
-            # Fix permissions for Laravel runtime        
+            # Fix permissions for Laravel runtime (AFTER git operations)
+            # Set ownership to deploy:www-data so both deploy user and web server can write
+            sudo chown -R deploy:www-data storage bootstrap/cache
+            # Set directory permissions (775 = owner and group can read/write/execute)
+            sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
+            # Set file permissions (664 = owner and group can read/write)
+            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
 
             # Run migrations
             php artisan migrate --force
