@@ -45,9 +45,12 @@ class WithdrawRequestRepository
             throw new \Exception('Withdraw Request not found');
         }
         $status = $data['status'];
-        $send_account = $data['send_account'];
-        $withdraw->send_account = $send_account;
-        // $withdraw->save();
+        
+        // Update send_account if provided
+        if (isset($data['send_account'])) {
+            $withdraw->send_account = $data['send_account'];
+        }
+        
         if ($status == 'approved') {
             $withdraw->status = 'approved';
             $withdraw->save();
@@ -72,25 +75,86 @@ class WithdrawRequestRepository
     {
         // Add logic to delete data
     }
+    /**
+     * Transform withdrawal request to include formatted bank_account object
+     * Uses relationship if bank_account_id exists, otherwise uses direct fields
+     * Returns array representation with formatted bank_account
+     */
+    private function transformWithdrawRequest($withdraw)
+    {
+        if (!$withdraw) {
+            return null;
+        }
+
+        // Get formatted bank account
+        $bankAccountData = $withdraw->getFormattedBankAccount();
+        
+        // Convert to array and transform
+        $data = $withdraw->toArray();
+        
+        // Remove raw bank account fields from response
+        unset($data['bank_account_id']);
+        unset($data['bank_account_name']);
+        unset($data['bank_account_code']);
+        unset($data['account_name']);
+        unset($data['account_number']);
+        
+        // Remove bankAccount relationship if present (we'll use formatted version)
+        if (isset($data['bank_account'])) {
+            unset($data['bank_account']);
+        }
+        
+        // Add formatted bank_account object (always in consistent format)
+        $data['bank_account'] = $bankAccountData;
+        
+        return $data;
+    }
+
     public function getwithdrawRequestStatus($id)
     {
-        return WithdrawRequest::where('id', $id)->with('bankAccount')->first();
+        $withdraw = WithdrawRequest::where('id', $id)->with('bankAccount')->first();
+        if (!$withdraw) {
+            return null;
+        }
+        return $this->transformWithdrawRequest($withdraw);
     }
+    
     public function getWithDrawRequestByUserId($userId)
     {
-        $withdraq= WithdrawRequest::where('user_id', $userId)->with('bankAccount')->orderBy('created_at', 'desc')->get();
-       $withdraq=$withdraq->map(function ($withdraw) {
-            $withdraw->type='withdraw';
-            return $withdraw;
+        $withdraws = WithdrawRequest::where('user_id', $userId)
+            ->with('bankAccount')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return $withdraws->map(function ($withdraw) {
+            $transformed = $this->transformWithdrawRequest($withdraw);
+            $transformed['type'] = 'withdraw';
+            return $transformed;
         });
-        return $withdraq;
     }
+    
     public function findByTransactionId($transactionId)
     {
         // return WithdrawRequest::where('transaction_id', $transactionId)->first();
     }
+    
     public function getAllwithdrawRequests()
     {
-        return WithdrawRequest::where('status','!=', 'approved')->with('bankAccount', 'user')->orderBy('created_at', 'desc')->get();
+        $withdraws = WithdrawRequest::where('status', '!=', 'approved')
+            ->with('bankAccount', 'user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return $withdraws->map(function ($withdraw) {
+            // Transform to array first
+            $transformed = $this->transformWithdrawRequest($withdraw);
+            
+            // Include user relationship if loaded
+            if ($withdraw->relationLoaded('user') && $withdraw->user) {
+                $transformed['user'] = $withdraw->user->toArray();
+            }
+            
+            return $transformed;
+        });
     }
 }

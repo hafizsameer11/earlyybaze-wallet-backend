@@ -28,12 +28,42 @@ class TransactionManagementController extends Controller
     public function getWithdrawRequests()
     {
         try {
-            $withdrawRequests = WithdrawRequest::orderBy('created_at', 'desc')->get();
-            $withdrawRequests->map(function ($withdrawRequest) {
-                $withdrawRequest->type = 'withdraw';
-                return $withdrawRequest;
+            $withdrawRequests = WithdrawRequest::orderBy('created_at', 'desc')
+                ->with('bankAccount', 'user')
+                ->get();
+            
+            // Transform to include formatted bank_account object
+            $transformed = $withdrawRequests->map(function ($withdrawRequest) {
+                $data = $withdrawRequest->toArray();
+                
+                // Get formatted bank account (uses relationship if bank_account_id exists, otherwise direct fields)
+                $bankAccountData = $withdrawRequest->getFormattedBankAccount();
+                
+                // Remove raw bank account fields from response
+                unset($data['bank_account_id']);
+                unset($data['bank_account_name']);
+                unset($data['bank_account_code']);
+                unset($data['account_name']);
+                unset($data['account_number']);
+                
+                // Remove bankAccount relationship (we'll use formatted version)
+                if (isset($data['bank_account'])) {
+                    unset($data['bank_account']);
+                }
+                
+                // Add formatted bank_account object
+                $data['bank_account'] = $bankAccountData;
+                $data['type'] = 'withdraw';
+                
+                // Include user relationship if loaded
+                if ($withdrawRequest->relationLoaded('user') && $withdrawRequest->user) {
+                    $data['user'] = $withdrawRequest->user->toArray();
+                }
+                
+                return $data;
             });
-            return ResponseHelper::success($withdrawRequests, 'Withdraw Requests fetched successfully', 200);
+            
+            return ResponseHelper::success($transformed, 'Withdraw Requests fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
@@ -109,7 +139,11 @@ class TransactionManagementController extends Controller
     public function getSingleWithdrawTransaction($id)
     {
         try {
+            // Use service which uses repository (already transforms the data)
             $withdraw = $this->withdrawService->getwithdrawRequestStatus($id);
+            if (!$withdraw) {
+                return ResponseHelper::error('Withdraw Request not found', 404);
+            }
             return ResponseHelper::success($withdraw, 'Withdraw fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

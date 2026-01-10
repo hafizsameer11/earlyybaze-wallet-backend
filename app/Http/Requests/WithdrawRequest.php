@@ -25,7 +25,11 @@ class WithdrawRequest extends FormRequest
         return [
             'amount' => 'required|numeric|gt:0',
             'asset' => 'nullable|string',
-            'bank_account_id' => 'required|numeric',
+            'bank_account_id' => 'nullable|numeric|exists:bank_accounts,id',
+            'bank_account_name' => 'nullable|string|max:255',
+            'bank_account_code' => 'nullable|string|max:50',
+            'account_name' => 'nullable|string|max:255',
+            'account_number' => 'nullable|string|max:50',
             'status' => 'nullable|string',
             'fee' => 'nullable|numeric',
         ];
