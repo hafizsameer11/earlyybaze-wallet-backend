@@ -33,6 +33,7 @@ class UpdateProfileRequest extends FormRequest
             'user_code'=>'nullable',
             'referral_amount'=>'nullable',
             'fullName'=>'nullable',
+            'role'=>'nullable',
 
         ];
     }
