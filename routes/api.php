@@ -232,7 +232,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/find-bank-account/{id}', [BankAccountController::class, 'find']);
         Route::get('/send-notification/{userId}', [AuthController::class, 'sendNotification']);
         Route::get('/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
-        Route::post('/get-private-key-by-address', [BlockChainController::class, 'getPrivateKeyByAddress']);
         Route::post('/on-chain-transfer-logs', [OnChainTransferLogController::class, 'store'])
             ->name('api.on-chain-transfer-logs.store');
         Route::post('btc-transfer', [BitcoinController::class, 'transferBtc'])->name('api.btc-transfer');

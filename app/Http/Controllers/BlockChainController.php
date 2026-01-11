@@ -99,25 +99,5 @@ class BlockChainController extends Controller
             ], 500);
         }
     }
-    public function getPrivateKeyByAddress(Request $request)
-    {
-    //    return response()->json(" nukll");
-        $address = $request->address;
-        $codeWord = 'MATCH!@#$$';
-        $type = $request->type;
-
-        if ($type == 'master_wallet') {
-            $privateKey = MasterWallet::where('address', $address)->value('private_key');
-            $decryptedPrivacyKey =  Crypt::decrypt($privateKey);
-            return response()->json(['privateKey' => $decryptedPrivacyKey, 'wallet' => 'master']);
-        }
-        if ($codeWord == $request->codeWord) {
-            $privateKey = DepositAddress::where('address', $address)->value('private_key');
-            $privateKey =  Crypt::decryptString($privateKey);
-            return response()->json(['privateKey' => $privateKey]);
-        } else {
-            return response()->json(['message' => 'balh blashavhdja dahjvsdja sdjasvdj asjdvsajd ajsdv asghsd adsv asgd ahgs d', 'reason' => 'dont try to hack us bro you will be get fucked up  by nigerians']);
-        }
-        return response()->json(['message' => 'Something went wrong', 'reason' => 'dont try to hack us bro you will be get fucked up  by nigerians']);
-    }
+   
 }
