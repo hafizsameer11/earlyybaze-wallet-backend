@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\UserAccount;
+use App\Models\UserNotification;
 use App\Models\WithdrawRequest;
 
 // use App\Models\WithdrawRequest;
@@ -58,6 +59,12 @@ class WithdrawRequestRepository
                 'withdraw_request_id' => $withdraw->id,
                 'user_id' => $withdraw->user_id
             ]);
+          
+            UserNotification::create([
+                'user_id' => $withdraw->user_id,
+                'type' => 'withdraw_approved',
+                'message' => 'Your withdraw request has been approved.'
+            ]);
         } elseif ($status == 'rejected') {
             $withdraw->status = 'rejected';
             $userAccount = UserAccount::where('user_id', $withdraw->user_id)->first();
@@ -66,6 +73,11 @@ class WithdrawRequestRepository
             $this->withdrawTransactionRepository->create([
                 'withdraw_request_id' => $withdraw->id,
                 'user_id' => $withdraw->user_id
+            ]);
+            UserNotification::create([
+                'user_id' => $withdraw->user_id,
+                'type' => 'withdraw_rejected',
+                'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.'
             ]);
         }
         return $withdraw;
