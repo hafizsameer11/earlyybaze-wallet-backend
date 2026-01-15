@@ -44,7 +44,7 @@ jobs:
             sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
             # Set file permissions (664 = owner and group can read/write)
             sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
-
+            php artisan optimize:clear
             # Run migrations
             php artisan migrate --force
 
