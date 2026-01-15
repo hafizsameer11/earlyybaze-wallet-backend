@@ -39,7 +39,8 @@ class User extends Authenticatable
         'sms_type',
         'sms_code',
         'is_number_verified',
-        'expoToken'
+        'expoToken',
+        'is_active'
     ];
 
     /**

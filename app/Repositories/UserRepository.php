@@ -500,6 +500,16 @@ public function userDetails($userId)
             'total_account_count' => $totalAccountCount,
         ];
     }
+    public function deactivateUser($userId)
+    {
+        $user = User::find($userId);
+        if (!$user) {
+            throw new Exception('User not found');
+        }
+        $user->is_active = false;
+        $user->save();
+        return $user;
+    }
 
 
 

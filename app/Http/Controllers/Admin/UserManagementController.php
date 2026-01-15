@@ -163,4 +163,12 @@ class UserManagementController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+    public function deactivateUser($userId){
+        try {
+            $data = $this->userService->deactivateUser($userId);
+            return ResponseHelper::success($data, 'User deactivated successfully', 200);
+        } catch (Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

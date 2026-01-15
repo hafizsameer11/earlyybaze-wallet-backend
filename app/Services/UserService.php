@@ -440,4 +440,13 @@ class UserService
             throw new Exception('Get balance by currency failed. ' . $e->getMessage());
         }
     }
+    public function deactivateUser($userId)
+    {
+        try {
+            return $this->userRepository->deactivateUser($userId);
+        } catch (Exception $e) {
+            Log::error('Deactivate user error: ' . $e->getMessage());
+            throw new Exception('Deactivate user failed. ' . $e->getMessage());
+        }
+    }
 }

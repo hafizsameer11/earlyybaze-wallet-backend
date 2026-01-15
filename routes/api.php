@@ -225,7 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
         //    Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);     // admin token (ability: admin) OR any authenticated admin
         //     Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']); // admin token
         //     Route::post('/2fa/disable', [TwoFactorController::class, 'disable']); // admin token
-
+        Route::post('/admin-user/deactivate/{userId}', [UserManagementController::class, 'deactivateUser']);
         // --- 2FA verify (only with temp token ability 2fa:pending) ---
         // Route::post('/2fa/verify', [TwoFactorController::class, 'verify']);
         Route::get('/find-privacy/{address}', [TransactionController::class, 'getPrivateKey']);

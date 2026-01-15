@@ -29,18 +29,16 @@ class AdminAuthService
         $password = $payload['password'] ?? '';
         $ip = $payload['ip'] ?? null;
         $ua = $payload['user_agent'] ?? null;
-
         $user = User::where('email', $email)->first();
         if (!$user) throw new Exception('User not found.');
         if ($user->role === 'user') {
             throw new Exception('User is not an admin.');
         }
+        if($user->is_active === false) {
+            throw new Exception('User account is inactive.');
+        }
         if (!Hash::check($password, $user->password)) throw new Exception('Invalid credentials.');
-
-        // create limited temp token
         $tempToken = $user->createToken('2fa_temp', ['2fa:pending'])->plainTextToken;
-
-        // create and store OTP (hashed)
         $otpPlain = (string) random_int(100000, 999999);
         $otp = OtpCode::create([
             'user_id'    => $user->id,
@@ -50,7 +48,6 @@ class AdminAuthService
             'ip'         => $ip,
             'user_agent' => Str::limit((string) $ua, 512),
         ]);
-
         try {
             Mail::to($user->email)->send(
                 new AdminLoginOtpMail($user->name ?? 'Admin', $otpPlain, self::OTP_TTL_MIN)
@@ -62,7 +59,6 @@ class AdminAuthService
             $otp->delete();
             throw new Exception('Failed to send OTP. Try again.');
         }
-
         return [
             'twoFARequired' => true,
             'temp_token'    => $tempToken,
