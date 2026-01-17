@@ -95,7 +95,7 @@ class TransactionManagementController extends Controller
             'start_date' => $startDate,
             'end_date' => $endDate,
             'page' => $request->query('page', 1),
-            'per_page' => $request->query('per_page', 15), // Default 15 items per page
+            'per_page' => $request->query('per_page', 100), // Default 15 items per page
         ];
 
         $data = $this->transactionService->all($params);
