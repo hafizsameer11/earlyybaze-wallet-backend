@@ -89,27 +89,17 @@ public function all(array $params)
         });
     }
 
-    // -------- Determine if pagination is needed
-    // Paginate when period is 'all' OR when custom date range is used
-    $shouldPaginate = ($period === 'all' || $useCustomDateRange);
-    
-    if ($shouldPaginate) {
-        // Use pagination
-        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
-        $transactions = $paginated->items();
-        $paginationData = [
-            'current_page' => $paginated->currentPage(),
-            'per_page' => $paginated->perPage(),
-            'total' => $paginated->total(),
-            'last_page' => $paginated->lastPage(),
-            'from' => $paginated->firstItem(),
-            'to' => $paginated->lastItem(),
-        ];
-    } else {
-        // Get all transactions for selected period (no pagination for predefined periods)
-        $transactions = $query->get();
-        $paginationData = null;
-    }
+    // -------- Always use pagination for all periods
+    $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+    $transactions = $paginated->items();
+    $paginationData = [
+        'current_page' => $paginated->currentPage(),
+        'per_page' => $paginated->perPage(),
+        'total' => $paginated->total(),
+        'last_page' => $paginated->lastPage(),
+        'from' => $paginated->firstItem(),
+        'to' => $paginated->lastItem(),
+    ];
 
     // -------- Overall totals (for stats - always calculated)
     $totalTransactions = Transaction::count();
@@ -145,12 +135,8 @@ public function all(array $params)
         'totalRevenue'      => number_format($totalRevenue, 0, '.', ','),
         'by_period'         => $byPeriod,
         'current_period'    => $period, // Return selected period for frontend reference
+        'pagination'        => $paginationData, // Always include pagination data
     ];
-    
-    // Add pagination data if pagination was used
-    if ($paginationData) {
-        $response['pagination'] = $paginationData;
-    }
     
     // Add custom date range info if used
     if ($useCustomDateRange) {
