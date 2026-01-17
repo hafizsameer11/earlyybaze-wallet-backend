@@ -13,7 +13,11 @@ class transactionRepository
 public function all(array $params)
 {
     $search = $params['search'] ?? null;
-    $period = $params['period'] ?? 'all'; // 'all', 'today', 'this_month', 'last_month', 'this_year'
+    $period = $params['period'] ?? 'all'; // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
+    $startDate = $params['start_date'] ?? null;
+    $endDate = $params['end_date'] ?? null;
+    $page = (int) ($params['page'] ?? 1);
+    $perPage = (int) ($params['per_page'] ?? 15);
 
     // -------- Anchors
     $now            = Carbon::now();
@@ -44,24 +48,37 @@ public function all(array $params)
     // -------- Query Builder
     $query = Transaction::with($with)->orderBy('created_at', 'desc');
 
-    // -------- Apply period filter based on frontend request
-    switch ($period) {
-        case 'today':
-            $query->whereBetween('created_at', [$todayStart, $todayEnd]);
-            break;
-        case 'this_month':
-            $query->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
-            break;
-        case 'last_month':
-            $query->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
-            break;
-        case 'this_year':
-            $query->whereBetween('created_at', [$thisYearStart, $thisYearEnd]);
-            break;
-        case 'all':
-        default:
-            // No date filter - load all transactions
-            break;
+    // -------- Apply date filter based on period or custom date range
+    $useCustomDateRange = false;
+    $customStartDate = null;
+    $customEndDate = null;
+    
+    if ($startDate && $endDate) {
+        // Custom date range provided
+        $useCustomDateRange = true;
+        $customStartDate = Carbon::parse($startDate)->startOfDay();
+        $customEndDate = Carbon::parse($endDate)->endOfDay();
+        $query->whereBetween('created_at', [$customStartDate, $customEndDate]);
+    } else {
+        // Use period-based filtering
+        switch ($period) {
+            case 'today':
+                $query->whereBetween('created_at', [$todayStart, $todayEnd]);
+                break;
+            case 'this_month':
+                $query->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
+                break;
+            case 'last_month':
+                $query->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
+                break;
+            case 'this_year':
+                $query->whereBetween('created_at', [$thisYearStart, $thisYearEnd]);
+                break;
+            case 'all':
+            default:
+                // No date filter - load all transactions
+                break;
+        }
     }
 
     // -------- Apply search filter
@@ -72,8 +89,27 @@ public function all(array $params)
         });
     }
 
-    // -------- GET ALL TRANSACTIONS FOR SELECTED PERIOD (no pagination)
-    $transactions = $query->get();
+    // -------- Determine if pagination is needed
+    // Paginate when period is 'all' OR when custom date range is used
+    $shouldPaginate = ($period === 'all' || $useCustomDateRange);
+    
+    if ($shouldPaginate) {
+        // Use pagination
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+        $transactions = $paginated->items();
+        $paginationData = [
+            'current_page' => $paginated->currentPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+            'last_page' => $paginated->lastPage(),
+            'from' => $paginated->firstItem(),
+            'to' => $paginated->lastItem(),
+        ];
+    } else {
+        // Get all transactions for selected period (no pagination for predefined periods)
+        $transactions = $query->get();
+        $paginationData = null;
+    }
 
     // -------- Overall totals (for stats - always calculated)
     $totalTransactions = Transaction::count();
@@ -102,7 +138,7 @@ public function all(array $params)
         ],
     ];
 
-    return [
+    $response = [
         'transactions'      => $transactions,
         'totalTransactions' => $totalTransactions,
         'totalWallets'      => $totalWallets,
@@ -110,6 +146,21 @@ public function all(array $params)
         'by_period'         => $byPeriod,
         'current_period'    => $period, // Return selected period for frontend reference
     ];
+    
+    // Add pagination data if pagination was used
+    if ($paginationData) {
+        $response['pagination'] = $paginationData;
+    }
+    
+    // Add custom date range info if used
+    if ($useCustomDateRange) {
+        $response['custom_date_range'] = [
+            'start_date' => $customStartDate?->toDateString(),
+            'end_date' => $customEndDate?->toDateString(),
+        ];
+    }
+    
+    return $response;
 }
 
 

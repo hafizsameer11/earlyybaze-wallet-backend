@@ -71,10 +71,31 @@ class TransactionManagementController extends Controller
  public function getAll(Request $request)
 {
     try {
+        // Validate date format if provided
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        // Validate date format
+        if ($startDate && !strtotime($startDate)) {
+            return ResponseHelper::error('Invalid start_date format. Use Y-m-d format (e.g., 2026-01-01)', 422);
+        }
+        
+        if ($endDate && !strtotime($endDate)) {
+            return ResponseHelper::error('Invalid end_date format. Use Y-m-d format (e.g., 2026-01-31)', 422);
+        }
+        
+        // Validate date range
+        if ($startDate && $endDate && strtotime($startDate) > strtotime($endDate)) {
+            return ResponseHelper::error('start_date must be before or equal to end_date', 422);
+        }
 
         $params = [
             'search' => $request->query('search'),
-            'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year'
+            'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'page' => $request->query('page', 1),
+            'per_page' => $request->query('per_page', 15), // Default 15 items per page
         ];
 
         $data = $this->transactionService->all($params);
