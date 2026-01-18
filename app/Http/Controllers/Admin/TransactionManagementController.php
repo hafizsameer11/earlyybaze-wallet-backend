@@ -89,6 +89,9 @@ class TransactionManagementController extends Controller
             return ResponseHelper::error('start_date must be before or equal to end_date', 422);
         }
 
+        // Check if this is an export request
+        $isExport = $request->query('export', false) === 'true' || $request->query('export', false) === true;
+        
         $params = [
             'search' => $request->query('search'),
             'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
@@ -97,8 +100,9 @@ class TransactionManagementController extends Controller
             'status' => $request->query('status'), // 'completed', 'pending', 'rejected', or 'all' (ignore if 'all')
             'type' => $request->query('type'), // 'send', 'receive', 'buy', 'swap', 'withdrawTransaction', or 'all' (ignore if 'all')
             'transfer_type' => $request->query('transfer_type'), // 'internal', 'external', or 'all' (ignore if 'all')
-            'page' => $request->query('page', 1),
-            'per_page' => $request->query('per_page', 20), // Default 20 items per page
+            'export' => $isExport, // Export mode flag
+            'page' => $isExport ? 1 : $request->query('page', 1), // Ignore page for export
+            'per_page' => $isExport ? null : $request->query('per_page', 20), // Ignore per_page for export
         ];
 
         $data = $this->transactionService->all($params);

@@ -19,8 +19,9 @@ public function all(array $params)
     $status = $params['status'] ?? null;
     $type = $params['type'] ?? null;
     $transferType = $params['transfer_type'] ?? null;
-    $page = (int) ($params['page'] ?? 1);
-    $perPage = (int) ($params['per_page'] ?? 15);
+    $isExport = $params['export'] ?? false;
+    $page = $isExport ? 1 : (int) ($params['page'] ?? 1);
+    $perPage = $isExport ? null : (int) ($params['per_page'] ?? 15);
 
     // -------- Anchors
     $now            = Carbon::now();
@@ -115,17 +116,24 @@ public function all(array $params)
         });
     }
 
-    // -------- Always use pagination for all periods
-    $paginated = $query->paginate($perPage, ['*'], 'page', $page);
-    $transactions = $paginated->items();
-    $paginationData = [
-        'current_page' => $paginated->currentPage(),
-        'per_page' => $paginated->perPage(),
-        'total' => $paginated->total(),
-        'last_page' => $paginated->lastPage(),
-        'from' => $paginated->firstItem(),
-        'to' => $paginated->lastItem(),
-    ];
+    // -------- Handle export mode vs pagination mode
+    if ($isExport) {
+        // Export mode: Get all matching records without pagination
+        $transactions = $query->get();
+        $paginationData = null;
+    } else {
+        // Normal mode: Use pagination
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+        $transactions = $paginated->items();
+        $paginationData = [
+            'current_page' => $paginated->currentPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+            'last_page' => $paginated->lastPage(),
+            'from' => $paginated->firstItem(),
+            'to' => $paginated->lastItem(),
+        ];
+    }
 
     // -------- Overall totals (for stats - always calculated)
     $totalTransactions = Transaction::count();
@@ -161,8 +169,26 @@ public function all(array $params)
         'totalRevenue'      => number_format($totalRevenue, 0, '.', ','),
         'by_period'         => $byPeriod,
         'current_period'    => $period, // Return selected period for frontend reference
-        'pagination'        => $paginationData, // Always include pagination data
     ];
+    
+    // Add pagination data only if not in export mode
+    if (!$isExport && $paginationData) {
+        $response['pagination'] = $paginationData;
+    }
+    
+    // Add export metadata if in export mode
+    if ($isExport) {
+        $response['export'] = [
+            'total_records' => count($transactions),
+            'filters_applied' => [
+                'period' => $period,
+                'status' => $status && $status !== 'all' ? $status : null,
+                'type' => $type && $type !== 'all' ? $type : null,
+                'transfer_type' => $transferType && $transferType !== 'all' ? $transferType : null,
+                'search' => $search ?: null,
+            ],
+        ];
+    }
     
     // Add custom date range info if used
     if ($useCustomDateRange) {
