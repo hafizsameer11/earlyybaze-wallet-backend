@@ -16,6 +16,9 @@ public function all(array $params)
     $period = $params['period'] ?? 'all'; // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
     $startDate = $params['start_date'] ?? null;
     $endDate = $params['end_date'] ?? null;
+    $status = $params['status'] ?? null;
+    $type = $params['type'] ?? null;
+    $transferType = $params['transfer_type'] ?? null;
     $page = (int) ($params['page'] ?? 1);
     $perPage = (int) ($params['per_page'] ?? 15);
 
@@ -81,11 +84,34 @@ public function all(array $params)
         }
     }
 
-    // -------- Apply search filter
+    // -------- Apply status filter (ignore if 'all' or null)
+    if ($status && $status !== 'all') {
+        $query->where('status', $status);
+    }
+
+    // -------- Apply type filter (ignore if 'all' or null)
+    if ($type && $type !== 'all') {
+        $query->where('type', $type);
+    }
+
+    // -------- Apply transfer_type filter (ignore if 'all' or null)
+    if ($transferType && $transferType !== 'all') {
+        $query->where('transfer_type', $transferType);
+    }
+
+    // -------- Apply search filter (enhanced to search multiple fields)
     if ($search) {
-        $query->whereHas('user', function ($q) use ($search) {
-            $q->where('username', 'LIKE', "%{$search}%")
-              ->orWhere('email', 'LIKE', "%{$search}%");
+        $query->where(function ($q) use ($search) {
+            // Search in user fields
+            $q->whereHas('user', function ($userQuery) use ($search) {
+                $userQuery->where('username', 'LIKE', "%{$search}%")
+                          ->orWhere('email', 'LIKE', "%{$search}%")
+                          ->orWhere('name', 'LIKE', "%{$search}%");
+            })
+            // Search in transaction fields
+            ->orWhere('reference', 'LIKE', "%{$search}%")
+            ->orWhere('id', 'LIKE', "%{$search}%")
+            ->orWhere('transaction_id', 'LIKE', "%{$search}%");
         });
     }
 

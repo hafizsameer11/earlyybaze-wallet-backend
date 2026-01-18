@@ -94,8 +94,11 @@ class TransactionManagementController extends Controller
             'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'status' => $request->query('status'), // 'completed', 'pending', 'rejected', or 'all' (ignore if 'all')
+            'type' => $request->query('type'), // 'send', 'receive', 'buy', 'swap', 'withdrawTransaction', or 'all' (ignore if 'all')
+            'transfer_type' => $request->query('transfer_type'), // 'internal', 'external', or 'all' (ignore if 'all')
             'page' => $request->query('page', 1),
-            'per_page' => $request->query('per_page', 20), // Default 15 items per page
+            'per_page' => $request->query('per_page', 20), // Default 20 items per page
         ];
 
         $data = $this->transactionService->all($params);

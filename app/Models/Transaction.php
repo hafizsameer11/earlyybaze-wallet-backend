@@ -21,7 +21,8 @@ class Transaction extends Model
         'network',
         'amount_usd',
         'fee',
-        'fee_usd'
+        'fee_usd',
+        'transfer_type'
     ];
 
     protected $appends = ['details'];
