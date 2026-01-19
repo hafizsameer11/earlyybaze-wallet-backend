@@ -58,62 +58,106 @@ class CreateDatabaseBackupJob implements ShouldQueue
             $host = $config['host'];
             $port = $config['port'] ?? 3306;
 
-            // Create mysqldump command
-            // Use --single-transaction for InnoDB tables to ensure consistency
-            // Use --quick for faster dumps
-            // Use --lock-tables=false to avoid locking issues
+            // Create a temporary config file for mysqldump (more secure and reliable)
+            $configFile = storage_path('app/backups/.my.cnf.' . uniqid());
+            $configContent = "[client]\n";
+            $configContent .= "host=" . $host . "\n";
+            $configContent .= "port=" . $port . "\n";
+            $configContent .= "user=" . $username . "\n";
+            $configContent .= "password=" . $password . "\n";
+            
+            file_put_contents($configFile, $configContent);
+            chmod($configFile, 0600); // Secure permissions (read/write for owner only)
+
+            // Create mysqldump command using config file
+            // --defaults-file must be first option
+            // --single-transaction for InnoDB tables to ensure consistency (creates consistent snapshot)
+            // --lock-tables=false to avoid locking issues
+            // --routines to include stored procedures and functions
+            // --triggers to include triggers
+            // --events to include events
+            // --add-drop-table to include DROP TABLE statements
+            // --complete-insert to use complete INSERT statements
+            // Note: Removed --quick flag as it may skip data for very large tables
             $command = sprintf(
-                'mysqldump -h %s -P %d -u %s -p%s %s --single-transaction --quick --lock-tables=false > %s 2>&1',
-                escapeshellarg($host),
-                escapeshellarg($port),
-                escapeshellarg($username),
-                escapeshellarg($password),
+                'mysqldump --defaults-file=%s %s --single-transaction --lock-tables=false --routines --triggers --events --add-drop-table --complete-insert 2>%s | gzip > %s',
+                escapeshellarg($configFile),
                 escapeshellarg($database),
-                escapeshellarg($fullPath)
+                escapeshellarg($fullPath . '.error'),
+                escapeshellarg($fullPath . '.gz')
             );
+
+            Log::info("Starting database backup: {$filename}");
+            Log::info("Command: " . str_replace($password, '***', $command));
 
             // Execute backup
             exec($command, $output, $returnVar);
 
-            if ($returnVar !== 0) {
-                $error = implode("\n", $output);
-                Log::error("Backup failed for {$filename}: {$error}");
-                throw new Exception('Backup failed: ' . $error);
+            // Check for errors
+            $errorFile = $fullPath . '.error';
+            $errorOutput = '';
+            if (file_exists($errorFile)) {
+                $errorOutput = file_get_contents($errorFile);
+                unlink($errorFile); // Clean up error file
             }
 
-            // Check if file was created and has content
-            if (!file_exists($fullPath) || filesize($fullPath) === 0) {
-                throw new Exception('Backup file was not created or is empty');
+            // Clean up config file
+            if (file_exists($configFile)) {
+                unlink($configFile);
             }
 
-            // Compress backup using gzip (optional but recommended)
+            // Check if compressed file was created
             $compressedPath = $fullPath . '.gz';
-            $compressed = false;
-            
-            try {
-                // Try to compress the backup
-                $source = fopen($fullPath, 'rb');
-                $dest = gzopen($compressedPath, 'wb9'); // wb9 = highest compression
+            if (!file_exists($compressedPath)) {
+                $error = $errorOutput ?: implode("\n", $output);
+                Log::error("Backup file not created for {$filename}. Error: {$error}");
+                throw new Exception('Backup file was not created. Error: ' . $error);
+            }
+
+            // Check file size
+            $fileSize = filesize($compressedPath);
+            if ($fileSize === 0) {
+                $error = $errorOutput ?: implode("\n", $output);
+                Log::error("Backup file is empty for {$filename}. Error: {$error}");
+                throw new Exception('Backup file is empty. Error: ' . $error);
+            }
+
+            // Check for mysqldump errors in the output
+            if ($returnVar !== 0 || !empty($errorOutput)) {
+                $error = $errorOutput ?: implode("\n", $output);
+                Log::error("Backup command failed for {$filename}: {$error}");
                 
-                if ($source && $dest) {
-                    while (!feof($source)) {
-                        gzwrite($dest, fread($source, 8192));
-                    }
-                    fclose($source);
-                    gzclose($dest);
-                    
-                    if (file_exists($compressedPath) && filesize($compressedPath) > 0) {
-                        // Remove original file
-                        unlink($fullPath);
-                        $filename = $filename . '.gz';
-                        $filePath = $backupDir . '/' . $filename;
-                        $fullPath = $compressedPath;
-                        $compressed = true;
-                    }
+                // If file exists but has errors, check if it's a valid backup
+                // Sometimes mysqldump returns non-zero but still creates a valid file
+                if ($fileSize < 1000) { // Less than 1KB is definitely an error
+                    unlink($compressedPath); // Clean up invalid file
+                    throw new Exception('Backup failed: ' . $error);
+                } else {
+                    Log::warning("Backup completed with warnings for {$filename}: {$error}");
+                }
+            }
+
+            // Update variables for compressed file
+            $filename = $filename . '.gz';
+            $filePath = $backupDir . '/' . $filename;
+            $fullPath = $compressedPath;
+            $compressed = true;
+
+            // Verify backup contains data by checking for SQL statements
+            // A valid backup should contain CREATE TABLE or INSERT statements
+            $sample = '';
+            try {
+                $handle = gzopen($fullPath, 'r');
+                if ($handle) {
+                    $sample = gzread($handle, 1024); // Read first 1KB
+                    gzclose($handle);
                 }
             } catch (Exception $e) {
-                Log::warning("Failed to compress backup {$filename}: " . $e->getMessage());
-                // Continue with uncompressed backup
+                Log::warning("Could not verify backup content: " . $e->getMessage());
+            }
+
+            if (!empty($sample) && (stripos($sample, 'CREATE TABLE') === false && stripos($sample, 'INSERT INTO') === false)) {
+                Log::warning("Backup file may not contain valid SQL data. Sample: " . substr($sample, 0, 200));
             }
 
             // Update backup record
