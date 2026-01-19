@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TradeLimitController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
@@ -296,6 +297,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('kyc')->group(function (): void {
             Route::get('/get-all', [KycController::class, 'getAll']);
             Route::post('/update-status/{id}', [KycController::class, 'updateStatus']);
+        });
+        Route::prefix('database-backup')->group(function (): void {
+            Route::post('/create', [DatabaseBackupController::class, 'create']);
+            Route::get('/get-all', [DatabaseBackupController::class, 'getAll']);
+            Route::get('/download/{id}', [DatabaseBackupController::class, 'download']);
+            Route::delete('/delete/{id}', [DatabaseBackupController::class, 'delete']);
         });
         Route::prefix('walletmanagement')->group(function (): void {
             Route::get('/get-virtual-wallet', [WalletManagementController::class, 'getVirtualWalletData']);
