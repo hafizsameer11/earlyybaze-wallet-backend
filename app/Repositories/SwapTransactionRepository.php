@@ -30,90 +30,128 @@ class SwapTransactionRepository
     public function swap(array $data)
     {
         try {
-            // Extract necessary parameters
-            $currency = $data['currency'];
-            $network = $data['network'];
-            $amount = $data['amount'];
+            // Use database transaction to ensure atomicity and prevent race conditions
+            return DB::transaction(function () use ($data) {
+                // Extract necessary parameters
+                $currency = $data['currency'];
+                $network = $data['network'];
+                $amount = $data['amount'];
 
-            // Fetch fee
-            $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
-            $fixedFee = $fee->amount;
-            $percentageFee = $fee->percentage;
+                // Fetch fee
+                $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
+                if (!$fee) {
+                    throw new Exception('Swap fee not found.');
+                }
+                $fixedFee = $fee->amount;
+                $percentageFee = $fee->percentage;
 
-            // Calculate fee
-            $percentageFeeAmount = bcmul($amount, $percentageFee, 8);
-            $percentageFeeConverted = bcdiv($percentageFeeAmount, 100, 8);
-            $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
+                // Calculate fee
+                $percentageFeeAmount = bcmul($amount, $percentageFee, 8);
+                $percentageFeeConverted = bcdiv($percentageFeeAmount, 100, 8);
+                $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
 
-            // Fetch exchange rate
-            $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->firstOrFail();
-            $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
-            Log::info("exchange rate", [$exchangeRate]);
-            // Fee in token and converted currencies
-            $miniumumTrade=MinimumTrade::where('type', 'swap')->latest()->first();
-            $miniumumTradeAmount=$miniumumTrade->amount;
-            $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
-            $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
-            $amountNaira = bcmul($amountUsd, $exchangeRatenaira->rate_naira, 8);
-            $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
-            if($amountUsd<$miniumumTradeAmount){
-                throw new Exception('Minimum trade amount is '. $miniumumTradeAmount);
-            }
-            // Add calculated values to data
-            $data['amount_usd'] = $amountUsd;
-            $data['amount_naira'] = $amountNaira;
-            $data['fee_naira'] = $feeNaira;
-            $data['fee'] = $feeCurrency;
-            $data['exchange_rate'] = $exchangeRatenaira->rate_naira;
+                // Fetch exchange rate
+                $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->firstOrFail();
+                $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
+                Log::info("exchange rate", [$exchangeRate]);
+                // Fee in token and converted currencies
+                $miniumumTrade = MinimumTrade::where('type', 'swap')->latest()->first();
+                if (!$miniumumTrade) {
+                    throw new Exception('Minimum trade amount not found.');
+                }
+                $miniumumTradeAmount = $miniumumTrade->amount;
+                $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
+                $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
+                $amountNaira = bcmul($amountUsd, $exchangeRatenaira->rate_naira, 8);
+                $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
+                if (bccomp($amountUsd, $miniumumTradeAmount, 8) < 0) {
+                    throw new Exception('Minimum trade amount is ' . $miniumumTradeAmount);
+                }
+                // Add calculated values to data
+                $data['amount_usd'] = $amountUsd;
+                $data['amount_naira'] = $amountNaira;
+                $data['fee_naira'] = $feeNaira;
+                $data['fee'] = $feeCurrency;
+                $data['exchange_rate'] = $exchangeRatenaira->rate_naira;
 
-            $reference = 'EarlyBaze' . time();
-            Log::info("swap data", [$data]);
-            // Get admin and user
-            // $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
-            $user = Auth::user();
+                $reference = 'EarlyBaze' . time();
+                Log::info("swap data", [$data]);
+                // Get admin and user
+                // $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
+                $user = Auth::user();
 
+                // Lock the virtual account row to prevent concurrent swaps
+                $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
+                    ->where('currency', $currency)
+                    ->where('blockchain', $network)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
+                // Calculate total to deduct (amount + fee)
+                $totalToDeduct = bcadd($amount, $feeCurrency, 8);
+                Log::info("total to deduct", [$totalToDeduct]);
+                
+                // Get current available balance
+                $currentBalance = (string) $userVirtualAccount->available_balance;
+                
+                // Calculate total pending swaps for this currency/network (reserved balance)
+                // This includes both amount and fee for each pending swap
+                $pendingSwaps = SwapTransaction::where('user_id', $user->id)
+                    ->where('currency', $currency)
+                    ->where('network', $network)
+                    ->where('status', 'pending')
+                    ->get();
+                
+                $reservedBalance = '0.00000000';
+                foreach ($pendingSwaps as $pendingSwap) {
+                    $pendingAmount = (string) $pendingSwap->amount;
+                    $pendingFee = (string) ($pendingSwap->fee ?? '0.00000000');
+                    
+                    // Normalize scientific notation if present
+                    if (stripos($pendingAmount, 'e') !== false) {
+                        $pendingAmount = sprintf('%.8f', (float)$pendingAmount);
+                    }
+                    if (stripos($pendingFee, 'e') !== false) {
+                        $pendingFee = sprintf('%.8f', (float)$pendingFee);
+                    }
+                    
+                    // Total reserved = amount + fee (matching totalToDeduct calculation)
+                    $pendingTotal = bcadd($pendingAmount, $pendingFee, 8);
+                    $reservedBalance = bcadd($reservedBalance, $pendingTotal, 8);
+                }
+                
+                // Available balance = current balance - reserved (pending swaps)
+                $availableBalance = bcsub($currentBalance, $reservedBalance, 8);
+                
+                // Check if available balance is sufficient
+                if (bccomp($availableBalance, $totalToDeduct, 8) < 0) {
+                    throw new Exception('Insufficient balance for swap. You have pending swap transactions.');
+                }
 
-            $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
-                ->where('currency', $currency)
-                ->where('blockchain', $network)
-                ->firstOrFail();
+                // Note: Balance is NOT deducted here - it's deducted in completeSwapTransaction()
+                // This is intentional as the swap is created with 'pending' status first
 
-            // Check user balance
-            $totalToDeduct = bcadd($amount, $feeCurrency, 8);
-            Log::info("total to deduct", [$totalToDeduct]);
-            if (bccomp($userVirtualAccount->available_balance, $totalToDeduct, 8) < 0) {
-                throw new Exception('Insufficient balance for swap.');
-            }
+                // Save transaction record
+                $transaction = $this->transactionService->create([
+                    'type' => 'swap',
+                    'amount' => $totalToDeduct,
+                    'currency' => $currency,
+                    'status' => 'completed',
+                    'network' => $network,
+                    'reference' => $reference,
+                    'user_id' => $user->id,
+                    'amount_usd' => $amountUsd
+                ]);
 
-            //    $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $totalToDeduct, 8);
-            //     $userVirtualAccount->save();
-            //     $userAccount = UserAccount::where('user_id', $user->id)->first();
-            //     if ($userAccount) {
-            //         $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
-            //         $userAccount->save();
-            //     }
+                // Save swap transaction
+                $data['status'] = 'pending';
+                $data['user_id'] = $user->id;
+                $data['reference'] = $reference;
+                $data['transaction_id'] = $transaction->id;
+                $swapTransaction = SwapTransaction::create($data);
 
-            // Save transaction record
-            $transaction = $this->transactionService->create([
-                'type' => 'swap',
-                'amount' => $totalToDeduct,
-                'currency' => $currency,
-                'status' => 'completed',
-                'network' => $network,
-                'reference' => $reference,
-                'user_id' => $user->id,
-                'amount_usd' => $amountUsd
-            ]);
-
-            // Save swap transaction
-            $data['status'] = 'pending';
-            $data['user_id'] = $user->id;
-            $data['reference'] = $reference;
-            $data['transaction_id'] = $transaction->id;
-            $swapTransaction = SwapTransaction::create($data);
-
-            return $swapTransaction;
+                return $swapTransaction;
+            });
         } catch (Exception $e) {
             Log::error("Swap Failed: " . $e->getMessage());
             throw new Exception($e->getMessage());

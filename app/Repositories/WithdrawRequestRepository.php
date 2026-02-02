@@ -64,46 +64,71 @@ class WithdrawRequestRepository
 
     public function updateStatus($id, array $data)
     {
-        $withdraw = WithdrawRequest::where('id', $id)->first();
-        if (!$withdraw) {
-            throw new \Exception('Withdraw Request not found');
-        }
-        $status = $data['status'];
-        
-        // Update send_account if provided
-        if (isset($data['send_account'])) {
-            $withdraw->send_account = $data['send_account'];
-        }
-        
-        if ($status == 'approved') {
-            $withdraw->status = 'approved';
-            $withdraw->save();
-            $this->withdrawTransactionRepository->create([
-                'withdraw_request_id' => $withdraw->id,
-                'user_id' => $withdraw->user_id
-            ]);
-          
-            UserNotification::create([
-                'user_id' => $withdraw->user_id,
-                'type' => 'withdraw_approved',
-                'message' => 'Your withdraw request has been approved.'
-            ]);
-        } elseif ($status == 'rejected') {
-            $withdraw->status = 'rejected';
-            $userAccount = UserAccount::where('user_id', $withdraw->user_id)->first();
-            $userAccount->naira_balance = $userAccount->naira_balance + $withdraw->total;
-            $withdraw->save();
-            $this->withdrawTransactionRepository->create([
-                'withdraw_request_id' => $withdraw->id,
-                'user_id' => $withdraw->user_id
-            ]);
-            UserNotification::create([
-                'user_id' => $withdraw->user_id,
-                'type' => 'withdraw_rejected',
-                'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.'
-            ]);
-        }
-        return $withdraw;
+        // Use database transaction to ensure atomicity and prevent race conditions
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($id, $data) {
+            // Lock withdraw request to prevent concurrent status updates
+            $withdraw = WithdrawRequest::where('id', $id)->lockForUpdate()->first();
+            if (!$withdraw) {
+                throw new \Exception('Withdraw Request not found');
+            }
+            
+            // Check if already processed to prevent double processing
+            if (isset($data['status'])) {
+                if ($withdraw->status === $data['status']) {
+                    return $withdraw; // Already in this status, don't process again
+                }
+            }
+            
+            $status = $data['status'] ?? null;
+            
+            // Update send_account if provided
+            if (isset($data['send_account'])) {
+                $withdraw->send_account = $data['send_account'];
+            }
+            
+            if ($status == 'approved') {
+                $withdraw->status = 'approved';
+                $withdraw->save();
+                $this->withdrawTransactionRepository->create([
+                    'withdraw_request_id' => $withdraw->id,
+                    'user_id' => $withdraw->user_id
+                ]);
+              
+                UserNotification::create([
+                    'user_id' => $withdraw->user_id,
+                    'type' => 'withdraw_approved',
+                    'message' => 'Your withdraw request has been approved.'
+                ]);
+            } elseif ($status == 'rejected') {
+                $withdraw->status = 'rejected';
+                
+                // Lock user account to prevent concurrent refunds
+                $userAccount = UserAccount::where('user_id', $withdraw->user_id)
+                    ->lockForUpdate()
+                    ->first();
+                    
+                if ($userAccount) {
+                    // Refund balance using BCMath for precision
+                    $refundAmount = (string) $withdraw->total;
+                    $currentBalance = (string) $userAccount->naira_balance;
+                    $newBalance = bcadd($currentBalance, $refundAmount, 8);
+                    $userAccount->naira_balance = $newBalance;
+                    $userAccount->save();
+                }
+                
+                $withdraw->save();
+                $this->withdrawTransactionRepository->create([
+                    'withdraw_request_id' => $withdraw->id,
+                    'user_id' => $withdraw->user_id
+                ]);
+                UserNotification::create([
+                    'user_id' => $withdraw->user_id,
+                    'type' => 'withdraw_rejected',
+                    'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.'
+                ]);
+            }
+            return $withdraw->fresh();
+        });
     }
 
     public function delete($id)
