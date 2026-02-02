@@ -94,9 +94,7 @@ class TransactionManagementController extends Controller
         
         $params = [
             'search' => $request->query('search'),
-            'period' => $request->query('period', 'all'), // 'all', 'today', 'this_month', 'last_month', 'this_year', 'custom'
-            'start_date' => $startDate,
-            'end_date' => $endDate,
+            'period' => $request->query('period', 'all'),
             'status' => $request->query('status'), // 'completed', 'pending', 'rejected', or 'all' (ignore if 'all')
             'type' => $request->query('type'), // 'send', 'receive', 'buy', 'swap', 'withdrawTransaction', or 'all' (ignore if 'all')
             'transfer_type' => $request->query('transfer_type'), // 'internal', 'external', or 'all' (ignore if 'all')

@@ -57,8 +57,12 @@ public function create(array $data): \App\Models\WithdrawRequest
         $data['fee']  = $calculatedFee;
         $data['total'] = bcadd($amount, $calculatedFee, 8);
 
-        // balance check
-        if ($userAccount->naira_balance < $data['total']) {
+        // Balance check using BCMath for precision (consistent with fee calculation)
+        // Compare as strings to avoid floating point precision issues
+        $currentBalance = (string) $userAccount->naira_balance;
+        $requiredTotal = $data['total'];
+        
+        if (bccomp($currentBalance, $requiredTotal, 8) < 0) {
             throw new Exception('Insufficient Balance');
         }
 

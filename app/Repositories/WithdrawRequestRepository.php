@@ -27,15 +27,38 @@ class WithdrawRequestRepository
 
     public function create(array $data)
     {
-        $wallet=UserAccount::where('user_id', $data['user_id'])->first();
-        $data['balance_before'] = $wallet->naira_balance;
-        $withdaaw = WithdrawRequest::create($data);
-        //cut the user balance
-        
-        $userAccount = UserAccount::where('user_id', $data['user_id'])->first();
-        $userAccount->naira_balance = $userAccount->naira_balance - $data['total'];
-        $userAccount->save();
-        return $withdaaw;
+        // Use database transaction to ensure atomicity and prevent race conditions
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            // Lock the user account row for update to prevent concurrent withdrawals
+            $userAccount = UserAccount::where('user_id', $data['user_id'])
+                ->lockForUpdate()
+                ->first();
+            
+            if (!$userAccount) {
+                throw new \Exception('User Account not found');
+            }
+
+            // Store balance before deduction
+            $data['balance_before'] = $userAccount->naira_balance;
+            
+            // Double-check balance using BCMath (prevent race condition)
+            $currentBalance = (string) $userAccount->naira_balance;
+            $requiredTotal = $data['total'];
+            
+            if (bccomp($currentBalance, $requiredTotal, 8) < 0) {
+                throw new \Exception('Insufficient Balance');
+            }
+
+            // Create withdrawal request
+            $withdraw = WithdrawRequest::create($data);
+            
+            // Deduct balance using BCMath for precision
+            $newBalance = bcsub($currentBalance, $requiredTotal, 8);
+            $userAccount->naira_balance = $newBalance;
+            $userAccount->save();
+            
+            return $withdraw;
+        });
     }
 
 
