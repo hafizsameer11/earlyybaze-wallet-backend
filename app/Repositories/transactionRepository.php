@@ -105,7 +105,7 @@ public function all(array $params)
         $query->where(function ($q) use ($search) {
             // Search in user fields
             $q->whereHas('user', function ($userQuery) use ($search) {
-                $userQuery->where('username', 'LIKE', "%{$search}%")
+                $userQuery->where('fullName', 'LIKE', "%{$search}%")
                           ->orWhere('email', 'LIKE', "%{$search}%")
                           ->orWhere('name', 'LIKE', "%{$search}%");
             })

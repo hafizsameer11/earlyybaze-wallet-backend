@@ -106,25 +106,25 @@ class BuyTransactionRepository
         return \Illuminate\Support\Facades\DB::transaction(function () use ($id, $data) {
             // Lock buy transaction to prevent concurrent updates
             $buyTransaction = BuyTransaction::where('id', $id)->lockForUpdate()->first();
-            if (!$buyTransaction) {
-                throw new \Exception('Buy Transaction not found');
-            }
+        if (!$buyTransaction) {
+            throw new \Exception('Buy Transaction not found');
+        }
             
             // Check if already processed to prevent double crediting
             if ($buyTransaction->status === 'approved' && isset($data['status']) && $data['status'] === 'approved') {
                 return $buyTransaction; // Already approved, don't credit again
             }
             
-            if (isset($data['status'])) {
-                $buyTransaction->update(['status' => $data['status']]);
-            }
-            if (isset($data['rejection_reason'])) {
-                $buyTransaction->update(['rejection_reason' => $data['rejection_reason']]);
-            }
+        if (isset($data['status'])) {
+            $buyTransaction->update(['status' => $data['status']]);
+        }
+        if (isset($data['rejection_reason'])) {
+            $buyTransaction->update(['rejection_reason' => $data['rejection_reason']]);
+        }
             
             // Only credit balance if status is being set to 'approved'
             if (isset($data['status']) && $data['status'] === 'approved') {
-                $user_id = $buyTransaction->user_id;
+        $user_id = $buyTransaction->user_id;
                 $amountCoin = (string) $buyTransaction->amount_coin;
                 
                 // Lock virtual account to prevent concurrent updates
@@ -134,16 +134,16 @@ class BuyTransactionRepository
                     ->lockForUpdate()
                     ->first();
                     
-                if ($virtualAccount) {
+        if ($virtualAccount) {
                     // Use BCMath for precision
                     $newAvailableBalance = bcadd((string) $virtualAccount->available_balance, $amountCoin, 8);
                     $newAccountBalance = bcadd((string) $virtualAccount->account_balance, $amountCoin, 8);
                     
-                    $virtualAccount->update([
+            $virtualAccount->update([
                         'available_balance' => $newAvailableBalance,
                         'account_balance' => $newAccountBalance,
-                    ]);
-                }
+            ]);
+        }
             }
             
             return $buyTransaction->fresh();

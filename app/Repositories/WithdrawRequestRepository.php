@@ -55,7 +55,7 @@ class WithdrawRequestRepository
             // Deduct balance using BCMath for precision
             $newBalance = bcsub($currentBalance, $requiredTotal, 8);
             $userAccount->naira_balance = $newBalance;
-            $userAccount->save();
+        $userAccount->save();
             
             return $withdraw;
         });
@@ -68,9 +68,9 @@ class WithdrawRequestRepository
         return \Illuminate\Support\Facades\DB::transaction(function () use ($id, $data) {
             // Lock withdraw request to prevent concurrent status updates
             $withdraw = WithdrawRequest::where('id', $id)->lockForUpdate()->first();
-            if (!$withdraw) {
-                throw new \Exception('Withdraw Request not found');
-            }
+        if (!$withdraw) {
+            throw new \Exception('Withdraw Request not found');
+        }
             
             // Check if already processed to prevent double processing
             if (isset($data['status'])) {
@@ -86,21 +86,21 @@ class WithdrawRequestRepository
                 $withdraw->send_account = $data['send_account'];
             }
             
-            if ($status == 'approved') {
-                $withdraw->status = 'approved';
-                $withdraw->save();
-                $this->withdrawTransactionRepository->create([
-                    'withdraw_request_id' => $withdraw->id,
-                    'user_id' => $withdraw->user_id
-                ]);
+        if ($status == 'approved') {
+            $withdraw->status = 'approved';
+            $withdraw->save();
+            $this->withdrawTransactionRepository->create([
+                'withdraw_request_id' => $withdraw->id,
+                'user_id' => $withdraw->user_id
+            ]);
               
                 UserNotification::create([
                     'user_id' => $withdraw->user_id,
                     'type' => 'withdraw_approved',
                     'message' => 'Your withdraw request has been approved.'
                 ]);
-            } elseif ($status == 'rejected') {
-                $withdraw->status = 'rejected';
+        } elseif ($status == 'rejected') {
+            $withdraw->status = 'rejected';
                 
                 // Lock user account to prevent concurrent refunds
                 $userAccount = UserAccount::where('user_id', $withdraw->user_id)
@@ -116,17 +116,17 @@ class WithdrawRequestRepository
                     $userAccount->save();
                 }
                 
-                $withdraw->save();
-                $this->withdrawTransactionRepository->create([
-                    'withdraw_request_id' => $withdraw->id,
-                    'user_id' => $withdraw->user_id
-                ]);
+            $withdraw->save();
+            $this->withdrawTransactionRepository->create([
+                'withdraw_request_id' => $withdraw->id,
+                'user_id' => $withdraw->user_id
+            ]);
                 UserNotification::create([
                     'user_id' => $withdraw->user_id,
                     'type' => 'withdraw_rejected',
                     'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.'
                 ]);
-            }
+        }
             return $withdraw->fresh();
         });
     }

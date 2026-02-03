@@ -115,63 +115,63 @@ class TransactionSendRepository
         try {
             // Use database transaction to ensure atomicity and prevent race conditions
             return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
-                $currency = $data['currency'];
-                $network = $data['network'];
+            $currency = $data['currency'];
+            $network = $data['network'];
                 $network = WalletCurrency::where('currency', $currency)->first()->blockchain;
-                $email = $data['email'];
+            $email = $data['email'];
                 $amount = (string) $data['amount'];
-                $sendingType = $data['sending_type'];
-                $receiver = User::where('email', $email)->first();
-                if (!$receiver) {
+            $sendingType = $data['sending_type'];
+            $receiver = User::where('email', $email)->first();
+            if (!$receiver) {
                     throw new \Exception('Receiver not found');
-                }
+            }
 
-                $sender = Auth::user();
-                //check if receiver email and sender email are same
-                if ($email == $sender->email) {
-                    Log::info("You cannot send to yourself .$email");
-                    throw new \Exception('You cannot send to yourself');
-                }
+            $sender = Auth::user();
+            //check if receiver email and sender email are same
+            if ($email == $sender->email) {
+                Log::info("You cannot send to yourself .$email");
+               throw new \Exception('You cannot send to yourself');
+            }
 
                 // Lock sender account to prevent concurrent transfers
-                $senderAccount = VirtualAccount::where('user_id', $sender->id)
-                    ->where('currency', $currency)
-                    ->where('blockchain', $network)
+            $senderAccount = VirtualAccount::where('user_id', $sender->id)
+                ->where('currency', $currency)
+                ->where('blockchain', $network)
                     ->lockForUpdate()
-                    ->first();
+                ->first();
 
                 // Lock receiver account to prevent concurrent receives
-                $receiverAccount = VirtualAccount::where('user_id', $receiver->id)
-                    ->where('currency', $currency)
-                    ->where('blockchain', $network)
+            $receiverAccount = VirtualAccount::where('user_id', $receiver->id)
+                ->where('currency', $currency)
+                ->where('blockchain', $network)
                     ->lockForUpdate()
-                    ->first();
+                ->first();
 
-                if (!$senderAccount || !$receiverAccount) {
+            if (!$senderAccount || !$receiverAccount) {
                     throw new \Exception('Sender or receiver account not found');
-                }
+            }
 
                 // Check balance using BCMath for precision
                 $currentBalance = (string) $senderAccount->available_balance;
                 if (bccomp($currentBalance, $amount, 8) < 0) {
                     throw new \Exception('Insufficient balance');
-                }
+            }
 
-                $receiverDepositAddress = DepositAddress::where('virtual_account_id', $receiverAccount->id)->first();
+            $receiverDepositAddress = DepositAddress::where('virtual_account_id', $receiverAccount->id)->first();
 
                 // Adjust balances using BCMath for precision
                 $senderNewBalance = bcsub($currentBalance, $amount, 8);
                 $senderAccount->available_balance = $senderNewBalance;
                 $senderAccount->account_balance = bcsub((string) $senderAccount->account_balance, $amount, 8);
-                $senderAccount->save();
+            $senderAccount->save();
 
                 $receiverNewBalance = bcadd((string) $receiverAccount->available_balance, $amount, 8);
                 $receiverAccount->available_balance = $receiverNewBalance;
                 $receiverAccount->account_balance = bcadd((string) $receiverAccount->account_balance, $amount, 8);
-                $receiverAccount->save();
+            $receiverAccount->save();
 
-                // Calculate USD equivalent
-                $exchangerate = $this->exchangeRateService->getByCurrency($currency);
+            // Calculate USD equivalent
+            $exchangerate = $this->exchangeRateService->getByCurrency($currency);
                 $amountUsd = $exchangerate ? bcmul($amount, (string) $exchangerate->rate_usd, 8) : null;
 
             // Generate a reference
@@ -242,11 +242,11 @@ class TransactionSendRepository
             ]);
 
 
-                return [
-                    'success' => true,
-                    'transaction_id' => $senderTransaction->id,
-                    'reference' => $reference,
-                ];
+            return [
+                'success' => true,
+                'transaction_id' => $senderTransaction->id,
+                'reference' => $reference,
+            ];
             });
         } catch (\Exception $e) {
             Log::error('Internal Transfer Error: ' . $e->getMessage());
@@ -259,39 +259,39 @@ class TransactionSendRepository
         try {
             // Use database transaction to ensure atomicity and prevent race conditions
             return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
-                // Extract transaction details
-                $currency = strtoupper($data['currency']); // Example: ETH, USDT
-                $network = strtoupper($data['network']); // Blockchain: ETH, BSC, TRON, etc.
+            // Extract transaction details
+            $currency = strtoupper($data['currency']); // Example: ETH, USDT
+            $network = strtoupper($data['network']); // Blockchain: ETH, BSC, TRON, etc.
                 $amount = (string) $data['amount'];
-                $receiverAddress = $data['address'];
+            $receiverAddress = $data['address'];
 
                 // Get sender's virtual account with lock
-                $sender = Auth::user();
-                $senderAccount = VirtualAccount::where('user_id', $sender->id)
-                    ->where('currency', $currency)
-                    ->where('blockchain', $network)
+            $sender = Auth::user();
+            $senderAccount = VirtualAccount::where('user_id', $sender->id)
+                ->where('currency', $currency)
+                ->where('blockchain', $network)
                     ->lockForUpdate()
-                    ->first();
+                ->first();
 
-                if (!$senderAccount) {
+            if (!$senderAccount) {
                     throw new \Exception('Sender account not found');
-                }
+            }
 
-                // Get sender's deposit address
-                $senderDepositAddress = DepositAddress::where('virtual_account_id', $senderAccount->id)->first();
-                if (!$senderDepositAddress) {
+            // Get sender's deposit address
+            $senderDepositAddress = DepositAddress::where('virtual_account_id', $senderAccount->id)->first();
+            if (!$senderDepositAddress) {
                     throw new \Exception('Sender deposit address not found');
-                }
-                $senderAddress = $senderDepositAddress->address;
+            }
+            $senderAddress = $senderDepositAddress->address;
 
-                // Estimate Gas Fee
-                $gasFeeResponse = $this->tatumService->estimateGasFee($network, $senderAddress, $receiverAddress, $amount);
-                if (!isset($gasFeeResponse['gasLimit']) || !isset($gasFeeResponse['gasPrice'])) {
+            // Estimate Gas Fee
+            $gasFeeResponse = $this->tatumService->estimateGasFee($network, $senderAddress, $receiverAddress, $amount);
+            if (!isset($gasFeeResponse['gasLimit']) || !isset($gasFeeResponse['gasPrice'])) {
                     throw new \Exception('Failed to estimate gas fee');
-                }
+            }
 
-                $gasLimit = $gasFeeResponse['gasLimit'];
-                $gasPrice = $gasFeeResponse['gasPrice'];
+            $gasLimit = $gasFeeResponse['gasLimit'];
+            $gasPrice = $gasFeeResponse['gasPrice'];
                 $gasFee = (string) ($gasLimit * $gasPrice); // Total gas cost
 
                 // Ensure sender has enough balance for transaction + gas fee using BCMath
@@ -300,51 +300,51 @@ class TransactionSendRepository
                 
                 if (bccomp($currentBalance, $totalCost, 8) < 0) {
                     throw new \Exception('Insufficient balance to cover amount + gas fee');
-                }
+            }
 
-                // Execute On-Chain Transaction
-                $response = $this->tatumService->sendBlockchainTransaction([
-                    "chain" => $network,
-                    "from" => $senderAddress,
-                    "to" => $receiverAddress,
+            // Execute On-Chain Transaction
+            $response = $this->tatumService->sendBlockchainTransaction([
+                "chain" => $network,
+                "from" => $senderAddress,
+                "to" => $receiverAddress,
                     "amount" => $amount,
-                    "gasLimit" => $gasLimit,
-                    "gasPrice" => $gasPrice
-                ]);
+                "gasLimit" => $gasLimit,
+                "gasPrice" => $gasPrice
+            ]);
 
-                Log::info('On-Chain Transfer Response: ' . json_encode($response));
+            Log::info('On-Chain Transfer Response: ' . json_encode($response));
 
-                $status = 'failed';
-                $txId = null;
-                if (isset($response['txId'])) {
-                    $status = 'pending';
-                    $txId = $response['txId'];
-                } elseif (isset($response['errorCode'])) {
-                    throw new \Exception('Failed to send on-chain transaction: ' . $response['message']);
-                }
+            $status = 'failed';
+            $txId = null;
+            if (isset($response['txId'])) {
+                $status = 'pending';
+                $txId = $response['txId'];
+            } elseif (isset($response['errorCode'])) {
+                throw new \Exception('Failed to send on-chain transaction: ' . $response['message']);
+            }
 
-                // Store transaction details
-                TransactionSend::create([
-                    'transaction_type' => 'on_chain',
-                    'sender_virtual_account_id' => $senderAccount->account_id,
-                    'receiver_virtual_account_id' => null,
-                    'sender_address' => $senderAddress,
-                    'receiver_address' => $receiverAddress,
-                    'amount' => $amount,
-                    'currency' => $currency,
-                    'tx_id' => $txId,
-                    'gas_fee' => $gasFee,
-                    'status' => $status,
-                    'blockchain' => $network,
-                ]);
+            // Store transaction details
+            TransactionSend::create([
+                'transaction_type' => 'on_chain',
+                'sender_virtual_account_id' => $senderAccount->account_id,
+                'receiver_virtual_account_id' => null,
+                'sender_address' => $senderAddress,
+                'receiver_address' => $receiverAddress,
+                'amount' => $amount,
+                'currency' => $currency,
+                'tx_id' => $txId,
+                'gas_fee' => $gasFee,
+                'status' => $status,
+                'blockchain' => $network,
+            ]);
 
                 // Deduct balance using BCMath for precision
                 $newBalance = bcsub($currentBalance, $totalCost, 8);
                 $senderAccount->available_balance = $newBalance;
                 $senderAccount->account_balance = bcsub((string) $senderAccount->account_balance, $totalCost, 8);
-                $senderAccount->save();
+            $senderAccount->save();
 
-                return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
+            return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
             });
         } catch (\Exception $e) {
             Log::error('On-Chain Transfer Error: ' . $e->getMessage());
