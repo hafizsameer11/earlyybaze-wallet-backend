@@ -94,38 +94,9 @@ class SwapTransactionRepository
                 // Get current available balance
                 $currentBalance = (string) $userVirtualAccount->available_balance;
                 
-                // Calculate total pending swaps for this currency/network (reserved balance)
-                // This includes both amount and fee for each pending swap
-                $pendingSwaps = SwapTransaction::where('user_id', $user->id)
-                    ->where('currency', $currency)
-                    ->where('network', $network)
-                    ->where('status', 'pending')
-                    ->get();
-                
-                $reservedBalance = '0.00000000';
-                foreach ($pendingSwaps as $pendingSwap) {
-                    $pendingAmount = (string) $pendingSwap->amount;
-                    $pendingFee = (string) ($pendingSwap->fee ?? '0.00000000');
-                    
-                    // Normalize scientific notation if present
-                    if (stripos($pendingAmount, 'e') !== false) {
-                        $pendingAmount = sprintf('%.8f', (float)$pendingAmount);
-                    }
-                    if (stripos($pendingFee, 'e') !== false) {
-                        $pendingFee = sprintf('%.8f', (float)$pendingFee);
-                    }
-                    
-                    // Total reserved = amount + fee (matching totalToDeduct calculation)
-                    $pendingTotal = bcadd($pendingAmount, $pendingFee, 8);
-                    $reservedBalance = bcadd($reservedBalance, $pendingTotal, 8);
-                }
-                
-                // Available balance = current balance - reserved (pending swaps)
-                $availableBalance = bcsub($currentBalance, $reservedBalance, 8);
-                
-                // Check if available balance is sufficient
-                if (bccomp($availableBalance, $totalToDeduct, 8) < 0) {
-                    throw new Exception('Insufficient balance for swap. You have pending swap transactions.');
+                // Check if current balance is sufficient (without checking pending swaps)
+                if (bccomp($currentBalance, $totalToDeduct, 8) < 0) {
+                    throw new Exception('Insufficient balance for swap.');
                 }
 
                 // Note: Balance is NOT deducted here - it's deducted in completeSwapTransaction()

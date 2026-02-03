@@ -65,24 +65,24 @@ public function all(array $params)
         $query->whereBetween('created_at', [$customStartDate, $customEndDate]);
     } else {
         // Use period-based filtering
-        switch ($period) {
-            case 'today':
-                $query->whereBetween('created_at', [$todayStart, $todayEnd]);
-                break;
-            case 'this_month':
-                $query->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
-                break;
-            case 'last_month':
-                $query->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
-                break;
-            case 'this_year':
-                $query->whereBetween('created_at', [$thisYearStart, $thisYearEnd]);
-                break;
-            case 'all':
-            default:
-                // No date filter - load all transactions
-                break;
-        }
+    switch ($period) {
+        case 'today':
+            $query->whereBetween('created_at', [$todayStart, $todayEnd]);
+            break;
+        case 'this_month':
+            $query->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
+            break;
+        case 'last_month':
+            $query->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
+            break;
+        case 'this_year':
+            $query->whereBetween('created_at', [$thisYearStart, $thisYearEnd]);
+            break;
+        case 'all':
+        default:
+            // No date filter - load all transactions
+            break;
+    }
     }
 
     // -------- Apply status filter (ignore if 'all' or null)
@@ -119,7 +119,7 @@ public function all(array $params)
     // -------- Handle export mode vs pagination mode
     if ($isExport) {
         // Export mode: Get all matching records without pagination
-        $transactions = $query->get();
+    $transactions = $query->get();
         $paginationData = null;
     } else {
         // Normal mode: Use pagination
