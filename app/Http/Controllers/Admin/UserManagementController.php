@@ -186,18 +186,6 @@ class UserManagementController extends Controller
                 return ResponseHelper::error('User not found', 404);
             }
 
-            // Get all transactions (including soft deleted if any)
-            $transactions = \App\Models\Transaction::where('user_id', $userId)
-                ->with([
-                    'sendtransaction',
-                    'recievetransaction',
-                    'buytransaction.bankAccount',
-                    'swaptransaction',
-                    'withdraw_transaction.withdraw_request.bankAccount'
-                ])
-                ->orderBy('created_at', 'desc')
-                ->get();
-
             // Get all withdraw requests (including soft deleted)
             $withdrawRequests = \App\Models\WithdrawRequest::withTrashed()
                 ->where('user_id', $userId)
@@ -205,11 +193,6 @@ class UserManagementController extends Controller
                     $query->withTrashed();
                 }])
                 ->orderBy('created_at', 'desc')
-                ->get();
-
-            // Get all virtual accounts (on-chain assets)
-            $virtualAccounts = \App\Models\VirtualAccount::where('user_id', $userId)
-                ->with(['walletCurrency', 'depositAddresses'])
                 ->get();
 
             // Get user account (naira balance)
@@ -440,10 +423,8 @@ class UserManagementController extends Controller
                     'is_deleted' => $user->deleted_at !== null,
                 ],
                 'user_account' => $userAccount,
-                'virtual_accounts' => $virtualAccounts,
                 'bank_accounts' => $bankAccounts,
                 'kyc' => $kyc,
-                // Separate transactions by type
                 'transactions_by_type' => [
                     'withdraw' => [
                         'requests' => $withdrawRequests->values(),
@@ -479,33 +460,10 @@ class UserManagementController extends Controller
                         'count' => $buyTransactions->count(),
                     ],
                 ],
-                // Keep original structure for backward compatibility
-                'transactions' => [
-                    'all' => $transactions,
-                    'count' => $transactions->count(),
-                    'by_type' => [
-                        'send' => $transactions->where('type', 'send')->values(),
-                        'receive' => $transactions->where('type', 'receive')->values(),
-                        'buy' => $transactions->where('type', 'buy')->values(),
-                        'swap' => $transactions->where('type', 'swap')->values(),
-                        'withdraw' => $transactions->where('type', 'withdrawTransaction')->values(),
-                    ],
-                ],
-                'withdraw_requests' => [
-                    'all' => $withdrawRequests,
-                    'count' => $withdrawRequests->count(),
-                    'by_status' => [
-                        'pending' => $withdrawRequests->where('status', 'pending')->values(),
-                        'approved' => $withdrawRequests->where('status', 'approved')->values(),
-                        'rejected' => $withdrawRequests->where('status', 'rejected')->values(),
-                    ],
-                ],
                 'referral_earnings' => $referralEarnings,
                 'user_activity' => $userActivity,
                 'summary' => [
-                    'total_transactions' => $transactions->count(),
                     'total_withdraw_requests' => $withdrawRequests->count(),
-                    'total_virtual_accounts' => $virtualAccounts->count(),
                     'total_bank_accounts' => $bankAccounts->count(),
                     'total_received_assets' => $receivedAssets->count(),
                     'total_referral_earnings' => $referralEarnings->count(),
