@@ -111,8 +111,7 @@ public function all(array $params)
             })
             // Search in transaction fields
             ->orWhere('reference', 'LIKE', "%{$search}%")
-            ->orWhere('id', 'LIKE', "%{$search}%")
-            ->orWhere('transaction_id', 'LIKE', "%{$search}%");
+            ->orWhere('id', 'LIKE', "%{$search}%");
         });
     }
 
