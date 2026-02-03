@@ -250,7 +250,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user-management/user-assets/{userId}', [UserManagementController::class, 'getUserAssets']);
         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
-        //addign complete user details route
+        //addign complete user details routes
         Route::get('/user-management/complete-details/{userId}', [UserManagementController::class, 'getCompleteUserDetails']);
         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
         Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
