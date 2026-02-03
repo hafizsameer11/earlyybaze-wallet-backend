@@ -244,21 +244,41 @@ class UserManagementController extends Controller
                     // Get sender details if it's an internal transaction
                     $sender = null;
                     if ($receive->transaction_type === 'internal' && $receive->sender_address) {
-                        // Try to find sender by email first (for internal transactions, sender_address is usually email)
-                        $sender = \App\Models\User::withTrashed()
-                            ->where('email', $receive->sender_address)
+                        // Method 1: Find corresponding TransactionSend record by reference (most reliable)
+                        $sendTransaction = \App\Models\TransactionSend::where('tx_id', $receive->reference)
+                            ->orWhere('tx_id', $receive->tx_id)
+                            ->with(['user' => function($q) {
+                                $q->withTrashed();
+                            }])
                             ->first();
                         
-                        // If not found by email, try to find by virtual account address
-                        if (!$sender) {
-                            $sender = \App\Models\User::withTrashed()
-                                ->whereHas('virtualAccounts', function($q) use ($receive) {
-                                    $q->where('account_id', $receive->sender_address)
-                                      ->orWhereHas('depositAddresses', function($depositQ) use ($receive) {
-                                          $depositQ->where('address', $receive->sender_address);
-                                      });
-                                })
+                        if ($sendTransaction && $sendTransaction->user) {
+                            $sender = $sendTransaction->user;
+                        } else {
+                            // Method 2: Find sender by deposit address (sender_address is deposit address for internal)
+                            $depositAddress = \App\Models\DepositAddress::where('address', $receive->sender_address)
+                                ->with(['virtualAccount.user' => function($q) {
+                                    $q->withTrashed();
+                                }])
                                 ->first();
+                            
+                            if ($depositAddress && $depositAddress->virtualAccount && $depositAddress->virtualAccount->user) {
+                                $sender = $depositAddress->virtualAccount->user;
+                            } else {
+                                // Method 3: Try to find by email (fallback)
+                                $sender = \App\Models\User::withTrashed()
+                                    ->where('email', $receive->sender_address)
+                                    ->first();
+                                
+                                // Method 4: Try to find by virtual account ID
+                                if (!$sender) {
+                                    $sender = \App\Models\User::withTrashed()
+                                        ->whereHas('virtualAccounts', function($q) use ($receive) {
+                                            $q->where('account_id', $receive->sender_address);
+                                        })
+                                        ->first();
+                                }
+                            }
                         }
                     }
                     
@@ -386,10 +406,13 @@ class UserManagementController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Get received assets
+            // Get received assets (on-chain deposits) - get all without any filters
             $receivedAssets = \App\Models\ReceivedAsset::where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
                 ->get();
+            
+            // Debug: Log count to verify all are retrieved
+            \Illuminate\Support\Facades\Log::info("Received Assets Count for User {$userId}: " . $receivedAssets->count());
 
             // Get referral earnings
             $referralEarnings = \App\Models\ReferalEarning::where('user_id', $userId)
@@ -420,6 +443,43 @@ class UserManagementController extends Controller
                 'virtual_accounts' => $virtualAccounts,
                 'bank_accounts' => $bankAccounts,
                 'kyc' => $kyc,
+                // Separate transactions by type
+                'transactions_by_type' => [
+                    'withdraw' => [
+                        'requests' => $withdrawRequests->values(),
+                        'transactions' => $withdrawTransactions->values(),
+                        'count' => $withdrawRequests->count() + $withdrawTransactions->count(),
+                    ],
+                    'swap' => [
+                        'transactions' => $swapTransactions->values(),
+                        'count' => $swapTransactions->count(),
+                    ],
+                    'send_internal' => [
+                        'transactions' => $sendTransactions->where('transaction_type', 'internal')->values(),
+                        'count' => $sendTransactions->where('transaction_type', 'internal')->count(),
+                    ],
+                    'send_on_chain' => [
+                        'transactions' => $sendTransactions->where('transaction_type', 'on_chain')->values(),
+                        'count' => $sendTransactions->where('transaction_type', 'on_chain')->count(),
+                    ],
+                    'receive_internal' => [
+                        'transactions' => $receiveTransactions->where('transaction_type', 'internal')->values(),
+                        'count' => $receiveTransactions->where('transaction_type', 'internal')->count(),
+                    ],
+                    'receive_on_chain' => [
+                        'transactions' => $receiveTransactions->where('transaction_type', 'on_chain')->values(),
+                        'count' => $receiveTransactions->where('transaction_type', 'on_chain')->count(),
+                    ],
+                    'received_assets' => [
+                        'assets' => $receivedAssets->values(),
+                        'count' => $receivedAssets->count(),
+                    ],
+                    'buy' => [
+                        'transactions' => $buyTransactions->values(),
+                        'count' => $buyTransactions->count(),
+                    ],
+                ],
+                // Keep original structure for backward compatibility
                 'transactions' => [
                     'all' => $transactions,
                     'count' => $transactions->count(),
@@ -440,12 +500,6 @@ class UserManagementController extends Controller
                         'rejected' => $withdrawRequests->where('status', 'rejected')->values(),
                     ],
                 ],
-                'receive_transactions' => $receiveTransactions,
-                'send_transactions' => $sendTransactions,
-                'buy_transactions' => $buyTransactions,
-                'swap_transactions' => $swapTransactions,
-                'withdraw_transactions' => $withdrawTransactions,
-                'received_assets' => $receivedAssets,
                 'referral_earnings' => $referralEarnings,
                 'user_activity' => $userActivity,
                 'summary' => [
