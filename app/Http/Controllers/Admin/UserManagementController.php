@@ -229,15 +229,134 @@ class UserManagementController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Get all receive transactions
+            // Get all receive transactions with sender details
             $receiveTransactions = \App\Models\ReceiveTransaction::where('user_id', $userId)
+                ->with([
+                    'transaction',
+                    'virtualAccount.walletCurrency',
+                    'user' => function($query) {
+                        $query->withTrashed();
+                    }
+                ])
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->get()
+                ->map(function ($receive) {
+                    // Get sender details if it's an internal transaction
+                    $sender = null;
+                    if ($receive->transaction_type === 'internal' && $receive->sender_address) {
+                        // Try to find sender by email first (for internal transactions, sender_address is usually email)
+                        $sender = \App\Models\User::withTrashed()
+                            ->where('email', $receive->sender_address)
+                            ->first();
+                        
+                        // If not found by email, try to find by virtual account address
+                        if (!$sender) {
+                            $sender = \App\Models\User::withTrashed()
+                                ->whereHas('virtualAccounts', function($q) use ($receive) {
+                                    $q->where('account_id', $receive->sender_address)
+                                      ->orWhereHas('depositAddresses', function($depositQ) use ($receive) {
+                                          $depositQ->where('address', $receive->sender_address);
+                                      });
+                                })
+                                ->first();
+                        }
+                    }
+                    
+                    return [
+                        'id' => $receive->id,
+                        'user_id' => $receive->user_id,
+                        'transaction_id' => $receive->transaction_id,
+                        'transaction_type' => $receive->transaction_type,
+                        'sender_address' => $receive->sender_address,
+                        'reference' => $receive->reference,
+                        'tx_id' => $receive->tx_id,
+                        'amount' => $receive->amount,
+                        'currency' => $receive->currency,
+                        'blockchain' => $receive->blockchain,
+                        'amount_usd' => $receive->amount_usd,
+                        'status' => $receive->status,
+                        'balance_before' => $receive->balance_before,
+                        'created_at' => $receive->created_at,
+                        'updated_at' => $receive->updated_at,
+                        'transaction' => $receive->transaction,
+                        'virtual_account' => $receive->virtualAccount,
+                        'sender' => $sender ? [
+                            'id' => $sender->id,
+                            'name' => $sender->name,
+                            'fullName' => $sender->fullName,
+                            'email' => $sender->email,
+                            'phone' => $sender->phone,
+                            'is_deleted' => $sender->deleted_at !== null,
+                            'deleted_at' => $sender->deleted_at,
+                        ] : null,
+                    ];
+                });
 
-            // Get all send transactions
+            // Get all send transactions with receiver details
             $sendTransactions = \App\Models\TransactionSend::where('user_id', $userId)
+                ->with([
+                    'transaction',
+                    'receiver' => function($query) {
+                        $query->withTrashed();
+                    },
+                    'user' => function($query) {
+                        $query->withTrashed();
+                    }
+                ])
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->get()
+                ->map(function ($send) {
+                    // If receiver_id is missing but receiver_address exists (for internal transactions)
+                    $receiver = $send->receiver;
+                    if (!$receiver && $send->transaction_type === 'internal' && $send->receiver_address) {
+                        // Try to find receiver by email or virtual account
+                        $receiver = \App\Models\User::withTrashed()
+                            ->where('email', $send->receiver_address)
+                            ->orWhereHas('virtualAccounts', function($q) use ($send) {
+                                $q->where('account_id', $send->receiver_virtual_account_id);
+                            })
+                            ->first();
+                    }
+                    
+                    return [
+                        'id' => $send->id,
+                        'user_id' => $send->user_id,
+                        'receiver_id' => $send->receiver_id,
+                        'transaction_id' => $send->transaction_id,
+                        'transaction_type' => $send->transaction_type,
+                        'sender_virtual_account_id' => $send->sender_virtual_account_id,
+                        'receiver_virtual_account_id' => $send->receiver_virtual_account_id,
+                        'sender_address' => $send->sender_address,
+                        'receiver_address' => $send->receiver_address,
+                        'amount' => $send->amount,
+                        'currency' => $send->currency,
+                        'tx_id' => $send->tx_id,
+                        'block_height' => $send->block_height,
+                        'block_hash' => $send->block_hash,
+                        'gas_fee' => $send->gas_fee,
+                        'network_fee' => $send->network_fee,
+                        'status' => $send->status,
+                        'blockchain' => $send->blockchain,
+                        'amount_usd' => $send->amount_usd,
+                        'created_at' => $send->created_at,
+                        'updated_at' => $send->updated_at,
+                        'transaction' => $send->transaction,
+                        'sender' => $send->user ? [
+                            'id' => $send->user->id,
+                            'name' => $send->user->name,
+                            'fullName' => $send->user->fullName,
+                            'email' => $send->user->email,
+                            'is_deleted' => $send->user->deleted_at !== null,
+                        ] : null,
+                        'receiver' => $receiver ? [
+                            'id' => $receiver->id,
+                            'name' => $receiver->name,
+                            'fullName' => $receiver->fullName,
+                            'email' => $receiver->email,
+                            'is_deleted' => $receiver->deleted_at !== null,
+                        ] : null,
+                    ];
+                });
 
             // Get all buy transactions
             $buyTransactions = \App\Models\BuyTransaction::where('user_id', $userId)
@@ -252,13 +371,18 @@ class UserManagementController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Get all withdraw transactions
-            $withdrawTransactions = \App\Models\WithdrawTransaction::where('user_id', $userId)
-                ->with(['withdraw_request' => function($query) {
-                    $query->withTrashed()->with(['bankAccount' => function($q) {
-                        $q->withTrashed();
-                    }]);
-                }])
+            // Get all withdraw transactions (through transaction relationship since withdraw_transactions doesn't have user_id)
+            $withdrawTransactions = \App\Models\WithdrawTransaction::whereHas('transaction', function($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                })
+                ->with([
+                    'transaction',
+                    'withdraw_request' => function($query) {
+                        $query->withTrashed()->with(['bankAccount' => function($q) {
+                            $q->withTrashed();
+                        }]);
+                    }
+                ])
                 ->orderBy('created_at', 'desc')
                 ->get();
 

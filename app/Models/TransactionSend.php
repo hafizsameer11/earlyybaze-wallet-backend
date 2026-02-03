@@ -41,7 +41,7 @@ class TransactionSend extends Model
     }
     public function receiver()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'receiver_id');
     }
     public function transaction()
     {
