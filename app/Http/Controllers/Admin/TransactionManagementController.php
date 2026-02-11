@@ -71,30 +71,32 @@ class TransactionManagementController extends Controller
  public function getAll(Request $request)
 {
     try {
-        // Validate date format if provided
+        // Normalize and validate date range params
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
-        
-        // Validate date format
-        if ($startDate && !strtotime($startDate)) {
-            return ResponseHelper::error('Invalid start_date format. Use Y-m-d format (e.g., 2026-01-01)', 422);
-        }
-        
-        if ($endDate && !strtotime($endDate)) {
-            return ResponseHelper::error('Invalid end_date format. Use Y-m-d format (e.g., 2026-01-31)', 422);
-        }
-        
-        // Validate date range
-        if ($startDate && $endDate && strtotime($startDate) > strtotime($endDate)) {
-            return ResponseHelper::error('start_date must be before or equal to end_date', 422);
+        $startDate = is_string($startDate) ? trim($startDate) : $startDate;
+        $endDate = is_string($endDate) ? trim($endDate) : $endDate;
+        $useDateRange = $startDate !== '' && $endDate !== '';
+
+        if ($useDateRange) {
+            if (!strtotime($startDate)) {
+                return ResponseHelper::error('Invalid start_date format. Use Y-m-d (e.g. 2026-01-01)', 422);
+            }
+            if (!strtotime($endDate)) {
+                return ResponseHelper::error('Invalid end_date format. Use Y-m-d (e.g. 2026-01-31)', 422);
+            }
+            if (strtotime($startDate) > strtotime($endDate)) {
+                return ResponseHelper::error('start_date must be before or equal to end_date', 422);
+            }
         }
 
-        // Check if this is an export request
         $isExport = $request->query('export', false) === 'true' || $request->query('export', false) === true;
-        
+
         $params = [
             'search' => $request->query('search'),
             'period' => $request->query('period', 'all'),
+            'start_date' => $useDateRange ? $startDate : null,
+            'end_date' => $useDateRange ? $endDate : null,
             'status' => $request->query('status'), // 'completed', 'pending', 'rejected', or 'all' (ignore if 'all')
             'type' => $request->query('type'), // 'send', 'receive', 'buy', 'swap', 'withdrawTransaction', or 'all' (ignore if 'all')
             'transfer_type' => $request->query('transfer_type'), // 'internal', 'external', or 'all' (ignore if 'all')

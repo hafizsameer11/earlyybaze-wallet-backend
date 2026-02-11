@@ -52,13 +52,15 @@ public function all(array $params)
     // -------- Query Builder
     $query = Transaction::with($with)->orderBy('created_at', 'desc');
 
-    // -------- Apply date filter based on period or custom date range
+    // -------- Apply date filter: prefer start_date/end_date over period when both are non-empty
     $useCustomDateRange = false;
     $customStartDate = null;
     $customEndDate = null;
-    
-    if ($startDate && $endDate) {
-        // Custom date range provided
+    $startDate = isset($startDate) && $startDate !== '' ? trim((string) $startDate) : null;
+    $endDate = isset($endDate) && $endDate !== '' ? trim((string) $endDate) : null;
+
+    if ($startDate !== null && $endDate !== null) {
+        // Custom date range: ignore period
         $useCustomDateRange = true;
         $customStartDate = Carbon::parse($startDate)->startOfDay();
         $customEndDate = Carbon::parse($endDate)->endOfDay();
