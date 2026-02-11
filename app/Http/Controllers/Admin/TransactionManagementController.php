@@ -71,12 +71,20 @@ class TransactionManagementController extends Controller
  public function getAll(Request $request)
 {
     try {
-        // Normalize and validate date range params
+        // Normalize and validate date range params (only use range when BOTH are non-empty)
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
-        $startDate = is_string($startDate) ? trim($startDate) : $startDate;
-        $endDate = is_string($endDate) ? trim($endDate) : $endDate;
-        $useDateRange = $startDate !== '' && $endDate !== '';
+        if ($startDate !== null && $startDate !== '') {
+            $startDate = trim((string) $startDate);
+        } else {
+            $startDate = null;
+        }
+        if ($endDate !== null && $endDate !== '') {
+            $endDate = trim((string) $endDate);
+        } else {
+            $endDate = null;
+        }
+        $useDateRange = $startDate !== null && $endDate !== null;
 
         if ($useDateRange) {
             if (!strtotime($startDate)) {
