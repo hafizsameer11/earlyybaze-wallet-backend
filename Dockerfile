@@ -31,7 +31,4 @@ EXPOSE 80
 # THE RUNTIME SEQUENCE
 # These commands run only when Dokploy starts the container, 
 # ensuring they have access to the variables in the "Environment" tab.
-CMD php artisan storage:link --force && \
-    php artisan optimize && \
-    php artisan migrate --force && \
-    frankenphp php-server
+CMD ["sh", "-c", "php artisan storage:link --force && php artisan optimize && php artisan migrate --force && frankenphp php-server"]
