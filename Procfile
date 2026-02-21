@@ -1,1 +1,0 @@
-web: php artisan storage:link --force && php artisan optimize && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && (php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)
