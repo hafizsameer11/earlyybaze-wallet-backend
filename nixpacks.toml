@@ -1,9 +1,0 @@
-[phases.setup]
-  nixPkgs = ["...", "php82-pecl-redis"]
-
-[phases.build]
-  dependsOn = ["setup"]
-  cmds = ["composer install --optimize-autoloader --no-dev", "php artisan optimize"]
-
-[phases.prestart]
-  cmds = ["php artisan storage:link --force", "php artisan migrate --force"]
