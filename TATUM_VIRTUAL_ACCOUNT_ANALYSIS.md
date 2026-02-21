@@ -1,6 +1,7 @@
 # Tatum Virtual Account System - Complete Analysis
 
 ## Overview
+
 This document provides a comprehensive analysis of how the Tatum virtual account system works in the EarlyBaze wallet backend, including master wallets, virtual accounts, deposit addresses, and webhook processing.
 
 ---
@@ -8,9 +9,11 @@ This document provides a comprehensive analysis of how the Tatum virtual account
 ## 1. Master Wallet System
 
 ### Purpose
+
 Master wallets serve as the root wallets for each blockchain, used to generate deposit addresses for user virtual accounts.
 
 ### Implementation
+
 **Location:** `app/Services/MasterWalletService.php`, `app/Models/MasterWallet.php`, `app/Http/Controllers/MasterWalletController.php`
 
 ### Database Schema: `master_wallets`
@@ -29,6 +32,7 @@ Schema::create('master_wallets', function (Blueprint $table) {
 ```
 
 **Fields:**
+
 - `id` - Primary key
 - `blockchain` - Blockchain name (e.g., ethereum, bitcoin, tron, bsc, litecoin)
 - `xpub` - Extended public key (for address derivation on UTXO/EVM chains)
@@ -40,6 +44,7 @@ Schema::create('master_wallets', function (Blueprint $table) {
 ### Master Wallet Generation - Exact Code
 
 #### 1. API Endpoint
+
 **Route:** `POST /api/master-wallet`
 **Controller:** `app/Http/Controllers/MasterWalletController.php::create()`
 
@@ -53,7 +58,7 @@ public function create(Request $request)
 
     try {
         $wallet = $this->walletService->createMasterWallet(
-            $validated['blockchain'], 
+            $validated['blockchain'],
             $validated['endpoint']
         );
         return response()->json(['message' => 'Master wallet created', 'wallet' => $wallet], 201);
@@ -64,6 +69,7 @@ public function create(Request $request)
 ```
 
 #### 2. Service Layer
+
 **Service:** `app/Services/MasterWalletService.php::createMasterWallet()`
 
 ```php
@@ -72,7 +78,7 @@ public function createMasterWallet(string $blockchain, string $endpoint): array
     // Generate wallet using Tatum API
     $walletData = $this->tatumService->createWallet($blockchain, $endpoint);
     Log::info("walletData: ".json_encode($walletData));
-    
+
     $masterWallet = $this->walletRepository->create([
         'blockchain' => $blockchain,
         'xpub' => $walletData['xpub'] ?? null,
@@ -87,6 +93,7 @@ public function createMasterWallet(string $blockchain, string $endpoint): array
 ```
 
 #### 3. Tatum Service
+
 **Service:** `app/Services/TatumService.php::createWallet()`
 
 ```php
@@ -105,6 +112,7 @@ public function createWallet(string $blockchain, string $endpoint): array
 ```
 
 **Tatum API Endpoints Used:**
+
 - `GET /v3/ethereum/wallet` - Ethereum master wallet
 - `GET /v3/bitcoin/wallet` - Bitcoin master wallet
 - `GET /v3/bsc/wallet` - BSC master wallet
@@ -113,16 +121,18 @@ public function createWallet(string $blockchain, string $endpoint): array
 - etc.
 
 **Tatum Response Structure:**
+
 ```json
 {
-  "mnemonic": "word1 word2 ... word12",
-  "xpub": "xpub...",
-  "address": "0x...",
-  "privateKey": "0x..."
+    "mnemonic": "word1 word2 ... word12",
+    "xpub": "xpub...",
+    "address": "0x...",
+    "privateKey": "0x..."
 }
 ```
 
 #### 4. Repository Layer
+
 **Repository:** `app/Repositories/MasterWalletRepository.php`
 
 ```php
@@ -133,6 +143,7 @@ public function create(array $data): MasterWallet
 ```
 
 ### Master Wallet Model
+
 **Location:** `app/Models/MasterWallet.php`
 
 ```php
@@ -151,6 +162,7 @@ class MasterWallet extends Model
 ```
 
 **Usage:**
+
 - Master wallet xpub and mnemonic are used to derive deposit addresses
 - Each deposit address is generated using an index (starting from 5, incrementing by 40)
 - Addresses are derived using: `GET /{blockchain}/address/{xpub}/{index}`
@@ -191,42 +203,46 @@ class MasterWallet extends Model
 ## 2. Virtual Account Creation Flow
 
 ### Trigger: Email Verification
+
 **Location:** `app/Services/UserService.php::verifyOtp()`
 
 **Flow:**
+
 1. User registers → receives OTP via email
 2. User verifies OTP → `verifyOtp()` method called
 3. `otp_verified` set to `true`
 4. **Virtual accounts created:** `dispatch(new CreateVirtualAccount($user))`
 
 ### Virtual Account Creation Process
+
 **Location:** `app/Jobs/CreateVirtualAccount.php`
 
 **Steps:**
+
 1. Fetches all supported `WalletCurrency` records
 2. For each currency:
-   - Finds corresponding `MasterWallet` for the blockchain
-   - Creates virtual account via Tatum API:
-     ```php
-     POST /ledger/account
-     {
-       "currency": "BTC",
-       "customer": {
-         "externalId": "user_id"
-       },
-       "accountCode": "user_code",
-       "accountingCurrency": "USD"
-     }
-     ```
-   - **Note:** `xpub` is commented out (line 59), so virtual accounts are NOT linked to master wallet xpub
-   - Stores virtual account in database with:
-     - `account_id` - Tatum virtual account ID
-     - `customer_id` - Tatum customer ID
-     - `blockchain`, `currency`, `user_id`
-     - Balance information
+    - Finds corresponding `MasterWallet` for the blockchain
+    - Creates virtual account via Tatum API:
+        ```php
+        POST /ledger/account
+        {
+          "currency": "BTC",
+          "customer": {
+            "externalId": "user_id"
+          },
+          "accountCode": "user_code",
+          "accountingCurrency": "USD"
+        }
+        ```
+    - **Note:** `xpub` is commented out (line 59), so virtual accounts are NOT linked to master wallet xpub
+    - Stores virtual account in database with:
+        - `account_id` - Tatum virtual account ID
+        - `customer_id` - Tatum customer ID
+        - `blockchain`, `currency`, `user_id`
+        - Balance information
 3. After creation:
-   - Dispatches `AssignDepositAddress` job
-   - Dispatches `RegisterTatumWebhook` job
+    - Dispatches `AssignDepositAddress` job
+    - Dispatches `RegisterTatumWebhook` job
 
 ### Database Schema: `virtual_accounts`
 
@@ -252,6 +268,7 @@ Schema::create('virtual_accounts', function (Blueprint $table) {
 ```
 
 **Update Migration:** `database/migrations/2025_02_24_163655_update_virtual_account_table.php`
+
 - Added `currency_id` foreign key to link to `wallet_currencies` table
 
 ```php
@@ -262,6 +279,7 @@ Schema::table('virtual_accounts', function (Blueprint $table) {
 ```
 
 **Complete Schema:**
+
 - `id` - Primary key
 - `user_id` - Foreign key to `users` table (cascade delete)
 - `blockchain` - Blockchain name (e.g., Ethereum, Bitcoin, Tron)
@@ -279,6 +297,7 @@ Schema::table('virtual_accounts', function (Blueprint $table) {
 - `created_at`, `updated_at` - Timestamps
 
 **Relationships:**
+
 - `belongsTo(User::class)` - One user has many virtual accounts
 - `belongsTo(WalletCurrency::class, 'currency_id')` - Links to wallet currency
 - `hasMany(DepositAddress::class)` - One virtual account has many deposit addresses
@@ -288,32 +307,37 @@ Schema::table('virtual_accounts', function (Blueprint $table) {
 ## 3. Deposit Address Generation
 
 ### Process
+
 **Location:** `app/Services/WalletAddressService.php`, `app/Jobs/AssignDepositAddress.php`
 
 **Key Features:**
 
 #### Address Reuse (Blockchain Groups)
+
 Addresses are shared within blockchain groups:
+
 - **Tron Group:** `['tron', 'usdt_tron']` - share same address
 - **Ethereum Group:** `['eth', 'usdt', 'usdc']` - share same address
 - **BSC Group:** `['bsc', 'usdt_bsc', 'usdc_bsc']` - share same address
 
 #### Generation Flow:
+
 1. **Check for existing address** in same blockchain group for the user
-   - If exists: Reuse address and assign to new virtual account
-   - If not: Generate new address
+    - If exists: Reuse address and assign to new virtual account
+    - If not: Generate new address
 
 2. **New Address Generation:**
-   - Get master wallet for blockchain (with lock to prevent race conditions)
-   - Calculate next index: `max(index) + 40` (starts from 5)
-   - Generate address: `GET /{blockchain}/address/{xpub}/{index}`
-   - Generate private key: `POST /{blockchain}/wallet/priv` with mnemonic and index
-   - Assign to virtual account: `POST /offchain/account/{account_id}/address/{address}`
-   - Store in `deposit_addresses` table:
-     - Encrypted private key
-     - Address, index, blockchain, currency
+    - Get master wallet for blockchain (with lock to prevent race conditions)
+    - Calculate next index: `max(index) + 40` (starts from 5)
+    - Generate address: `GET /{blockchain}/address/{xpub}/{index}`
+    - Generate private key: `POST /{blockchain}/wallet/priv` with mnemonic and index
+    - Assign to virtual account: `POST /offchain/account/{account_id}/address/{address}`
+    - Store in `deposit_addresses` table:
+        - Encrypted private key
+        - Address, index, blockchain, currency
 
 **Security:**
+
 - Private keys are encrypted using `Crypt::encryptString()`
 - Master wallet is locked during address generation to prevent concurrent access
 
@@ -322,60 +346,66 @@ Addresses are shared within blockchain groups:
 ## 4. Webhook System
 
 ### Registration
+
 **Location:** `app/Jobs/RegisterTatumWebhook.php`
 
 **Process:**
+
 1. After virtual account creation, webhook is registered:
-   ```php
-   POST /subscription
-   {
-     "type": "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION",
-     "attr": {
-       "id": "virtual_account_id",
-       "url": "https://earlybaze.hmstech.xyz/api/webhook"
-     }
-   }
-   ```
+    ```php
+    POST /subscription
+    {
+      "type": "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION",
+      "attr": {
+        "id": "virtual_account_id",
+        "url": "https://api.settlesys.com/api/webhook"
+      }
+    }
+    ```
 2. Webhook URL configured in `config/tatum.php`
 
 ### Webhook Processing
+
 **Location:** `app/Http/Controllers/WebhookController.php`, `app/Jobs/ProcessBlockchainWebhook.php`
 
 **Flow:**
+
 1. **Receives webhook** at `/api/webhook`
 2. **Queues processing:** Dispatches `ProcessBlockchainWebhook` job
 3. **Job Processing:**
-   - **Master wallet check:** Ignores webhooks from master wallet addresses (top-ups)
-   - **Duplicate check:** Prevents processing same `reference` twice
-   - **Virtual account lookup:** Finds account by `accountId`
-   - **Balance update:** Updates `available_balance` on virtual account
-   - **Webhook logging:** Creates `WebhookResponse` record
-   - **Asset tracking:** Creates `ReceivedAsset` record
-   - **Transaction creation:** Creates `Transaction` and `ReceiveTransaction` records
-   - **Notification:** Sends notification to user
-   - **Transfer to master wallet:** Currently **COMMENTED OUT** (lines 151-165)
-     - Would transfer funds from virtual account to master wallet
-     - Supports: Ethereum, BSC, Solana, Litecoin, Tron, Bitcoin
+    - **Master wallet check:** Ignores webhooks from master wallet addresses (top-ups)
+    - **Duplicate check:** Prevents processing same `reference` twice
+    - **Virtual account lookup:** Finds account by `accountId`
+    - **Balance update:** Updates `available_balance` on virtual account
+    - **Webhook logging:** Creates `WebhookResponse` record
+    - **Asset tracking:** Creates `ReceivedAsset` record
+    - **Transaction creation:** Creates `Transaction` and `ReceiveTransaction` records
+    - **Notification:** Sends notification to user
+    - **Transfer to master wallet:** Currently **COMMENTED OUT** (lines 151-165)
+        - Would transfer funds from virtual account to master wallet
+        - Supports: Ethereum, BSC, Solana, Litecoin, Tron, Bitcoin
 
 **Webhook Payload Structure:**
+
 ```json
 {
-  "accountId": "virtual_account_id",
-  "subscriptionType": "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION",
-  "amount": "0.001",
-  "currency": "BTC",
-  "reference": "unique_reference",
-  "txId": "transaction_hash",
-  "from": "sender_address",
-  "to": "receiver_address",
-  "date": 1234567890000,
-  "blockHeight": 12345,
-  "blockHash": "block_hash",
-  "index": 0
+    "accountId": "virtual_account_id",
+    "subscriptionType": "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION",
+    "amount": "0.001",
+    "currency": "BTC",
+    "reference": "unique_reference",
+    "txId": "transaction_hash",
+    "from": "sender_address",
+    "to": "receiver_address",
+    "date": 1234567890000,
+    "blockHeight": 12345,
+    "blockHash": "block_hash",
+    "index": 0
 }
 ```
 
 **Lock Mechanism:**
+
 - Uses cache lock (`webhook_lock_{reference}`) to prevent duplicate processing
 - Lock duration: 120 seconds
 
@@ -420,6 +450,7 @@ ProcessBlockchainWebhook Job
 ## 6. Key Observations & Issues
 
 ### ✅ Working Components:
+
 1. ✅ Master wallet creation and storage
 2. ✅ Virtual account creation on email verification
 3. ✅ Deposit address generation from master wallet
@@ -430,27 +461,27 @@ ProcessBlockchainWebhook Job
 ### ⚠️ Potential Issues:
 
 1. **Virtual Account Not Linked to Master Wallet:**
-   - Line 59 in `CreateVirtualAccount.php`: `xpub` is commented out
-   - Virtual accounts are created without linking to master wallet xpub
-   - This means Tatum manages addresses separately from your master wallet
+    - Line 59 in `CreateVirtualAccount.php`: `xpub` is commented out
+    - Virtual accounts are created without linking to master wallet xpub
+    - This means Tatum manages addresses separately from your master wallet
 
 2. **Transfer to Master Wallet Disabled:**
-   - Lines 151-165 in `ProcessBlockchainWebhook.php` are commented out
-   - Funds remain in virtual accounts, not transferred to master wallet
-   - This could be intentional for custody management
+    - Lines 151-165 in `ProcessBlockchainWebhook.php` are commented out
+    - Funds remain in virtual accounts, not transferred to master wallet
+    - This could be intentional for custody management
 
 3. **Index Increment:**
-   - Address index increments by 40 (line 69 in `WalletAddressService.php`)
-   - This leaves gaps in address indices
-   - May be intentional to avoid address collision
+    - Address index increments by 40 (line 69 in `WalletAddressService.php`)
+    - This leaves gaps in address indices
+    - May be intentional to avoid address collision
 
 4. **No Error Recovery:**
-   - If deposit address assignment fails, virtual account exists without address
-   - No retry mechanism for failed jobs
+    - If deposit address assignment fails, virtual account exists without address
+    - No retry mechanism for failed jobs
 
 5. **Webhook Duplicate Prevention:**
-   - Uses `reference` field to prevent duplicates
-   - If Tatum sends same transaction with different reference, it will be processed twice
+    - Uses `reference` field to prevent duplicates
+    - If Tatum sends same transaction with different reference, it will be processed twice
 
 ---
 
@@ -510,7 +541,8 @@ Schema::create('virtual_accounts', function (Blueprint $table) {
 ### 7.3. deposit_addresses
 
 **Initial Migration:** `database/migrations/2025_01_29_103141_create_deposit_addresses_table.php`
-**Updates:** 
+**Updates:**
+
 - `database/migrations/2025_03_28_174839_update_depositaddress_tablke.php` - Added index and private_key
 - `database/migrations/2025_03_28_191627_update_depositaddress_tablke.php` - Changed types
 
@@ -531,6 +563,7 @@ $table->text('private_key')->nullable();    // Encrypted private key for this ad
 ```
 
 **Final Schema:**
+
 - `id` - Primary key
 - `virtual_account_id` - Foreign key to `virtual_accounts` (cascade delete)
 - `blockchain` - Blockchain name (nullable)
@@ -632,17 +665,21 @@ Schema::create('receive_transactions', function (Blueprint $table) {
 ### 7.7. Related Tables (Referenced)
 
 **users** - User accounts
+
 - `id` - Primary key (referenced by virtual_accounts.user_id)
 
 **wallet_currencies** - Supported currencies
+
 - `id` - Primary key (referenced by virtual_accounts.currency_id)
 - `blockchain` - Blockchain name
 - `currency` - Currency code
 
 **transactions** - General transaction table
+
 - `id` - Primary key (referenced by receive_transactions.transaction_id)
 
 **failed_master_transfers** - Failed transfer attempts
+
 - Links virtual_account_id and webhook_response_id
 - Stores failure reason
 
@@ -672,10 +709,11 @@ wallet_currencies (1) ──< (many) virtual_accounts
 ## 8. Configuration
 
 **Location:** `config/tatum.php`
+
 ```php
 'api_key' => env('TATUM_API_KEY'),
 'base_url' => env('TATUM_BASE_URL', 'https://api.tatum.io/v3'),
-'webhook_url' => 'https://earlybaze.hmstech.xyz/api/webhook',
+'webhook_url' => 'https://api.settlesys.com/api/webhook',
 ```
 
 ---
@@ -683,26 +721,26 @@ wallet_currencies (1) ──< (many) virtual_accounts
 ## 9. Recommendations
 
 1. **Enable Master Wallet Linking:**
-   - Uncomment xpub in `CreateVirtualAccount.php` if you want addresses derived from master wallet
-   - Currently using Tatum's address generation instead
+    - Uncomment xpub in `CreateVirtualAccount.php` if you want addresses derived from master wallet
+    - Currently using Tatum's address generation instead
 
 2. **Enable Transfer to Master Wallet:**
-   - Uncomment transfer logic if you want funds consolidated in master wallet
-   - Consider implementing retry mechanism for failed transfers
+    - Uncomment transfer logic if you want funds consolidated in master wallet
+    - Consider implementing retry mechanism for failed transfers
 
 3. **Add Monitoring:**
-   - Monitor failed webhook processing
-   - Track virtual accounts without deposit addresses
-   - Alert on master wallet balance thresholds
+    - Monitor failed webhook processing
+    - Track virtual accounts without deposit addresses
+    - Alert on master wallet balance thresholds
 
 4. **Improve Error Handling:**
-   - Add retry mechanism for failed address assignments
-   - Implement dead letter queue for failed webhooks
+    - Add retry mechanism for failed address assignments
+    - Implement dead letter queue for failed webhooks
 
 5. **Security Enhancements:**
-   - Rotate master wallet mnemonic periodically
-   - Implement rate limiting on webhook endpoint
-   - Add webhook signature verification
+    - Rotate master wallet mnemonic periodically
+    - Implement rate limiting on webhook endpoint
+    - Add webhook signature verification
 
 ---
 
@@ -712,37 +750,39 @@ This section provides all API endpoints needed to implement the same system in E
 
 ### Quick Reference Table
 
-| Endpoint Type | Method | Endpoint | Purpose |
-|--------------|--------|----------|---------|
-| **Backend - Master Wallet** | POST | `/api/master-wallet` | Create master wallet |
-| **Backend - Master Wallet** | GET | `/api/master-wallet` | Get all master wallets |
-| **Backend - Auth** | POST | `/api/auth/register` | Register user |
-| **Backend - Auth** | POST | `/api/auth/otp-verification` | Verify OTP (triggers VA creation) |
-| **Backend - Auth** | POST | `/api/auth/login` | User login |
-| **Backend - User** | GET | `/api/user/deposit-address/{currency}/{network}` | Get deposit address |
-| **Backend - User** | GET | `/api/user/assets` | Get user virtual accounts |
-| **Backend - Webhook** | POST | `/api/webhook` | Receive Tatum webhooks |
-| **Tatum - Wallet** | GET | `/v3/{blockchain}/wallet` | Create master wallet |
-| **Tatum - Virtual Account** | POST | `/v3/ledger/account` | Create virtual account |
-| **Tatum - Virtual Account** | GET | `/v3/ledger/account/customer/{externalId}` | Get user accounts |
-| **Tatum - Address** | GET | `/v3/{blockchain}/address/{xpub}/{index}` | Generate address |
-| **Tatum - Address** | POST | `/v3/{blockchain}/wallet/priv` | Generate private key |
-| **Tatum - Address** | POST | `/v3/offchain/account/{id}/address/{address}` | Assign address to VA |
-| **Tatum - Webhook** | POST | `/v3/subscription` | Register webhook |
-| **Tatum - Webhook** | GET | `/v3/subscription` | Get webhooks |
-| **Tatum - Webhook** | DELETE | `/v3/subscription/{id}` | Delete webhook |
+| Endpoint Type               | Method | Endpoint                                         | Purpose                           |
+| --------------------------- | ------ | ------------------------------------------------ | --------------------------------- |
+| **Backend - Master Wallet** | POST   | `/api/master-wallet`                             | Create master wallet              |
+| **Backend - Master Wallet** | GET    | `/api/master-wallet`                             | Get all master wallets            |
+| **Backend - Auth**          | POST   | `/api/auth/register`                             | Register user                     |
+| **Backend - Auth**          | POST   | `/api/auth/otp-verification`                     | Verify OTP (triggers VA creation) |
+| **Backend - Auth**          | POST   | `/api/auth/login`                                | User login                        |
+| **Backend - User**          | GET    | `/api/user/deposit-address/{currency}/{network}` | Get deposit address               |
+| **Backend - User**          | GET    | `/api/user/assets`                               | Get user virtual accounts         |
+| **Backend - Webhook**       | POST   | `/api/webhook`                                   | Receive Tatum webhooks            |
+| **Tatum - Wallet**          | GET    | `/v3/{blockchain}/wallet`                        | Create master wallet              |
+| **Tatum - Virtual Account** | POST   | `/v3/ledger/account`                             | Create virtual account            |
+| **Tatum - Virtual Account** | GET    | `/v3/ledger/account/customer/{externalId}`       | Get user accounts                 |
+| **Tatum - Address**         | GET    | `/v3/{blockchain}/address/{xpub}/{index}`        | Generate address                  |
+| **Tatum - Address**         | POST   | `/v3/{blockchain}/wallet/priv`                   | Generate private key              |
+| **Tatum - Address**         | POST   | `/v3/offchain/account/{id}/address/{address}`    | Assign address to VA              |
+| **Tatum - Webhook**         | POST   | `/v3/subscription`                               | Register webhook                  |
+| **Tatum - Webhook**         | GET    | `/v3/subscription`                               | Get webhooks                      |
+| **Tatum - Webhook**         | DELETE | `/v3/subscription/{id}`                          | Delete webhook                    |
 
 ---
 
 ### 10.1. Backend API Endpoints (Your Application)
 
 #### Base URL
+
 ```
 Production: https://yourdomain.com/api
 Development: http://localhost:8000/api
 ```
 
 #### Authentication
+
 - Most endpoints require Bearer token authentication
 - Token obtained from `/api/auth/login` or `/api/auth/otp-verification`
 - Header: `Authorization: Bearer {token}`
@@ -752,6 +792,7 @@ Development: http://localhost:8000/api
 #### 10.1.1. Master Wallet Endpoints
 
 **Create Master Wallet**
+
 ```
 POST /api/master-wallet
 Content-Type: application/json
@@ -780,6 +821,7 @@ Response (201):
 ```
 
 **Get All Master Wallets**
+
 ```
 GET /api/master-wallet
 Authorization: Bearer {token} (if required)
@@ -801,6 +843,7 @@ Response (200):
 #### 10.1.2. User Authentication & Registration
 
 **Register User**
+
 ```
 POST /api/auth/register
 Content-Type: application/json
@@ -827,6 +870,7 @@ Response (201):
 ```
 
 **Verify OTP (Triggers Virtual Account Creation)**
+
 ```
 POST /api/auth/otp-verification
 Content-Type: application/json
@@ -852,6 +896,7 @@ Note: This triggers CreateVirtualAccount job in background
 ```
 
 **Login**
+
 ```
 POST /api/auth/login
 Content-Type: application/json
@@ -892,6 +937,7 @@ Response (200):
 #### 10.1.3. Virtual Account & Deposit Address Endpoints
 
 **Get User Deposit Address**
+
 ```
 GET /api/user/deposit-address/{currency}/{network}
 Authorization: Bearer {token}
@@ -910,6 +956,7 @@ Response (200):
 ```
 
 **Get User Virtual Accounts**
+
 ```
 GET /api/user/assets
 Authorization: Bearer {token}
@@ -929,6 +976,7 @@ Response (200):
 ```
 
 **Get User Accounts from Tatum**
+
 ```
 GET /api/user-accounts
 Authorization: Bearer {token}
@@ -950,6 +998,7 @@ Response (200):
 ```
 
 **Assign Deposit Addresses (Admin/Manual)**
+
 ```
 POST /api/users/{user_id}/virtual-accounts/assign-deposit-addresses
 Authorization: Bearer {token}
@@ -965,6 +1014,7 @@ Response (200):
 #### 10.1.4. Webhook Endpoint
 
 **Receive Tatum Webhook**
+
 ```
 POST /api/webhook
 Content-Type: application/json
@@ -998,13 +1048,16 @@ Note: This endpoint should be publicly accessible (no auth required)
 ### 10.2. Tatum API Endpoints
 
 #### Base URL
+
 ```
 Production: https://api.tatum.io/v3
 Testnet: https://api.tatum.io/v3 (use testnet API keys)
 ```
 
 #### Authentication
+
 All Tatum API requests require:
+
 ```
 Header: x-api-key: {YOUR_TATUM_API_KEY}
 ```
@@ -1014,6 +1067,7 @@ Header: x-api-key: {YOUR_TATUM_API_KEY}
 #### 10.2.1. Master Wallet Creation
 
 **Create Wallet (Ethereum)**
+
 ```
 GET https://api.tatum.io/v3/ethereum/wallet
 Headers:
@@ -1029,6 +1083,7 @@ Response (200):
 ```
 
 **Create Wallet (Bitcoin)**
+
 ```
 GET https://api.tatum.io/v3/bitcoin/wallet
 Headers:
@@ -1044,6 +1099,7 @@ Response (200):
 ```
 
 **Other Blockchains:**
+
 - BSC: `GET /v3/bsc/wallet`
 - Tron: `GET /v3/tron/wallet`
 - Litecoin: `GET /v3/litecoin/wallet`
@@ -1055,6 +1111,7 @@ Response (200):
 #### 10.2.2. Virtual Account Management
 
 **Create Virtual Account**
+
 ```
 POST https://api.tatum.io/v3/ledger/account
 Headers:
@@ -1087,6 +1144,7 @@ Response (200):
 ```
 
 **Get User Accounts by External ID**
+
 ```
 GET https://api.tatum.io/v3/ledger/account/customer/{externalId}?pageSize=50
 Headers:
@@ -1112,6 +1170,7 @@ Response (200):
 ```
 
 **Get Virtual Account Details**
+
 ```
 GET https://api.tatum.io/v3/ledger/account/{accountId}
 Headers:
@@ -1136,6 +1195,7 @@ Response (200):
 #### 10.2.3. Deposit Address Generation
 
 **Generate Address from Master Wallet**
+
 ```
 GET https://api.tatum.io/v3/{blockchain}/address/{xpub}/{index}
 Headers:
@@ -1153,6 +1213,7 @@ Response (200):
 ```
 
 **Generate Private Key from Mnemonic**
+
 ```
 POST https://api.tatum.io/v3/{blockchain}/wallet/priv
 Headers:
@@ -1177,6 +1238,7 @@ Response (200):
 ```
 
 **Assign Address to Virtual Account**
+
 ```
 POST https://api.tatum.io/v3/offchain/account/{accountId}/address/{address}
 Headers:
@@ -1199,6 +1261,7 @@ Response (200):
 #### 10.2.4. Webhook Registration
 
 **Register Webhook Subscription**
+
 ```
 POST https://api.tatum.io/v3/subscription
 Headers:
@@ -1226,6 +1289,7 @@ Response (200):
 ```
 
 **Get Webhook Subscriptions**
+
 ```
 GET https://api.tatum.io/v3/subscription?pageSize=50
 Headers:
@@ -1244,6 +1308,7 @@ Response (200):
 ```
 
 **Delete Webhook Subscription**
+
 ```
 DELETE https://api.tatum.io/v3/subscription/{subscriptionId}
 Headers:
@@ -1257,6 +1322,7 @@ Response (204): No Content
 #### 10.2.5. Transaction Management
 
 **Get Account Transactions**
+
 ```
 GET https://api.tatum.io/v3/ledger/transaction/account/{accountId}?pageSize=50
 Headers:
@@ -1279,6 +1345,7 @@ Response (200):
 ```
 
 **Transfer Between Virtual Accounts**
+
 ```
 POST https://api.tatum.io/v3/ledger/transaction
 Headers:
@@ -1310,80 +1377,88 @@ Response (200):
 
 ```typescript
 // Example: Create Master Wallet
-import axios from 'axios';
+import axios from "axios";
 
 const TATUM_API_KEY = process.env.TATUM_API_KEY;
-const TATUM_BASE_URL = 'https://api.tatum.io/v3';
+const TATUM_BASE_URL = "https://api.tatum.io/v3";
 
 async function createMasterWallet(blockchain: string) {
-  const endpoint = `/${blockchain}/wallet`;
-  
-  const response = await axios.get(`${TATUM_BASE_URL}${endpoint}`, {
-    headers: {
-      'x-api-key': TATUM_API_KEY
-    }
-  });
-  
-  return response.data; // { mnemonic, xpub, address, privateKey }
+    const endpoint = `/${blockchain}/wallet`;
+
+    const response = await axios.get(`${TATUM_BASE_URL}${endpoint}`, {
+        headers: {
+            "x-api-key": TATUM_API_KEY,
+        },
+    });
+
+    return response.data; // { mnemonic, xpub, address, privateKey }
 }
 
 // Example: Create Virtual Account
-async function createVirtualAccount(currency: string, userId: string, userCode: string) {
-  const response = await axios.post(
-    `${TATUM_BASE_URL}/ledger/account`,
-    {
-      currency: currency,
-      customer: {
-        externalId: userId
-      },
-      accountCode: userCode,
-      accountingCurrency: 'USD'
-    },
-    {
-      headers: {
-        'x-api-key': TATUM_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  
-  return response.data;
+async function createVirtualAccount(
+    currency: string,
+    userId: string,
+    userCode: string,
+) {
+    const response = await axios.post(
+        `${TATUM_BASE_URL}/ledger/account`,
+        {
+            currency: currency,
+            customer: {
+                externalId: userId,
+            },
+            accountCode: userCode,
+            accountingCurrency: "USD",
+        },
+        {
+            headers: {
+                "x-api-key": TATUM_API_KEY,
+                "Content-Type": "application/json",
+            },
+        },
+    );
+
+    return response.data;
 }
 
 // Example: Generate Deposit Address
-async function generateDepositAddress(blockchain: string, xpub: string, index: number) {
-  const response = await axios.get(
-    `${TATUM_BASE_URL}/${blockchain}/address/${xpub}/${index}`,
-    {
-      headers: {
-        'x-api-key': TATUM_API_KEY
-      }
-    }
-  );
-  
-  return response.data.address;
+async function generateDepositAddress(
+    blockchain: string,
+    xpub: string,
+    index: number,
+) {
+    const response = await axios.get(
+        `${TATUM_BASE_URL}/${blockchain}/address/${xpub}/${index}`,
+        {
+            headers: {
+                "x-api-key": TATUM_API_KEY,
+            },
+        },
+    );
+
+    return response.data.address;
 }
 
 // Example: Register Webhook
 async function registerWebhook(accountId: string, webhookUrl: string) {
-  const response = await axios.post(
-    `${TATUM_BASE_URL}/subscription`,
-    {
-      type: 'ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION',
-      attr: {
-        id: accountId,
-        url: webhookUrl
-      }
-    },
-    {
-      headers: {
-        'x-api-key': TATUM_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  
-  return response.data;
+    const response = await axios.post(
+        `${TATUM_BASE_URL}/subscription`,
+        {
+            type: "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION",
+            attr: {
+                id: accountId,
+                url: webhookUrl,
+            },
+        },
+        {
+            headers: {
+                "x-api-key": TATUM_API_KEY,
+                "Content-Type": "application/json",
+            },
+        },
+    );
+
+    return response.data;
 }
 ```
 
@@ -1395,18 +1470,18 @@ When Tatum sends a webhook to your endpoint, it will have this structure:
 
 ```typescript
 interface TatumWebhookPayload {
-  accountId: string;                    // Tatum virtual account ID
-  subscriptionType: string;             // "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION"
-  amount: string;                        // "0.001"
-  currency: string;                     // "BTC", "ETH", "USDT", etc.
-  reference: string;                    // Unique transaction reference
-  txId: string;                         // Blockchain transaction hash
-  from: string;                         // Sender address
-  to: string;                           // Receiver address (your deposit address)
-  date: number;                         // Timestamp in milliseconds
-  blockHeight: number;                  // Block number
-  blockHash: string;                    // Block hash
-  index: number;                        // Transaction index in block
+    accountId: string; // Tatum virtual account ID
+    subscriptionType: string; // "ACCOUNT_INCOMING_BLOCKCHAIN_TRANSACTION"
+    amount: string; // "0.001"
+    currency: string; // "BTC", "ETH", "USDT", etc.
+    reference: string; // Unique transaction reference
+    txId: string; // Blockchain transaction hash
+    from: string; // Sender address
+    to: string; // Receiver address (your deposit address)
+    date: number; // Timestamp in milliseconds
+    blockHeight: number; // Block number
+    blockHash: string; // Block hash
+    index: number; // Transaction index in block
 }
 ```
 
@@ -1415,15 +1490,17 @@ interface TatumWebhookPayload {
 ### 10.5. Error Responses
 
 **Tatum API Errors:**
+
 ```json
 {
-  "statusCode": 400,
-  "message": "Error message",
-  "error": "Bad Request"
+    "statusCode": 400,
+    "message": "Error message",
+    "error": "Bad Request"
 }
 ```
 
 **Common HTTP Status Codes:**
+
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request (invalid parameters)
@@ -1437,6 +1514,7 @@ interface TatumWebhookPayload {
 ## 11. Complete Code Flow Summary
 
 ### Master Wallet Creation
+
 ```
 POST /api/master-wallet
   → MasterWalletController::create()
@@ -1447,6 +1525,7 @@ POST /api/master-wallet
 ```
 
 ### Virtual Account Creation (On Email Verification)
+
 ```
 User verifies OTP
   → UserService::verifyOtp()
@@ -1460,6 +1539,7 @@ User verifies OTP
 ```
 
 ### Deposit Address Generation
+
 ```
 AssignDepositAddress::handle()
   → WalletAddressService::generateAndAssignToVirtualAccount()
@@ -1474,6 +1554,7 @@ AssignDepositAddress::handle()
 ```
 
 ### Webhook Processing
+
 ```
 Tatum sends webhook
   → POST /api/webhook
@@ -1496,6 +1577,7 @@ Tatum sends webhook
 ## Conclusion
 
 The system implements a complete Tatum virtual account integration with:
+
 - ✅ Master wallet management (per blockchain)
 - ✅ Virtual account creation on email verification (one per currency)
 - ✅ Deposit address generation from master wallet (with address reuse)
@@ -1503,6 +1585,7 @@ The system implements a complete Tatum virtual account integration with:
 - ✅ Complete database schema with relationships
 
 ### Key Architecture Points:
+
 1. **Master Wallets:** One per blockchain, used to derive all deposit addresses
 2. **Virtual Accounts:** One per user per currency, created when email is verified
 3. **Deposit Addresses:** Generated from master wallet using index-based derivation
@@ -1510,8 +1593,8 @@ The system implements a complete Tatum virtual account integration with:
 5. **Webhooks:** Registered per virtual account, processed asynchronously
 
 ### Currently Disabled Features:
+
 - Virtual account xpub linking (line 59 in CreateVirtualAccount.php)
 - Transfer to master wallet (lines 151-165 in ProcessBlockchainWebhook.php)
 
 These may be intentional based on your custody model - funds remain in virtual accounts managed by Tatum rather than being consolidated in master wallets.
-
