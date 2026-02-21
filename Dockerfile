@@ -3,12 +3,17 @@ FROM composer:latest AS build
 WORKDIR /app
 COPY . /app
 
-# Disable interactive plugins and install
-RUN composer config allow-plugins true --no-interaction \
-    && composer install --ignore-platform-reqs --no-interaction --optimize-autoloader --no-dev
+# We use --no-scripts to prevent Laravel from trying to boot 
+# during the build process when environment variables aren't present.
+RUN composer install \
+    --ignore-platform-reqs \
+    --no-interaction \
+    --no-scripts \
+    --optimize-autoloader \
+    --no-dev
 
 # Stage 2: Production image
-FROM dunglas/frankenphp
+FROM dunglas/frankenphp:latest
 
 # Install PHP extensions required for Laravel
 RUN install-php-extensions pcntl bcmath gd intl zip opcache pdo_mysql redis
@@ -17,13 +22,16 @@ RUN install-php-extensions pcntl bcmath gd intl zip opcache pdo_mysql redis
 COPY --from=build /app /app
 WORKDIR /app
 
-# Set correct permissions for Laravel
+# Set correct permissions for the web server (www-data)
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
-# Production optimizations
-# Note: This requires your .env variables to be set in Dokploy
-RUN php artisan optimize
+# Expose the port FrankenPHP listens on
+EXPOSE 80
 
-# Final start command
-# This links storage, runs migrations, and starts the server
-CMD php artisan storage:link --force && php artisan migrate --force && frankenphp php-server
+# THE RUNTIME SEQUENCE
+# These commands run only when Dokploy starts the container, 
+# ensuring they have access to the variables in the "Environment" tab.
+CMD php artisan storage:link --force && \
+    php artisan optimize && \
+    php artisan migrate --force && \
+    frankenphp php-server
