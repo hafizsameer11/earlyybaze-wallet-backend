@@ -18,16 +18,16 @@ class Authenticate extends Middleware
         $this->authenticate($request, $guards);
 
         // If authenticated, log request
-        if (auth()->check()) {
-            ApiRequestLog::create([
-                'email'  => auth()->user()->email,
-                'method' => $request->method(),
-                'url'    => $request->fullUrl(),
-                'headers'=> $request->headers->all(),
-                'body'   => $request->except(['password', 'password_confirmation']), // don’t log sensitive
-                'ip'     => $request->ip(),
-            ]);
-        }
+        // if (auth()->check()) {
+        //     ApiRequestLog::create([
+        //         'email'  => auth()->user()->email,
+        //         'method' => $request->method(),
+        //         'url'    => $request->fullUrl(),
+        //         'headers'=> $request->headers->all(),
+        //         'body'   => $request->except(['password', 'password_confirmation']), // don’t log sensitive
+        //         'ip'     => $request->ip(),
+        //     ]);
+        // }
 
         return $next($request);
     }
