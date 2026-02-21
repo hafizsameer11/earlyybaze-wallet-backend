@@ -9,7 +9,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "ext-redis": "*",
         "bacon/bacon-qr-code": "^2.0",
         "google/apiclient": "^2.18",
         "guzzlehttp/guzzle": "^7.2",
