@@ -624,17 +624,24 @@ class SimpleWithdrawalService
     private function senderOf($it): ?string
     {
         // Try the most common columns that may contain the address we control
-        $candidates = array_filter([
+        $rawCandidates = [
             $it->transfer_address ?? null,
             $it->deposit_address ?? null,
             $it->address ?? null,
             $it->to_address ?? null,     // funds received "to" our deposit address (very common)
             $it->from_address ?? null,   // fallback if your schema uses from_address as our own
-        ], fn($v) => is_string($v) && strlen($v) > 20);
+        ];
+        $candidates = array_values(array_unique(array_filter(array_map(function ($v) {
+            if (!is_string($v)) return null;
+            $v = trim($v);
+            return strlen($v) > 20 ? $v : null;
+        }, $rawCandidates))));
 
         foreach ($candidates as $maybe) {
-            if (DepositAddress::where('address', $maybe)->exists()) {
-                return $maybe; // only accept addresses we actually control
+            // Return canonical DB address to avoid later case/format mismatch.
+            $dep = DepositAddress::whereRaw('LOWER(address) = ?', [strtolower($maybe)])->first();
+            if ($dep) {
+                return $dep->address; // only accept addresses we actually control
             }
         }
 
@@ -650,7 +657,36 @@ class SimpleWithdrawalService
             }
         }
 
+        // Fallback: resolve sender from user_id (+ chain hint from currency).
+        if (!empty($it->user_id)) {
+            $chainHints = $this->chainHintsForCurrency($it->currency ?? null);
+            $depQuery = DepositAddress::whereHas('virtualAccount', function ($q) use ($it) {
+                $q->where('user_id', $it->user_id);
+            });
+            if (!empty($chainHints)) {
+                $depQuery->whereIn('blockchain', $chainHints);
+            }
+            $dep = $depQuery->orderByDesc('id')->first();
+            if (!empty($dep?->address)) {
+                return $dep->address;
+            }
+        }
+
         return null;
+    }
+
+    private function chainHintsForCurrency(?string $currency): array
+    {
+        $c = strtoupper((string) $currency);
+        return match ($c) {
+            'ETH', 'USDT', 'USDC', 'USDT_ETH', 'USDC_ETH' => ['eth', 'usdt', 'usdc'],
+            'BNB', 'BSC', 'USDT_BSC', 'USDC_BSC' => ['bsc', 'usdt_bsc', 'usdc_bsc'],
+            'TRON', 'USDT_TRON' => ['tron', 'usdt_tron'],
+            'MATIC', 'POLYGON', 'USDT_POLYGON', 'USDC_POLYGON' => ['polygon', 'matic', 'usdt_polygon', 'usdc_polygon'],
+            'BTC' => ['bitcoin', 'btc'],
+            'LTC' => ['litecoin', 'ltc'],
+            default => [],
+        };
     }
 
 
