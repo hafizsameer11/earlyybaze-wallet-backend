@@ -7,6 +7,7 @@ use App\Models\DepositAddress;
 use App\Models\ReceivedAsset;
 use App\Models\TransferLog;
 use App\Models\MasterWallet;
+use App\Models\VirtualAccount;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -636,6 +637,19 @@ class SimpleWithdrawalService
                 return $maybe; // only accept addresses we actually control
             }
         }
+
+        // Fallback: resolve sender from account_id -> virtual_account -> deposit_address
+        // This handles rows where webhook payload didn't include a directly matchable address.
+        if (!empty($it->account_id)) {
+            $va = VirtualAccount::where('account_id', $it->account_id)->first();
+            if ($va) {
+                $dep = DepositAddress::where('virtual_account_id', $va->id)->orderByDesc('id')->first();
+                if (!empty($dep?->address)) {
+                    return $dep->address;
+                }
+            }
+        }
+
         return null;
     }
 
