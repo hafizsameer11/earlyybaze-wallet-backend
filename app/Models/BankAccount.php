@@ -16,6 +16,7 @@ class BankAccount extends Model
         'account_name',
         'bank_name',
         'is_default',
+        'bank_code',
     ];
 
     public function user()

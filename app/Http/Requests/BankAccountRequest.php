@@ -26,7 +26,8 @@ class BankAccountRequest extends FormRequest
             'account_number' => 'required|string',
             'account_name' => 'required|string',
             'bank_name' => 'required|string',
-            'is_default' => 'nullable|boolean'
+            'is_default' => 'nullable|boolean',
+            'bank_code' => 'nullable|string',
             //
         ];
     }
