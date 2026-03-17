@@ -130,7 +130,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::get('admin/banners', [InAppBannerController::class, 'index']);
 
 //Authenticated routes for user
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
 
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
@@ -210,7 +210,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
 });
-//non auth routes
+//non auth routes (still require authentication, but not user "active" status)
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('blockchain')->group(function () {
