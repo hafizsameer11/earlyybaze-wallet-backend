@@ -129,7 +129,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 Route::get('admin/banners', [InAppBannerController::class, 'index']);
 
-//Authenticated routes for user
+//Authenticated routes for user done
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
 
