@@ -40,6 +40,7 @@ use App\Http\Controllers\Wallet\SupportController;
 use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
+use App\Http\Controllers\DevTatumBtcWalletController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
@@ -122,6 +123,7 @@ Route::prefix('auth')->group(function () {
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
 Route::post('/webhook', [WebhookController::class, 'webhook']);
+Route::post('/dev/tatum/btc-wallet-v4-subscription', [DevTatumBtcWalletController::class, 'createWithV4IncomingNativeSubscription']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/2fa/resend', [AuthController::class, 'resendOtpAdmin']);
