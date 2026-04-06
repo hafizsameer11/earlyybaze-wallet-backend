@@ -40,12 +40,19 @@ class UserService
     {
         try {
             $user = Auth::user();
-            $va = VirtualAccount::where('user_id', $user->id)->first();
-            if (!$va || !$va->customer_id) {
-                throw new Exception('No Tatum ledger customer for this user (wallet v2 uses on-chain wallets only).');
+
+            if ($user->usesWalletFlowV2()) {
+                $va = VirtualAccount::where('user_id', $user->id)->first();
+                if (! $va || ! $va->customer_id) {
+                    throw new Exception('No Tatum ledger customer for this user (wallet v2 uses on-chain wallets only).');
+                }
+
+                return $this->tatumService->getUserAccounts($va->customer_id);
             }
 
-            return $this->tatumService->getUserAccounts($va->customer_id);
+            $customer_id = VirtualAccount::where('user_id', $user->id)->first()->customer_id;
+
+            return $this->tatumService->getUserAccounts($customer_id);
         } catch (Exception $e) {
             Log::error('Get user accounts error: ' . $e->getMessage());
             throw new Exception('Get user accounts failed.');
