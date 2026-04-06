@@ -115,6 +115,8 @@ class UserWalletV2Provisioner
 
         $nativeSubId = null;
         $nativeSubCreated = false;
+        $fungibleSubId = null;
+        $fungibleSubCreated = false;
 
         foreach ($currencies as $walletCurrency) {
             if (VirtualAccount::where('user_id', $user->id)->where('currency_id', $walletCurrency->id)->exists()) {
@@ -152,13 +154,17 @@ class UserWalletV2Provisioner
             ]);
 
             if ($isToken) {
-                $contract = $this->resolveContractForSubscription($walletCurrency);
-                if ($contract) {
-                    $fid = $this->subscriptions->subscribeFungible($v4Chain, $address, $contract);
+                if (! $fungibleSubCreated) {
+                    $fid = $this->subscriptions->subscribeFungible($v4Chain, $address);
                     if ($fid) {
+                        $fungibleSubCreated = true;
+                        $fungibleSubId = $fid;
                         $deposit->tatum_subscription_fungible_id = $fid;
                         $deposit->save();
                     }
+                } else {
+                    $deposit->tatum_subscription_fungible_id = $fungibleSubId;
+                    $deposit->save();
                 }
             } else {
                 if (! $nativeSubCreated) {
@@ -186,23 +192,27 @@ class UserWalletV2Provisioner
                     ->update(['tatum_subscription_native_id' => $nativeSubId]);
             }
         }
-    }
 
-    private function resolveContractForSubscription(WalletCurrency $wc): ?string
-    {
-        $c = trim((string) ($wc->contract_address ?? ''));
-        if ($c !== '') {
-            return $c;
+        if (! $fungibleSubCreated) {
+            $hasToken = false;
+            foreach ($currencies as $wc) {
+                if ((bool) ($wc->is_token ?? false)) {
+                    $hasToken = true;
+                    break;
+                }
+            }
+            if ($hasToken) {
+                $fid = $this->subscriptions->subscribeFungible($v4Chain, $address);
+                if ($fid) {
+                    DepositAddress::query()
+                        ->where('version', 'v2')
+                        ->where('address', $address)
+                        ->whereHas('virtualAccount', fn ($q) => $q->where('user_id', $user->id))
+                        ->whereHas('virtualAccount', fn ($q) => $q->whereHas('walletCurrency', fn ($q2) => $q2->where('is_token', true)))
+                        ->whereNull('tatum_subscription_fungible_id')
+                        ->update(['tatum_subscription_fungible_id' => $fid]);
+                }
+            }
         }
-
-        $cur = strtoupper((string) $wc->currency);
-        if ($cur === 'USDT_TRON') {
-            return 'USDT_TRON';
-        }
-        if ($cur === 'USDC_TRON') {
-            return 'USDC_TRON';
-        }
-
-        return null;
     }
 }

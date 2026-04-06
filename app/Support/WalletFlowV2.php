@@ -8,13 +8,18 @@ class WalletFlowV2
 {
     public static function currencyAllowedForV2(WalletCurrency $wc): bool
     {
+        $currencyUpper = strtoupper(trim((string) $wc->currency));
+        $excluded = array_map('strtoupper', config('tatum_v2.v2_excluded_wallet_currencies', []));
+        if (in_array($currencyUpper, $excluded, true)) {
+            return false;
+        }
+
         $chainKey = self::resolveChainKey((string) $wc->blockchain);
         $allowedKeys = config('tatum_v2.v2_allowed_chain_keys', []);
         if (! $chainKey || ! in_array($chainKey, $allowedKeys, true)) {
             return false;
         }
 
-        $currency = strtoupper(trim((string) $wc->currency));
         $isToken = (bool) ($wc->is_token ?? false);
 
         if ($isToken) {
@@ -22,12 +27,12 @@ class WalletFlowV2
                 return false;
             }
 
-            return self::isV2StablecoinCurrency($currency);
+            return self::isV2StablecoinCurrency($currencyUpper);
         }
 
         $natives = config('tatum_v2.v2_native_currencies_by_chain.'.$chainKey, []);
 
-        return in_array($currency, array_map('strtoupper', $natives), true);
+        return in_array($currencyUpper, array_map('strtoupper', $natives), true);
     }
 
     public static function isV2StablecoinCurrency(string $currency): bool

@@ -8,6 +8,9 @@ return [
      */
     'v2_allowed_chain_keys' => ['bitcoin', 'ethereum', 'bsc', 'tron'],
 
+    /** wallet_currencies.currency values never provisioned for wallet v2 */
+    'v2_excluded_wallet_currencies' => ['LTC', 'SOL'],
+
     'v2_stablecoin_currencies' => [
         'USDT', 'USDC',
         'USDT_BSC', 'USDC_BSC',

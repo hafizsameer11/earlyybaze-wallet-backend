@@ -25,7 +25,7 @@ class TatumV4SubscriptionService
         return $this->postAndReturnId($url, $payload);
     }
 
-    public function subscribeFungible(string $v4Chain, string $address, string $contractAddress): ?string
+    public function subscribeFungible(string $v4Chain, string $address): ?string
     {
         $url = rtrim(config('tatum.v4_base_url', 'https://api.tatum.io/v4'), '/')
             .'/subscription?type='.urlencode(config('tatum_v2.v4_network_type', 'mainnet'));
@@ -36,7 +36,6 @@ class TatumV4SubscriptionService
                 'chain' => $v4Chain,
                 'address' => $address,
                 'url' => config('tatum.webhook_v2_url'),
-                'contractAddress' => $contractAddress,
             ],
             'templateId' => 'enriched',
         ];
