@@ -63,11 +63,22 @@ class DevTatumBtcWalletController extends Controller
 
             $wallet = $walletResponse->json();
             $address = $wallet['address'] ?? null;
+
+            if (! $address && ! empty($wallet['xpub'])) {
+                $addrResponse = Http::withHeaders([
+                    'x-api-key' => $apiKey,
+                ])->get($v3Base.'/bitcoin/address/'.rawurlencode($wallet['xpub']).'/0');
+                if ($addrResponse->successful()) {
+                    $address = $addrResponse->json('address');
+                }
+            }
+
             if (! $address) {
                 return response()->json([
                     'ok' => false,
                     'step' => 'parse_wallet',
-                    'wallet' => $wallet,
+                    'hint' => 'No address in /bitcoin/wallet and deriving /bitcoin/address/{xpub}/0 failed.',
+                    'has_xpub' => !empty($wallet['xpub']),
                 ], 502);
             }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\BlockChainHelper;
 use App\Helpers\ExchangeFeeHelper;
 use App\Jobs\ProcessBlockchainWebhook;
+use App\Jobs\ProcessTatumV4DepositWebhook;
 use App\Models\FailedMasterTransfer;
 use App\Models\MasterWallet;
 use App\Models\ReceiveTransaction;
@@ -135,5 +136,13 @@ class WebhookController extends Controller
         ProcessBlockchainWebhook::dispatch($request->all());
 
         return response()->json(['message' => 'Webhook queued for processing'], 200);
+    }
+
+    public function webhookV2(Request $request)
+    {
+        Log::info('🚀 Incoming Webhook v4 Request', $request->all());
+        ProcessTatumV4DepositWebhook::dispatch($request->all());
+
+        return response()->json(['message' => 'Webhook v2 queued for processing'], 200);
     }
 }

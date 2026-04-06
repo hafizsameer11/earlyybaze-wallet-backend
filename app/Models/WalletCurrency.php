@@ -16,7 +16,8 @@ class WalletCurrency extends Model
         'symbol',
         'decimals',
         'token_type',
-        'contract_address'
+        'contract_address',
+        'is_token',
     ];
     public function virtualAccounts()
     {

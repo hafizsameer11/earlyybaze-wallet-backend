@@ -44,6 +44,16 @@ class AuthController extends Controller
         }
     }
 
+    public function registerWalletV2(RegisterRequest $request)
+    {
+        try {
+            $user = $this->userService->registerUserForWalletV2($request->validated());
+            return ResponseHelper::success($user, 'User registered successfully (wallet v2)', 201);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
+        }
+    }
+
     public function otpVerification(OtpVerificationRequst $request)
     {
         try {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\CreateVirtualAccount;
+use App\Jobs\ProvisionUserWalletsV2;
 use App\Mail\OtpMail;
 use App\Models\User;
 use App\Models\VirtualAccount;
@@ -39,9 +40,12 @@ class UserService
     {
         try {
             $user = Auth::user();
-            $customer_id = VirtualAccount::where('user_id', $user->id)->first()->customer_id;
-            // return $user->id;
-            return $this->tatumService->getUserAccounts($customer_id);
+            $va = VirtualAccount::where('user_id', $user->id)->first();
+            if (!$va || !$va->customer_id) {
+                throw new Exception('No Tatum ledger customer for this user (wallet v2 uses on-chain wallets only).');
+            }
+
+            return $this->tatumService->getUserAccounts($va->customer_id);
         } catch (Exception $e) {
             Log::error('Get user accounts error: ' . $e->getMessage());
             throw new Exception('Get user accounts failed.');
@@ -68,6 +72,14 @@ class UserService
             throw new Exception('User registration failed.' . $e->getMessage());
         }
     }
+
+    public function registerUserForWalletV2(array $data): ?User
+    {
+        $data['wallet_flow_version'] = 'v2';
+
+        return $this->registerUser($data);
+    }
+
     public function createUser(array $data): ?User
     {
         try {
@@ -131,7 +143,11 @@ class UserService
             //     $twilio->sendVerification($user->phone, $message, $smsType);
             // }
 
-            dispatch(new CreateVirtualAccount($user));
+            if ($user->wallet_flow_version === 'v2') {
+                dispatch(new ProvisionUserWalletsV2($user));
+            } else {
+                dispatch(new CreateVirtualAccount($user));
+            }
 
             return $user;
         } catch (Exception $e) {

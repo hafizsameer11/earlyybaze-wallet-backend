@@ -21,8 +21,14 @@ class VirtualAccount extends Model
         'available_balance',
         'xpub',
         'accounting_currency',
-        'currency_id'
+        'currency_id',
+        'is_tatum_ledger',
     ];
+
+    protected $casts = [
+        'is_tatum_ledger' => 'boolean',
+    ];
+
     public function depositAddresses()
     {
         return $this->hasMany(DepositAddress::class);

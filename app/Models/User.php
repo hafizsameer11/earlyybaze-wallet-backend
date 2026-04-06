@@ -40,7 +40,8 @@ class User extends Authenticatable
         'sms_code',
         'is_number_verified',
         'expoToken',
-        'is_active'
+        'is_active',
+        'wallet_flow_version',
     ];
 
     /**
@@ -77,6 +78,17 @@ class User extends Authenticatable
     {
         return $this->hasMany(VirtualAccount::class);
     }
+
+    public function userBlockchainWallets()
+    {
+        return $this->hasMany(UserBlockchainWallet::class);
+    }
+
+    public function usesWalletFlowV2(): bool
+    {
+        return $this->wallet_flow_version === 'v2';
+    }
+
     public function nairaWallet()
     {
         return $this->hasOne(NairaWallet::class);

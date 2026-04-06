@@ -40,7 +40,6 @@ use App\Http\Controllers\Wallet\SupportController;
 use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
-use App\Http\Controllers\DevTatumBtcWalletController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
@@ -106,7 +105,20 @@ Route::prefix('master-wallet')->group(function () {
     Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets
 });
 
-//Customer route
+/*
+|--------------------------------------------------------------------------
+| Wallet flow v2 — public auth (on-chain wallets; OTP provisions v2)
+|--------------------------------------------------------------------------
+| POST /api/v2/auth/register
+| POST /api/v2/auth/otp-verification
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v2/auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'registerWalletV2']);
+    Route::post('/otp-verification', [AuthController::class, 'otpVerification']);
+});
+
+// Customer route (v1)
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Register a user
@@ -122,8 +134,23 @@ Route::prefix('auth')->group(function () {
 });
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
+/*
+|--------------------------------------------------------------------------
+| Webhooks — v1 (legacy Tatum ledger)
+|--------------------------------------------------------------------------
+| POST /api/webhook
+|--------------------------------------------------------------------------
+*/
 Route::post('/webhook', [WebhookController::class, 'webhook']);
-Route::post('/dev/tatum/btc-wallet-v4-subscription', [DevTatumBtcWalletController::class, 'createWithV4IncomingNativeSubscription']);
+
+/*
+|--------------------------------------------------------------------------
+| Webhooks — v2 (Tatum v4 Notifications / INCOMING_*_TX)
+|--------------------------------------------------------------------------
+| POST /api/webhook/v2
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhook/v2', [WebhookController::class, 'webhookV2']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/2fa/resend', [AuthController::class, 'resendOtpAdmin']);
@@ -215,6 +242,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 //non auth routes (still require authentication, but not user "active" status)
 Route::middleware('auth:sanctum')->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Blockchain — shared routes (v2 users: on-chain withdraw in controller)
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('blockchain')->group(function () {
         Route::get('/get-balance-by-address', [BlockChainController::class, 'checkAddressBalance']);
         Route::post('/manual-transform-to-master-wallet', action: [BlockChainController::class, 'manualTransformToMasterWalts']);

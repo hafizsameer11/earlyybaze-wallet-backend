@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\BlockChainHelper;
+use App\Helpers\BlockChainHelperV2;
 use App\Models\DepositAddress;
 use App\Models\MasterWallet;
 use App\Models\VirtualAccount;
@@ -79,13 +80,45 @@ class BlockChainController extends Controller
         $user = Auth::user();
 
         try {
-            $result = BlockchainHelper::sendToExternalAddress(
-                $user,
-                $request->blockchain,
-                $request->currency,
-                $request->to_address,
-                $request->amount
-            );
+            $blockchainUpper = strtoupper($request->blockchain);
+            $currencyUpper = strtoupper($request->currency);
+
+            $walletCurrency = WalletCurrency::where([
+                'blockchain' => $blockchainUpper,
+                'currency' => $currencyUpper,
+            ])->first();
+
+            if (! $walletCurrency) {
+                throw new \Exception("Unsupported currency {$currencyUpper} on {$blockchainUpper}.");
+            }
+
+            $virtualAccount = $user->virtualAccounts()
+                ->where('currency_id', $walletCurrency->id)
+                ->first()
+                ?? $user->virtualAccounts()
+                    ->where('blockchain', $blockchainUpper)
+                    ->where('currency', $currencyUpper)
+                    ->first();
+
+            if ($user->usesWalletFlowV2() && $virtualAccount && $virtualAccount->is_tatum_ledger === false) {
+                $result = BlockChainHelperV2::sendToExternalAddressFromUserDeposit(
+                    $user,
+                    $virtualAccount,
+                    $walletCurrency,
+                    $blockchainUpper,
+                    $currencyUpper,
+                    $request->to_address,
+                    (float) $request->amount
+                );
+            } else {
+                $result = BlockChainHelper::sendToExternalAddress(
+                    $user,
+                    $request->blockchain,
+                    $request->currency,
+                    $request->to_address,
+                    $request->amount
+                );
+            }
 
             return response()->json([
                 'success' => true,
