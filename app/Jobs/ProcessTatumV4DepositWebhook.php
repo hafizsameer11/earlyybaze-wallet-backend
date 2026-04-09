@@ -26,6 +26,18 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private const TRON_MAINNET_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+
+    private const TRON_MAINNET_USDC_CONTRACT = 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8';
+
+    private const ETH_MAINNET_USDT_CONTRACT = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+
+    private const ETH_MAINNET_USDC_CONTRACT = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+
+    private const BSC_MAINNET_USDT_CONTRACT = '0x55d398326f99059ff775485246999027b3197955';
+
+    private const BSC_MAINNET_USDC_CONTRACT = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
+
     public function __construct(
         public array $data
     ) {}
@@ -67,6 +79,15 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             return;
         }
 
+        if (! $this->isV2OnChainDeposit($deposit, $account)) {
+            Log::warning('v4 webhook ignored: not v2 on-chain (ledger or v1 user)', [
+                'deposit_id' => $deposit->id,
+                'virtual_account_id' => $account->id,
+            ]);
+
+            return;
+        }
+
         $lockKey = 'webhook_lock_'.$reference;
         $lock = Cache::lock($lockKey, 120);
         if (! $lock->get()) {
@@ -77,7 +98,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
 
         try {
             $amount = (string) ($data['amount'] ?? '0');
-            $currency = strtoupper((string) ($data['currency'] ?? $account->currency));
+            $currency = strtoupper((string) $account->currency);
             $txId = (string) ($data['txId'] ?? '');
             $toAddr = (string) ($data['address'] ?? $deposit->address);
 
@@ -189,7 +210,13 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         $candidates = DepositAddress::query()
             ->where('version', 'v2')
             ->whereRaw('LOWER(address) = ?', [strtolower($addr)])
-            ->with(['virtualAccount.walletCurrency'])
+            ->whereHas('virtualAccount', function ($q): void {
+                $q->where('is_tatum_ledger', false);
+            })
+            ->whereHas('virtualAccount.user', function ($q): void {
+                $q->where('wallet_flow_version', 'v2');
+            })
+            ->with(['virtualAccount.walletCurrency', 'virtualAccount.user'])
             ->get();
 
         foreach ($candidates as $dep) {
@@ -201,19 +228,28 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             if (! $wc || ! WalletFlowV2::currencyAllowedForV2($wc)) {
                 continue;
             }
-            if (strtoupper((string) $va->currency) !== $currency) {
+
+            if ($subType === 'INCOMING_FUNGIBLE_TX') {
+                if ($this->fungibleContractMatches($va, $data['contractAddress'] ?? null)) {
+                    return $dep;
+                }
+
                 continue;
             }
 
-            if ($subType === 'INCOMING_FUNGIBLE_TX') {
-                if (! $this->fungibleContractMatches($va, $data['contractAddress'] ?? null)) {
+            if ($subType === 'INCOMING_NATIVE_TX') {
+                if (strtoupper((string) $va->currency) !== $currency) {
                     continue;
                 }
-            } elseif ($subType === 'INCOMING_NATIVE_TX') {
-                $wc = $va->walletCurrency;
                 if ($wc && ($wc->is_token ?? false)) {
                     continue;
                 }
+
+                return $dep;
+            }
+
+            if (strtoupper((string) $va->currency) !== $currency) {
+                continue;
             }
 
             return $dep;
@@ -229,21 +265,77 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             return false;
         }
 
-        $their = strtoupper(trim((string) $payloadContract));
-        $ours = strtoupper(trim((string) ($wc->contract_address ?? '')));
+        $their = trim((string) $payloadContract);
+        $theirUpper = strtoupper($their);
+        $ours = trim((string) ($wc->contract_address ?? ''));
+        $vaCur = strtoupper((string) $va->currency);
 
-        if ($ours !== '' && $their !== '' && strtolower($ours) === strtolower($their)) {
+        if ($ours !== '' && $their !== '' && $this->addressesEqual($ours, $their)) {
             return true;
         }
 
-        if ($their === 'USDT_TRON' && strtoupper((string) $va->currency) === 'USDT_TRON') {
+        if ($theirUpper === 'USDT_TRON' && $vaCur === 'USDT_TRON') {
+            return true;
+        }
+        if ($theirUpper === 'USDC_TRON' && $vaCur === 'USDC_TRON') {
+            return true;
+        }
+        if ($theirUpper === 'USDT_BSC' && $vaCur === 'USDT_BSC') {
+            return true;
+        }
+        if ($theirUpper === 'USDC_BSC' && $vaCur === 'USDC_BSC') {
             return true;
         }
 
-        if ($their === 'USDC_TRON' && strtoupper((string) $va->currency) === 'USDC_TRON') {
+        if ($vaCur === 'USDT_TRON' && $their !== '' && strcasecmp($their, self::TRON_MAINNET_USDT_CONTRACT) === 0) {
+            return true;
+        }
+        if ($vaCur === 'USDC_TRON' && $their !== '' && strcasecmp($their, self::TRON_MAINNET_USDC_CONTRACT) === 0) {
+            return true;
+        }
+
+        if (in_array($vaCur, ['USDT', 'USDT_ETH'], true) && $their !== '' && $this->addressesEqual($their, self::ETH_MAINNET_USDT_CONTRACT)) {
+            return true;
+        }
+        if (in_array($vaCur, ['USDC', 'USDC_ETH'], true) && $their !== '' && $this->addressesEqual($their, self::ETH_MAINNET_USDC_CONTRACT)) {
+            return true;
+        }
+
+        if (in_array($vaCur, ['USDT_BSC'], true) && $their !== '' && $this->addressesEqual($their, self::BSC_MAINNET_USDT_CONTRACT)) {
+            return true;
+        }
+        if (in_array($vaCur, ['USDC_BSC'], true) && $their !== '' && $this->addressesEqual($their, self::BSC_MAINNET_USDC_CONTRACT)) {
             return true;
         }
 
         return false;
+    }
+
+    private function isV2OnChainDeposit(DepositAddress $deposit, VirtualAccount $account): bool
+    {
+        if (($deposit->version ?? '') !== 'v2') {
+            return false;
+        }
+        if ($account->is_tatum_ledger !== false) {
+            return false;
+        }
+        $user = $account->relationLoaded('user') ? $account->user : $account->user()->first();
+
+        return $user && $user->wallet_flow_version === 'v2';
+    }
+
+    /** EVM 0x hex (checksum-safe); TRON base58 uses case-sensitive compare. */
+    private function addressesEqual(string $a, string $b): bool
+    {
+        $a = trim($a);
+        $b = trim($b);
+        if ($a === '' || $b === '') {
+            return false;
+        }
+        if (str_starts_with(strtolower($a), '0x') && str_starts_with(strtolower($b), '0x')) {
+            return strtolower($a) === strtolower($b);
+        }
+
+        return strcasecmp($a, $b) === 0;
     }
 }
