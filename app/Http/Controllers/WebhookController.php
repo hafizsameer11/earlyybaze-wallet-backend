@@ -10,6 +10,7 @@ use App\Models\FailedMasterTransfer;
 use App\Models\MasterWallet;
 use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
+use App\Models\WebhookRawPayload;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
 use App\Services\EthereumService;
@@ -133,6 +134,8 @@ class WebhookController extends Controller
 
         Log::info('🚀 Incoming Webhook Request', $request->all());
 
+        WebhookRawPayload::recordIncoming($request, WebhookRawPayload::CHANNEL_V1);
+
         ProcessBlockchainWebhook::dispatch($request->all());
 
         return response()->json(['message' => 'Webhook queued for processing'], 200);
@@ -141,6 +144,9 @@ class WebhookController extends Controller
     public function webhookV2(Request $request)
     {
         Log::info('🚀 Incoming Webhook v4 Request', $request->all());
+
+        WebhookRawPayload::recordIncoming($request, WebhookRawPayload::CHANNEL_V2);
+
         ProcessTatumV4DepositWebhook::dispatch($request->all());
 
         return response()->json(['message' => 'Webhook v2 queued for processing'], 200);
