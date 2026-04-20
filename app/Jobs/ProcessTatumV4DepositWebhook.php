@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Helpers\ExchangeFeeHelper;
 use App\Models\DepositAddress;
-use App\Support\WalletFlowV2;
 use App\Models\MasterWallet;
 use App\Models\ReceivedAsset;
 use App\Models\ReceiveTransaction;
@@ -12,6 +11,7 @@ use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
 use App\Services\NotificationService;
+use App\Support\WalletFlowV2;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,9 +47,15 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         NotificationService $notificationService
     ): void {
         $data = $this->data;
-        $reference = 'v4-'.($data['subscriptionId'] ?? 'na').'-'.($data['txId'] ?? uniqid('', true));
 
-        $from = $data['counterAddress'] ?? ($data['counterAddresses'][0] ?? null);
+        $txId = (string) ($data['txId'] ?? '');
+        $refSuffix = $txId;
+        if (array_key_exists('logIndex', $data)) {
+            $refSuffix .= '-'.(string) $data['logIndex'];
+        }
+        $reference = 'v4-'.($data['subscriptionId'] ?? 'na').'-'.$refSuffix;
+
+        $from = $this->senderAddress($data);
         if ($from) {
             $master = MasterWallet::whereRaw('LOWER(address) = ?', [strtolower($from)])->first();
             if ($master) {
@@ -59,7 +65,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             }
         }
 
-        if (isset($data['txId']) && WebhookResponse::where('reference', $reference)->exists()) {
+        if ($txId !== '' && WebhookResponse::where('reference', $reference)->exists()) {
             Log::info('v4 webhook duplicate reference', ['reference' => $reference]);
 
             return;
@@ -97,10 +103,9 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         }
 
         try {
-            $amount = (string) ($data['amount'] ?? '0');
+            $amount = $this->inboundAmount($data);
             $currency = strtoupper((string) $account->currency);
-            $txId = (string) ($data['txId'] ?? '');
-            $toAddr = (string) ($data['address'] ?? $deposit->address);
+            $toAddr = $this->recipientAddress($data) ?? $deposit->address;
 
             DB::transaction(function () use (
                 $data, $account, $amount, $currency, $reference, $txId, $toAddr, $from,
@@ -123,9 +128,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                 $exchangeRate = ExchangeFeeHelper::caclulateExchangeRate($amount, $currency);
                 $amountUsd = $exchangeRate['amount_usd'];
 
-                $txDate = isset($data['timestamp'])
-                    ? Carbon::createFromTimestampMs((int) $data['timestamp'])
-                    : now();
+                $txDate = $this->transactionCarbon($data);
 
                 WebhookResponse::create([
                     'account_id' => $lockedAccount->account_id,
@@ -139,7 +142,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                     'from_address' => $from ?? 'not provided',
                     'to_address' => $toAddr,
                     'transaction_date' => $txDate,
-                    'index' => null,
+                    'index' => $data['logIndex'] ?? null,
                 ]);
 
                 ReceivedAsset::create([
@@ -153,7 +156,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                     'to_address' => $toAddr,
                     'transaction_date' => $txDate,
                     'status' => 'inWallet',
-                    'index' => null,
+                    'index' => $data['logIndex'] ?? null,
                     'user_id' => $lockedAccount->user_id,
                 ]);
 
@@ -197,14 +200,132 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         }
     }
 
+    /** Tatum enriched: `to` + `value` + `from` + `txTimestamp` / `tokenMetadata`. */
+    private function recipientAddress(array $data): ?string
+    {
+        $a = $data['to'] ?? $data['address'] ?? null;
+
+        return $a !== null && $a !== '' ? (string) $a : null;
+    }
+
+    private function senderAddress(array $data): ?string
+    {
+        $a = $data['from'] ?? $data['counterAddress'] ?? null;
+        if ($a === null && ! empty($data['counterAddresses'][0])) {
+            $a = $data['counterAddresses'][0];
+        }
+
+        return $a !== null && $a !== '' ? (string) $a : null;
+    }
+
+    private function inboundAmount(array $data): string
+    {
+        $raw = $data['value'] ?? $data['amount'] ?? '0';
+
+        return (string) $raw;
+    }
+
+    private function transactionCarbon(array $data): Carbon
+    {
+        $ms = $data['txTimestamp'] ?? $data['blockTimestamp'] ?? $data['timestamp'] ?? null;
+        if ($ms !== null && is_numeric($ms)) {
+            return Carbon::createFromTimestampMs((int) $ms);
+        }
+
+        return now();
+    }
+
+    /**
+     * Map chain + tokenMetadata (+ subscriptionType/kind) to wallet_currencies.currency codes we use.
+     *
+     * @return list<string>
+     */
+    private function inferredWalletCurrencies(array $data): array
+    {
+        $chain = strtolower((string) ($data['chain'] ?? ''));
+        $meta = is_array($data['tokenMetadata'] ?? null) ? $data['tokenMetadata'] : [];
+        $symbol = strtoupper(trim((string) ($meta['symbol'] ?? '')));
+        $metaType = strtolower(trim((string) ($meta['type'] ?? '')));
+        $subType = strtoupper((string) ($data['subscriptionType'] ?? ''));
+        $kind = strtolower((string) ($data['kind'] ?? ''));
+
+        $isNativeEvent = $subType === 'INCOMING_NATIVE_TX'
+            || ($metaType === 'native' && $kind === 'transfer');
+
+        if ($isNativeEvent) {
+            if (str_contains($chain, 'ethereum')) {
+                return array_values(array_unique(array_filter(['ETH', $symbol])));
+            }
+            if (str_contains($chain, 'bsc')) {
+                return array_values(array_unique(array_filter(['BNB', 'BSC', $symbol])));
+            }
+            if (str_contains($chain, 'tron')) {
+                return ['TRON', 'TRX'];
+            }
+            if (str_contains($chain, 'bitcoin') || str_contains($chain, 'btc')) {
+                return array_values(array_unique(array_filter(['BTC', $symbol])));
+            }
+
+            return $symbol !== '' ? [$symbol] : [];
+        }
+
+        $isFungibleEvent = $subType === 'INCOMING_FUNGIBLE_TX'
+            || $metaType === 'fungible'
+            || $kind === 'token_transfer';
+
+        if ($isFungibleEvent) {
+            if (str_contains($chain, 'tron')) {
+                if ($symbol === 'USDT') {
+                    return ['USDT_TRON'];
+                }
+                if ($symbol === 'USDC') {
+                    return ['USDC_TRON'];
+                }
+            }
+            if (str_contains($chain, 'bsc')) {
+                if ($symbol === 'USDT') {
+                    return ['USDT_BSC'];
+                }
+                if ($symbol === 'USDC') {
+                    return ['USDC_BSC'];
+                }
+            }
+            if (str_contains($chain, 'ethereum')) {
+                if ($symbol === 'USDT') {
+                    return ['USDT', 'USDT_ETH'];
+                }
+                if ($symbol === 'USDC') {
+                    return ['USDC', 'USDC_ETH'];
+                }
+            }
+        }
+
+        $top = strtoupper(trim((string) ($data['currency'] ?? '')));
+
+        return $top !== '' ? [$top] : [];
+    }
+
+    private function virtualAccountMatchesPayload(VirtualAccount $va, array $data, string $subType): bool
+    {
+        $vaCur = strtoupper((string) $va->currency);
+        $expected = array_map('strtoupper', $this->inferredWalletCurrencies($data));
+
+        if ($expected !== []) {
+            return in_array($vaCur, $expected, true);
+        }
+
+        $top = strtoupper(trim((string) ($data['currency'] ?? '')));
+
+        return $top !== '' && $vaCur === $top;
+    }
+
     private function findDeposit(array $data): ?DepositAddress
     {
-        $addr = $data['address'] ?? null;
+        $addr = $this->recipientAddress($data);
         if (! $addr) {
             return null;
         }
 
-        $currency = strtoupper((string) ($data['currency'] ?? ''));
         $subType = (string) ($data['subscriptionType'] ?? '');
 
         $candidates = DepositAddress::query()
@@ -230,7 +351,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             }
 
             if ($subType === 'INCOMING_FUNGIBLE_TX') {
-                if ($this->fungibleContractMatches($va, $data['contractAddress'] ?? null)) {
+                if ($this->fungibleDepositMatches($va, $data)) {
                     return $dep;
                 }
 
@@ -238,24 +359,31 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             }
 
             if ($subType === 'INCOMING_NATIVE_TX') {
-                if (strtoupper((string) $va->currency) !== $currency) {
+                if ($wc && ($wc->is_token ?? false)) {
                     continue;
                 }
-                if ($wc && ($wc->is_token ?? false)) {
+                if (! $this->virtualAccountMatchesPayload($va, $data, $subType)) {
                     continue;
                 }
 
                 return $dep;
             }
 
-            if (strtoupper((string) $va->currency) !== $currency) {
-                continue;
+            if ($this->virtualAccountMatchesPayload($va, $data, $subType)) {
+                return $dep;
             }
-
-            return $dep;
         }
 
         return null;
+    }
+
+    private function fungibleDepositMatches(VirtualAccount $va, array $data): bool
+    {
+        if ($this->fungibleContractMatches($va, $data['contractAddress'] ?? null)) {
+            return true;
+        }
+
+        return $this->virtualAccountMatchesPayload($va, $data, 'INCOMING_FUNGIBLE_TX');
     }
 
     private function fungibleContractMatches(VirtualAccount $va, mixed $payloadContract): bool
@@ -324,7 +452,6 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         return $user && $user->wallet_flow_version === 'v2';
     }
 
-    /** EVM 0x hex (checksum-safe); TRON base58 uses case-sensitive compare. */
     private function addressesEqual(string $a, string $b): bool
     {
         $a = trim($a);
