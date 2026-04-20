@@ -144,7 +144,7 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'from_address'       => $data['from'] ?? 'not provided',
             'to_address'         => $data['to'],
             'transaction_date'   => Carbon::createFromTimestampMs($data['date']),
-            'index'              => $data['index'],
+            'index'              => $data['index'] ?? null,
         ]);
         ReceivedAsset::create([
             'account_id'        => $data['accountId'],
