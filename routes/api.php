@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AmlRuleController;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\InAppBannerController;
 use App\Http\Controllers\Admin\InAppNotificationController;
 use App\Http\Controllers\Admin\MaintenanceServiceController;
@@ -13,7 +14,6 @@ use App\Http\Controllers\Admin\RefferalManagementController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TradeLimitController;
-use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\WalletManagementController;
@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\UserDeviceController;
 use App\Http\Controllers\BitcoinController;
 use App\Http\Controllers\BlockChainController;
 use App\Http\Controllers\DepositAddressController;
+use App\Http\Controllers\DevTatumV4SubscribeController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\KycController;
@@ -57,17 +58,16 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
 Route::get('/proxy-test', function (Request $request) {
     return response()->json([
-        'client_ip'      => $request->ip(),
-        'real_ip'        => $request->header('X-Real-IP'),
-        'forwarded_for'  => $request->header('X-Forwarded-For'),
-        'user_agent'     => $request->userAgent(),
-        'server_ip'      => $_SERVER['SERVER_ADDR'] ?? null,
-        'method'         => $request->method(),
-        'url'            => $request->fullUrl(),
-        'all_headers'    => $request->headers->all(),
+        'client_ip' => $request->ip(),
+        'real_ip' => $request->header('X-Real-IP'),
+        'forwarded_for' => $request->header('X-Forwarded-For'),
+        'user_agent' => $request->userAgent(),
+        'server_ip' => $_SERVER['SERVER_ADDR'] ?? null,
+        'method' => $request->method(),
+        'url' => $request->fullUrl(),
+        'all_headers' => $request->headers->all(),
     ]);
 });
 Route::get('/optimize-app', function () {
@@ -81,10 +81,11 @@ Route::get('/optimize-app', function () {
     Artisan::call('view:cache');     // Precompiles Blade templates
     Artisan::call('optimize');       // Optimizes class loading
 
-    return "Application optimized and caches cleared successfully!";
+    return 'Application optimized and caches cleared successfully!';
 });
 Route::get('/migrate', function () {
     Artisan::call('migrate');
+
     return response()->json(['message' => 'Migration successful'], 200);
 });
 // Route::get('/migrate/rollback', function () {
@@ -95,6 +96,9 @@ Route::get('/migrate', function () {
 Route::get('/unath', function () {
     return response()->json(['message' => 'Unauthenticated'], 401);
 })->name('login');
+
+/** GET /api/dev/tatum/v4-subscribe?address=...&chain=...&kind=native|fungible — Tatum v4 address subscription (no auth). */
+Route::get('/dev/tatum/v4-subscribe', DevTatumV4SubscribeController::class);
 
 Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create']);
 Route::post('/update-wallet-currency/{id}', [WalletCurrencyController::class, 'update']);
@@ -130,7 +134,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']); // Reset password
     Route::post('/verify-phone', [AuthController::class, 'verifyPhoneOtp']);
 
-
 });
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
@@ -158,13 +161,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 Route::get('admin/banners', [InAppBannerController::class, 'index']);
 
-//Authenticated routes for user done
+// Authenticated routes for user done
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
-
 
     Route::post('/user/add-testing-balance', [UserController::class, 'addTestingBalance']);
     Route::get('user-activity', [UserController::class, 'getUserActivity']);
-    //Fee Module
+    // Fee Module
     Route::prefix('fee')->group(function () {
         Route::post('/create', [FeeController::class, 'create']); // Create a fee
         Route::post('/update/{id}', [FeeController::class, 'update']); // Update a fee
@@ -187,12 +189,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/user-accounts', [UserController::class, 'getUserAccountsFromApi']);
     Route::get('/user/balance', [UserController::class, 'getUserBalance']);
     Route::get('/user/assets', [UserController::class, 'getUserAssets']);
-    //routes for selecting currency with wallet
-    Route::get('/user/wallet-currencies', [UserController::class, 'walletCurrenciesforUser']); //wallet currencies for user that have balance and associated virtual account
-    Route::get('/user/all-wallet-currencies/{isBuy}', [UserController::class, 'allwalletCurrenciesforUser']); //wallet currencies for user that have balance and associated virtual account
+    // routes for selecting currency with wallet
+    Route::get('/user/wallet-currencies', [UserController::class, 'walletCurrenciesforUser']); // wallet currencies for user that have balance and associated virtual account
+    Route::get('/user/all-wallet-currencies/{isBuy}', [UserController::class, 'allwalletCurrenciesforUser']); // wallet currencies for user that have balance and associated virtual account
     Route::get('/user/networks/{currency_id}', [WalletCurrencyController::class, 'getNetworks']);
     Route::get('/user/deposit-address/{currency}/{network}', [UserController::class, 'getDepositAddress']);
-    //profile edit and user details routes
+    // profile edit and user details routes
     Route::get('/user/details', [UserController::class, 'getUserDetails']);
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     Route::post('/user/update-profile', [UserController::class, 'UpdateUserProfile']);
@@ -232,14 +234,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('transaction/get-all', [TransactionController::class, 'getTransactionsForUser']);
     Route::get('transaction/currency/{name}', [TransactionController::class, 'getTransactionsForCurrency']);
 
-    Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']); //change with getrefferalsummary when pushing to live
-    Route::get('refferal/get-all-new', [RefferalEarningController::class, 'getUserReferralSummary']); //change with getrefferalsummary when pushing to live
+    Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']); // change with getrefferalsummary when pushing to live
+    Route::get('refferal/get-all-new', [RefferalEarningController::class, 'getUserReferralSummary']); // change with getrefferalsummary when pushing to live
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
     Route::post('/validate-email', [UserController::class, 'validateEmail']);
 });
-//non auth routes (still require authentication, but not user "active" status)
+// non auth routes (still require authentication, but not user "active" status)
 Route::middleware('auth:sanctum')->group(function () {
 
     /*
@@ -278,26 +280,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('referal_payments/{id}', [ReferalPaymentController::class, 'show']); // Get single record
         Route::put('referal_payments/{id}', [ReferalPaymentController::class, 'update']); // Update record
         Route::delete('referal_payments/{id}', [ReferalPaymentController::class, 'destroy']); // Delete record
-        //usermanagement
+        // usermanagement
         Route::get('/user-management', [UserManagementController::class, 'getUserManagementData']);
         Route::get('/user-management/user-detail/{userId}', [UserManagementController::class, 'getUserDetails']);
         Route::get('/user-management/user-assets/{userId}', [UserManagementController::class, 'getUserAssets']);
         Route::get('/user-management/user-banks/{userId}', [UserManagementController::class, 'getBanksForUser']);
         Route::get('/user-management/virtualWallets/{userId}', [UserManagementController::class, 'getUserVirtualAccounts']);
-        //addign complete user details routesjhh
+        // addign complete user details routesjhh
         Route::get('/user-management/complete-details/{userId}', [UserManagementController::class, 'getCompleteUserDetails']);
         Route::post('/user-management/update-profile/{userId}', [UserController::class, 'UpdateUserProfileByAdmin']);
         Route::post('/user-management/create-bank/{userId}', [UserManagementController::class, 'createBankAccount']);
         Route::get('/user-management/delete-user/{id}', [UserManagementController::class, 'deleteUser']);
         Route::get('/user-management/block-user/{id}', [UserManagementController::class, 'blockUser']);
         Route::post('/create-user', [UserManagementController::class, 'createUser']);
-        //banners
+        // banners
         Route::get('/banners/{id}', [InAppBannerController::class, 'show']);
         Route::post('/banners', [InAppBannerController::class, 'create']);
         Route::post('/banners/{id}', [InAppBannerController::class, 'update']);
         Route::delete('/banners/{id}', [InAppBannerController::class, 'delete']);
 
-        //reffer management data
+        // reffer management data
         Route::get('/referal-management', [RefferalManagementController::class, 'getRefferalManagement']);
         Route::get('refferal/get-for-user/{id}', [RefferalEarningController::class, 'getForUser']);
         Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
@@ -317,7 +319,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-singe/swap/{id}', [TransactionManagementController::class, 'getSingleSwapTransaction']);
             Route::get('/get-singe/buy/{id}', [TransactionManagementController::class, 'getSingleBuyTransaction']);
             Route::get('/get-single/receive/{id}', [TransactionManagementController::class, 'getSingleReceiveTransaction']);
-            //withdraw single
+            // withdraw single
             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'getSingleWithdrawTransaction']);
             Route::get('/get-single/withdraw/{id}', [TransactionManagementController::class, 'ReferalPaymentController@destroy']);
             Route::get('/withdraw-requests', [TransactionManagementController::class, 'getWithdrawRequests']);
@@ -438,7 +440,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('devices', [UserDeviceController::class, 'index']);
     Route::get('admin/transactions/get-singe/internal-send/{id}', [TransactionManagementController::class, 'getSingleInternalSendTransaction']);
-
 
     Route::get('admin/transactions/get-single/internal-receive/{id}', [TransactionManagementController::class, 'getSingleInternalReceiveTransaction']);
 });

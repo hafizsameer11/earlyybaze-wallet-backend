@@ -8,9 +8,8 @@ return [
     'webhook_url' => 'https://api.settlesys.com/api/webhook',
     'webhook_v2_url' => env('TATUM_WEBHOOK_V2_URL', 'https://api.settlesys.com/api/webhook/v2'),
     /**
-     * When true, dev Tatum routes respond: POST .../btc-wallet-v4-subscription, GET .../v4-subscribe (otherwise 404).
-     * Defaults to on in local so `php artisan serve` works without extra env; set
-     * TATUM_DEV_BTC_WALLET_V4_ENDPOINT_ENABLED=false to disable, or true in staging.
+     * When true, POST /api/dev/tatum/btc-wallet-v4-subscription responds (otherwise 404).
+     * GET /api/dev/tatum/v4-subscribe is registered in routes/api.php and is not gated by this flag.
      */
     'dev_btc_wallet_v4_endpoint_enabled' => filter_var(
         env('TATUM_DEV_BTC_WALLET_V4_ENDPOINT_ENABLED', env('APP_ENV', 'production') === 'local'),

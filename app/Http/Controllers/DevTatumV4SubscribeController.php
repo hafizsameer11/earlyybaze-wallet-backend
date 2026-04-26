@@ -6,7 +6,7 @@ use App\Services\TatumV4SubscriptionService;
 use Illuminate\Http\Request;
 
 /**
- * Dev-only GET: create a Tatum v4 address subscription from the query string (browser-friendly).
+ * GET: create a Tatum v4 address subscription from the query string (browser-friendly).
  *
  * /api/dev/tatum/v4-subscribe?address=...&chain=bitcoin-mainnet&kind=native
  */
@@ -14,10 +14,6 @@ class DevTatumV4SubscribeController extends Controller
 {
     public function __invoke(Request $request, TatumV4SubscriptionService $subscriptions)
     {
-        if (! config('tatum.dev_btc_wallet_v4_endpoint_enabled')) {
-            abort(404);
-        }
-
         $validated = $request->validate([
             'address' => 'required|string|max:256',
             'chain' => 'sometimes|string|max:64',
