@@ -1,4 +1,5 @@
 <?php
+
 return [
     'api_key' => env('TATUM_API_KEY', ''),
     'base_url' => env('TATUM_BASE_URL', 'https://api.tatum.io/v3'),
@@ -7,7 +8,7 @@ return [
     'webhook_url' => 'https://api.settlesys.com/api/webhook',
     'webhook_v2_url' => env('TATUM_WEBHOOK_V2_URL', 'https://api.settlesys.com/api/webhook/v2'),
     /**
-     * When true, POST /api/dev/tatum/btc-wallet-v4-subscription responds (otherwise 404).
+     * When true, dev Tatum routes respond: POST .../btc-wallet-v4-subscription, GET .../v4-subscribe (otherwise 404).
      * Defaults to on in local so `php artisan serve` works without extra env; set
      * TATUM_DEV_BTC_WALLET_V4_ENDPOINT_ENABLED=false to disable, or true in staging.
      */

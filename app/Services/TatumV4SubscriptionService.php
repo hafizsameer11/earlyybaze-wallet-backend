@@ -7,11 +7,32 @@ use Illuminate\Support\Facades\Log;
 
 class TatumV4SubscriptionService
 {
-    public function subscribeNative(string $v4Chain, string $address): ?string
+    /**
+     * v4 templateId / finality / conditions are only valid on TRON and EVM chains (Tatum API).
+     */
+    private function v4ChainSupportsSubscriptionExtras(string $v4Chain): bool
     {
-        $url = rtrim(config('tatum.v4_base_url', 'https://api.tatum.io/v4'), '/')
-            .'/subscription?type='.urlencode(config('tatum_v2.v4_network_type', 'mainnet'));
+        $noExtras = ['bitcoin-', 'litecoin-core-', 'doge-', 'ripple-', 'solana-', 'tezos-'];
+        foreach ($noExtras as $prefix) {
+            if (str_starts_with($v4Chain, $prefix)) {
+                return false;
+            }
+        }
 
+        return true;
+    }
+
+    private function subscriptionBaseUrl(): string
+    {
+        return rtrim(config('tatum.v4_base_url', 'https://api.tatum.io/v4'), '/')
+            .'/subscription?type='.urlencode(config('tatum_v2.v4_network_type', 'mainnet'));
+    }
+
+    /**
+     * @return array{type: string, attr: array<string, mixed>, templateId?: string}
+     */
+    private function incomingNativePayload(string $v4Chain, string $address): array
+    {
         $payload = [
             'type' => 'INCOMING_NATIVE_TX',
             'attr' => [
@@ -19,17 +40,19 @@ class TatumV4SubscriptionService
                 'address' => $address,
                 'url' => config('tatum.webhook_v2_url'),
             ],
-            'templateId' => 'enriched',
         ];
+        if ($this->v4ChainSupportsSubscriptionExtras($v4Chain)) {
+            $payload['templateId'] = 'enriched';
+        }
 
-        return $this->postAndReturnId($url, $payload);
+        return $payload;
     }
 
-    public function subscribeFungible(string $v4Chain, string $address): ?string
+    /**
+     * @return array{type: string, attr: array<string, mixed>, templateId?: string}
+     */
+    private function incomingFungiblePayload(string $v4Chain, string $address): array
     {
-        $url = rtrim(config('tatum.v4_base_url', 'https://api.tatum.io/v4'), '/')
-            .'/subscription?type='.urlencode(config('tatum_v2.v4_network_type', 'mainnet'));
-
         $payload = [
             'type' => 'INCOMING_FUNGIBLE_TX',
             'attr' => [
@@ -37,13 +60,18 @@ class TatumV4SubscriptionService
                 'address' => $address,
                 'url' => config('tatum.webhook_v2_url'),
             ],
-            'templateId' => 'enriched',
         ];
+        if ($this->v4ChainSupportsSubscriptionExtras($v4Chain)) {
+            $payload['templateId'] = 'enriched';
+        }
 
-        return $this->postAndReturnId($url, $payload);
+        return $payload;
     }
 
-    private function postAndReturnId(string $url, array $payload): ?string
+    /**
+     * @return array{ok: true, id: string}|array{ok: false, status: int, body: mixed}
+     */
+    private function postSubscription(string $url, array $payload): array
     {
         $response = Http::withHeaders([
             'x-api-key' => config('tatum.api_key'),
@@ -57,11 +85,53 @@ class TatumV4SubscriptionService
                 'status' => $response->status(),
             ]);
 
-            return null;
+            return [
+                'ok' => false,
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ];
         }
 
         $json = $response->json();
+        $id = $json['id'] ?? $json['data']['id'] ?? null;
+        if ($id === null || $id === '') {
+            return [
+                'ok' => false,
+                'status' => $response->status(),
+                'body' => $json,
+            ];
+        }
 
-        return $json['id'] ?? $json['data']['id'] ?? null;
+        return ['ok' => true, 'id' => (string) $id];
+    }
+
+    /**
+     * @return array{ok: true, id: string}|array{ok: false, status: int, body: mixed}
+     */
+    public function createIncomingNativeSubscription(string $v4Chain, string $address): array
+    {
+        return $this->postSubscription($this->subscriptionBaseUrl(), $this->incomingNativePayload($v4Chain, $address));
+    }
+
+    /**
+     * @return array{ok: true, id: string}|array{ok: false, status: int, body: mixed}
+     */
+    public function createIncomingFungibleSubscription(string $v4Chain, string $address): array
+    {
+        return $this->postSubscription($this->subscriptionBaseUrl(), $this->incomingFungiblePayload($v4Chain, $address));
+    }
+
+    public function subscribeNative(string $v4Chain, string $address): ?string
+    {
+        $result = $this->createIncomingNativeSubscription($v4Chain, $address);
+
+        return $result['ok'] ? $result['id'] : null;
+    }
+
+    public function subscribeFungible(string $v4Chain, string $address): ?string
+    {
+        $result = $this->createIncomingFungibleSubscription($v4Chain, $address);
+
+        return $result['ok'] ? $result['id'] : null;
     }
 }

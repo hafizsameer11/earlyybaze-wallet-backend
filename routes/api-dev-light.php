@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DevTatumBtcWalletController;
+use App\Http\Controllers\DevTatumV4SubscribeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,3 +24,11 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::post('/dev/tatum/btc-wallet-v4-subscription', [DevTatumBtcWalletController::class, 'createWithV4IncomingNativeSubscription']);
+
+/*
+|--------------------------------------------------------------------------
+| GET /api/dev/tatum/v4-subscribe?address=...&chain=bitcoin-mainnet&kind=native
+| Same gate as btc-wallet-v4-subscription (tatum.dev_btc_wallet_v4_endpoint_enabled).
+|--------------------------------------------------------------------------
+*/
+Route::get('/dev/tatum/v4-subscribe', DevTatumV4SubscribeController::class);
