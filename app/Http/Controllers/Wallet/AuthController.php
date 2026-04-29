@@ -22,22 +22,30 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     protected $userService;
-    protected $resetPasswordService, $notificationService;
+
+    protected $resetPasswordService;
+
+    protected $notificationService;
+
     public function __construct(UserService $userService, ResetPasswordService $resetPasswordService, NotificationService $notificationService, private AdminAuthService $service)
     {
         $this->userService = $userService;
         $this->resetPasswordService = $resetPasswordService;
         $this->notificationService = $notificationService;
     }
+
     public function sendNotification($userId)
     {
-        $notification =   $this->notificationService->sendToUserById($userId, 'Notification Title', 'Notification Body');
+        $notification = $this->notificationService->sendToUserById($userId, 'Notification Title', 'Notification Body');
+
         return $notification;
     }
+
     public function register(RegisterRequest $request)
     {
         try {
-            $user = $this->userService->registerUser($request->validated());
+            $user = $this->userService->registerUserForWalletV2($request->validated());
+
             return ResponseHelper::success($user, 'User registered successfully', 201);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
@@ -48,6 +56,7 @@ class AuthController extends Controller
     {
         try {
             $user = $this->userService->registerUserForWalletV2($request->validated());
+
             return ResponseHelper::success($user, 'User registered successfully (wallet v2)', 201);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
@@ -58,38 +67,41 @@ class AuthController extends Controller
     {
         try {
             $user = $this->userService->verifyOtp($request->validated());
+
             return ResponseHelper::success($user, 'OTP verified successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     public function verifyPhoneOtp(Request $request)
-{
-    $validated = $request->validate([
-        'email' => 'required|email',
-        'sms_code' => 'required|digits:6',
-    ]);
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'sms_code' => 'required|digits:6',
+        ]);
 
-    try {
-        $user = \App\Models\User::where('email', $validated['email'])->first();
-        if (!$user) {
-            return ResponseHelper::error('User not found', 404);
+        try {
+            $user = \App\Models\User::where('email', $validated['email'])->first();
+            if (! $user) {
+                return ResponseHelper::error('User not found', 404);
+            }
+
+            if ($user->sms_code !== $validated['sms_code']) {
+                return ResponseHelper::error('Invalid verification code');
+            }
+
+            $user->is_number_verified = true;
+            $user->sms_code = null;
+            $user->save();
+
+            return ResponseHelper::success($user, 'Phone number verified successfully', 200);
+        } catch (\Throwable $e) {
+            Log::error('Phone OTP verify error: '.$e->getMessage());
+
+            return ResponseHelper::error('Phone verification failed');
         }
-
-        if ($user->sms_code !== $validated['sms_code']) {
-            return ResponseHelper::error('Invalid verification code');
-        }
-
-        $user->is_number_verified = true;
-        $user->sms_code = null;
-        $user->save();
-
-        return ResponseHelper::success($user, 'Phone number verified successfully', 200);
-    } catch (\Throwable $e) {
-        Log::error('Phone OTP verify error: ' . $e->getMessage());
-        return ResponseHelper::error('Phone verification failed');
     }
-}
 
     public function login(LoginRequest $request)
     {
@@ -110,8 +122,8 @@ class AuthController extends Controller
             $ipAddress = $request->ip();
 
             // Fallback if no device_id passed
-            if (!$deviceId) {
-                $deviceId = sha1($userAgent . $ipAddress . $userd['id']);
+            if (! $deviceId) {
+                $deviceId = sha1($userAgent.$ipAddress.$userd['id']);
             }
 
             // Check if this device already exists
@@ -119,7 +131,7 @@ class AuthController extends Controller
                 ->where('user_id', $userd['id'])
                 ->first();
 
-            if (!$existingDevice) {
+            if (! $existingDevice) {
                 \App\Models\UserDevice::create([
                     'user_id' => $userd['id'],
                     'device_id' => $deviceId,
@@ -136,48 +148,51 @@ class AuthController extends Controller
                     'title' => 'New Device Login',
                     'message' => 'Your account was accessed from a new device.',
                 ]);
-                
-           
+
             }
-                 $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
-                UserNotification::create([
-                    'user_id' => $userd['id'],
-                    'title' => 'Login Notification',
-                    'message' => 'You logged in successfully'
-                ]);
+            $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
+            UserNotification::create([
+                'user_id' => $userd['id'],
+                'title' => 'Login Notification',
+                'message' => 'You logged in successfully',
+            ]);
             UserActivityHelper::LoggedInUserActivity('User logged in');
             $data = [
-                    'user' => $user['user'],
-                    'assets' => $user['virtual_accounts'],
-                    'token' => $user['token']
-                ];
+                'user' => $user['user'],
+                'assets' => $user['virtual_accounts'],
+                'token' => $user['token'],
+            ];
+
             return ResponseHelper::success($data, 'User logged in successfully', 200);
         } catch (\Exception $e) {
             Log::error('Login Error:', ['error' => $e->getMessage()]);
+
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     // app/Http/Controllers/AuthController.php (excerpt)
     public function adminLogin(Request $request)
     {
         try {
             $data = $request->validate([
-                'email'    => ['required', 'email'],
+                'email' => ['required', 'email'],
                 'password' => ['required', 'string', 'min:6'],
             ]);
 
             // enrich payload with context (no Request in service)
             $payload = array_merge($data, [
-                'ip'         => $request->ip(),
+                'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
 
             $resp = $this->service->adminLogin($payload);
+
             return ResponseHelper::success($resp, $resp['message'] ?? 'OTP sent', 200);
         } catch (ValidationException $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return ResponseHelper::error('Admin login failed: ' . $e->getMessage(), 422);
+            return ResponseHelper::error('Admin login failed: '.$e->getMessage(), 422);
         }
     }
 
@@ -190,6 +205,7 @@ class AuthController extends Controller
                 $request->ip(),
                 $request->userAgent()
             );
+
             return ResponseHelper::success(['ok' => true], 'OTP resent to email', 200);
         } catch (\Throwable $e) {
             return ResponseHelper::error($e->getMessage(), 429);
@@ -205,19 +221,20 @@ class AuthController extends Controller
             ]);
 
             $resp = $this->service->verifyOtpAndIssueToken($request->user(), $validated['otp']);
+
             return ResponseHelper::success($resp, $resp['message'] ?? 'Logged in', 200);
         } catch (ValidationException $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return ResponseHelper::error('OTP verification failed: ' . $e->getMessage(), 422);
+            return ResponseHelper::error('OTP verification failed: '.$e->getMessage(), 422);
         }
     }
-
 
     public function resendOtp(Request $request)
     {
         try {
             $user = $this->userService->resendOtp($request->email);
+
             return ResponseHelper::success($user, 'OTP resent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
@@ -228,34 +245,41 @@ class AuthController extends Controller
     {
         try {
             $user = $this->resetPasswordService->forgetPassword($request->email);
+
             return ResponseHelper::success($user, 'OTP resent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     public function verifyForgetPasswordOtp(ResetPasswordRequest $request)
     {
         try {
             $user = $this->resetPasswordService->verifyForgetPassswordOtp($request->email, $request->otp);
+
             return ResponseHelper::success($user, 'OTP verified successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     public function resetPassword(Request $request)
     {
         try {
             $user = $this->resetPasswordService->resetPassword($request->email, $request->password);
+
             return ResponseHelper::success($user, 'Password reset successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
         }
     }
+
     public function changePassword(ChangePasswordRequest $request)
     {
         try {
             $user = $this->userService->changePassword($request->old_password, $request->new_password);
             UserActivityHelper::LoggedInUserActivity('User changed their password');
+
             return ResponseHelper::success($user, 'Password changed successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage());
