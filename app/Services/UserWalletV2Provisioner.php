@@ -113,34 +113,52 @@ class UserWalletV2Provisioner
         $address = $ubw->primary_address;
         $privateKeyEncrypted = $ubw->private_key_ciphertext;
 
+        if (! $address || ! $privateKeyEncrypted) {
+            Log::error('Wallet v2: cannot add deposit addresses — missing address or key', ['user_id' => $user->id, 'chain' => $chainKey]);
+
+            return;
+        }
+
         $nativeSubId = null;
         $nativeSubCreated = false;
         $fungibleSubId = null;
         $fungibleSubCreated = false;
 
         foreach ($currencies as $walletCurrency) {
-            if (VirtualAccount::where('user_id', $user->id)->where('currency_id', $walletCurrency->id)->exists()) {
-                continue;
-            }
-
             $isToken = (bool) ($walletCurrency->is_token ?? false);
 
-            $virtualAccount = VirtualAccount::create([
-                'user_id' => $user->id,
-                'blockchain' => $walletCurrency->blockchain,
-                'currency' => $walletCurrency->currency,
-                'customer_id' => null,
-                'account_id' => WalletFlowV2::syntheticAccountId($user->id, $walletCurrency->id),
-                'account_code' => $user->user_code,
-                'active' => true,
-                'frozen' => false,
-                'account_balance' => '0',
-                'available_balance' => '0',
-                'xpub' => $ubw->xpub ?? 'v2-managed',
-                'accounting_currency' => 'USD',
-                'currency_id' => $walletCurrency->id,
-                'is_tatum_ledger' => false,
-            ]);
+            $virtualAccount = VirtualAccount::query()
+                ->where('user_id', $user->id)
+                ->where('currency_id', $walletCurrency->id)
+                ->first();
+
+            if (! $virtualAccount) {
+                $virtualAccount = VirtualAccount::create([
+                    'user_id' => $user->id,
+                    'blockchain' => $walletCurrency->blockchain,
+                    'currency' => $walletCurrency->currency,
+                    'customer_id' => null,
+                    'account_id' => WalletFlowV2::syntheticAccountId($user->id, $walletCurrency->id),
+                    'account_code' => $user->user_code,
+                    'active' => true,
+                    'frozen' => false,
+                    'account_balance' => '0',
+                    'available_balance' => '0',
+                    'xpub' => $ubw->xpub ?? 'v2-managed',
+                    'accounting_currency' => 'USD',
+                    'currency_id' => $walletCurrency->id,
+                    'is_tatum_ledger' => false,
+                ]);
+            }
+
+            $alreadyHasV2Deposit = DepositAddress::query()
+                ->where('virtual_account_id', $virtualAccount->id)
+                ->where('version', 'v2')
+                ->exists();
+
+            if ($alreadyHasV2Deposit) {
+                continue;
+            }
 
             $deposit = DepositAddress::create([
                 'virtual_account_id' => $virtualAccount->id,
