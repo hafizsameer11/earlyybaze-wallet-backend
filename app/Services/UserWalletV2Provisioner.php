@@ -149,6 +149,22 @@ class UserWalletV2Provisioner
                     'currency_id' => $walletCurrency->id,
                     'is_tatum_ledger' => false,
                 ]);
+            } else {
+                $dirty = false;
+
+                if ($virtualAccount->currency_id !== $walletCurrency->id) {
+                    $virtualAccount->currency_id = $walletCurrency->id;
+                    $dirty = true;
+                }
+
+                if ($virtualAccount->is_tatum_ledger !== false) {
+                    $virtualAccount->is_tatum_ledger = false;
+                    $dirty = true;
+                }
+
+                if ($dirty) {
+                    $virtualAccount->save();
+                }
             }
 
             $alreadyHasV2Deposit = DepositAddress::query()

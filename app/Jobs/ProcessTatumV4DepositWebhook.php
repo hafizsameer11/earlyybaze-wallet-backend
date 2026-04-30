@@ -11,7 +11,6 @@ use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
 use App\Services\NotificationService;
-use App\Support\WalletFlowV2;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -331,12 +330,6 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         $candidates = DepositAddress::query()
             ->where('version', 'v2')
             ->whereRaw('LOWER(address) = ?', [strtolower($addr)])
-            ->whereHas('virtualAccount', function ($q): void {
-                $q->where('is_tatum_ledger', false);
-            })
-            ->whereHas('virtualAccount.user', function ($q): void {
-                $q->where('wallet_flow_version', 'v2');
-            })
             ->with(['virtualAccount.walletCurrency', 'virtualAccount.user'])
             ->get();
 
@@ -346,9 +339,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                 continue;
             }
             $wc = $va->walletCurrency;
-            if (! $wc || ! WalletFlowV2::currencyAllowedForV2($wc)) {
-                continue;
-            }
+            $isToken = $wc ? (bool) ($wc->is_token ?? false) : false;
 
             if ($subType === 'INCOMING_FUNGIBLE_TX') {
                 if ($this->fungibleDepositMatches($va, $data)) {
@@ -359,7 +350,7 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             }
 
             if ($subType === 'INCOMING_NATIVE_TX') {
-                if ($wc && ($wc->is_token ?? false)) {
+                if ($isToken) {
                     continue;
                 }
                 if (! $this->virtualAccountMatchesPayload($va, $data, $subType)) {
@@ -444,12 +435,8 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         if (($deposit->version ?? '') !== 'v2') {
             return false;
         }
-        if ($account->is_tatum_ledger !== false) {
-            return false;
-        }
-        $user = $account->relationLoaded('user') ? $account->user : $account->user()->first();
 
-        return $user && $user->wallet_flow_version === 'v2';
+        return true;
     }
 
     private function addressesEqual(string $a, string $b): bool
