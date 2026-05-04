@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class SupportTicket extends Model
+class SupportTicket extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = ['user_id', 'subject', 'issue', 'status', 'answered'];
 
     public function user()

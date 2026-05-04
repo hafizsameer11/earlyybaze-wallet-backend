@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class VirtualAccount extends Model
+class VirtualAccount extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'blockchain',
@@ -33,27 +33,29 @@ class VirtualAccount extends Model
     {
         return $this->hasMany(DepositAddress::class);
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function walletCurrency()
     {
         return $this->belongsTo(WalletCurrency::class, 'currency_id', 'id');
     }
+
     public function getAvailableBalanceAttribute($value)
-{
-    if ($value === null) {
-        return null;
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // If value is in scientific notation (e.g., 1.5526E-4)
+        if (stripos($value, 'e') !== false) {
+            return number_format((float) $value, 8, '.', ''); // you can increase decimals if needed
+        }
+
+        // Otherwise return as normal
+        return $value;
     }
-
-    // If value is in scientific notation (e.g., 1.5526E-4)
-    if (stripos($value, 'e') !== false) {
-        return number_format((float)$value, 8, '.', ''); // you can increase decimals if needed
-    }
-
-    // Otherwise return as normal
-    return $value;
-}
-
 }

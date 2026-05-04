@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class SupportReply extends Model
+class SupportReply extends BaseModel
 {
     use HasFactory;
-    protected $fillable = ['ticket_id', 'message', 'sender_type','attachment'];
+
+    protected $fillable = ['ticket_id', 'message', 'sender_type', 'attachment'];
 
     public function ticket()
     {

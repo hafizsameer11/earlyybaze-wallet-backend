@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class UserBlockchainWallet extends Model
+class UserBlockchainWallet extends BaseModel
 {
     protected $fillable = [
         'user_id',

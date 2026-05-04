@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class SwapTransaction extends Model
+class SwapTransaction extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'transaction_id',
@@ -18,13 +18,15 @@ class SwapTransaction extends Model
         'status',
         'exchange_rate',
         'fee_naira',
-        'amount','reference','network',
-        'balance_before'
+        'amount', 'reference', 'network',
+        'balance_before',
     ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);

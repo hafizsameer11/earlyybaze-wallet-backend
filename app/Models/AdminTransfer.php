@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class AdminTransfer extends Model
+class AdminTransfer extends BaseModel
 {
     use HasFactory;
-    protected $fillable = ['blockchain', 'currency', 'address','forAll'];
+
+    protected $fillable = ['blockchain', 'currency', 'address', 'forAll'];
 }

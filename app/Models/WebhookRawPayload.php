@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class WebhookRawPayload extends Model
+class WebhookRawPayload extends BaseModel
 {
     protected $fillable = [
         'channel',

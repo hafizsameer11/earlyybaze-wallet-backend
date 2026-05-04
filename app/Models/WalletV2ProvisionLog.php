@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class WalletV2ProvisionLog extends Model
+class WalletV2ProvisionLog extends BaseModel
 {
     public $timestamps = false;
 

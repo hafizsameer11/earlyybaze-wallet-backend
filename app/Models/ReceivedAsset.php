@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ReceivedAsset extends Model
+class ReceivedAsset extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'account_id',
         'subscription_type',
@@ -28,6 +28,7 @@ class ReceivedAsset extends Model
         'address_to_send',
 
     ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

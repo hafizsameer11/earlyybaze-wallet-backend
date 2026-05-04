@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ReferralWalletTopUp extends Model
+class ReferralWalletTopUp extends BaseModel
 {
     use HasFactory;
+
     protected $guarded = [];
-    public function user(){
+
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 }

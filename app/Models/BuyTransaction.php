@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class BuyTransaction extends Model
+class BuyTransaction extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'transaction_id',
@@ -22,14 +22,17 @@ class BuyTransaction extends Model
         'name_on_account',
         'amount_paid',
     ];
+
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function bankAccount()
     {
         return $this->belongsTo(BankAccount::class);

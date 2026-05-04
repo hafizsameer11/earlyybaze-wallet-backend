@@ -30,19 +30,23 @@ class UserRepository
             $data['profile_picture'] = $path;
         }
 
-        // 👉 Check if a user with this email already exists
-        $existingUser = User::where('email', $data['email'])->first();
+        // 👉 Check if a user with this email already exists (including soft-deleted: unique index still blocks inserts)
+        $existingUser = User::withTrashed()->where('email', $data['email'])->first();
 
         if ($existingUser) {
+            if ($existingUser->trashed()) {
+                throw new Exception(
+                    'This email is tied to a deleted account. Restore that user or use a different email.'
+                );
+            }
             if ($existingUser->otp_verified) {
                 // Already verified → prevent duplicate registration
                 throw new Exception('User already registered.');
-            } else {
-                // Not verified → update with the new data
-                $existingUser->update($data);
-
-                return $existingUser->fresh(); // return updated instance
             }
+            // Not verified → update with the new data
+            $existingUser->update($data);
+
+            return $existingUser->fresh(); // return updated instance
         }
 
         // 👉 No existing user → create a new one
@@ -117,7 +121,14 @@ class UserRepository
 
     public function getuserAssets($userId)
     {
-        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)
+            ->with([
+                'walletCurrency',
+                'depositAddresses' => function ($q): void {
+                    $q->where('version', 'v2');
+                },
+            ])
+            ->get();
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $ngnExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount, $ngnExchangeRate) {
@@ -146,6 +157,23 @@ class UserRepository
                 $amountNGN = $amountUsd * $ngnExchangeRate->rate_usd;
             }
 
+            $depositAddresses = $account->depositAddresses->map(function ($d) {
+                return [
+                    'id' => $d->id,
+                    'virtual_account_id' => $d->virtual_account_id,
+                    'version' => $d->version,
+                    'blockchain' => $d->blockchain,
+                    'currency' => $d->currency,
+                    'address' => $d->address,
+                    'index' => $d->index,
+                    'tatum_v4_chain' => $d->tatum_v4_chain,
+                    'tatum_subscription_native_id' => $d->tatum_subscription_native_id,
+                    'tatum_subscription_fungible_id' => $d->tatum_subscription_fungible_id,
+                    'created_at' => $d->created_at,
+                    'updated_at' => $d->updated_at,
+                ];
+            })->values();
+
             return [
                 'id' => $account->id,
                 'name' => $account->walletCurrency->name,
@@ -155,7 +183,7 @@ class UserRepository
                 'available_balance' => $account->available_balance,
                 'ngn_balance' => $amountNGN ?? null,
                 'account_balance' => $account->account_balance,
-                'deposit_addresses' => $account->depositAddresses,
+                'deposit_addresses' => $depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
                 'nairaWallet' => $userAccount->naira_balance ?? null,
                 'freezed' => $account->frozen,

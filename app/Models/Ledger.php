@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Ledger extends Model
+class Ledger extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'type',

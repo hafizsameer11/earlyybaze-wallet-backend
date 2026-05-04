@@ -3,11 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class DepositAddress extends Model
+class DepositAddress extends BaseModel
 {
     use HasFactory;
+
+    /**
+     * Never expose encrypted key material in API / admin JSON.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'private_key',
+    ];
+
     protected $fillable = [
         'virtual_account_id',
         'version',

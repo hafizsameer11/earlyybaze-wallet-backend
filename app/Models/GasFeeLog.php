@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class GasFeeLog extends Model
+class GasFeeLog extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'blockchain',
@@ -16,6 +16,6 @@ class GasFeeLog extends Model
         'fee_currency',
         'tx_type',
         'tx_hash',
-        'status'
+        'status',
     ];
 }

@@ -13,6 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    use Concerns\SerializesDatesInAppTimezone;
     use HasApiTokens, HasFactory, Notifiable;
     use SoftDeletes;
 
@@ -52,7 +53,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'otp'
+        'otp',
     ];
 
     /**
@@ -66,14 +67,17 @@ class User extends Authenticatable
         'two_factor_recovery_codes' => 'array',
         'two_factor_confirmed_at' => 'datetime',
     ];
+
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
     }
+
     public function resetPassword()
     {
         return $this->hasMany(ResetPassword::class);
     }
+
     public function virtualAccounts()
     {
         return $this->hasMany(VirtualAccount::class);
@@ -93,22 +97,27 @@ class User extends Authenticatable
     {
         return $this->hasOne(NairaWallet::class);
     }
+
     public function withdrawRequests()
     {
         return $this->hasMany(WithdrawRequest::class);
     }
+
     public function userAccount()
     {
         return $this->hasOne(UserAccount::class);
     }
+
     public function kyc()
     {
         return $this->hasOne(Kyc::class);
     }
+
     public function newsletters()
     {
         return $this->belongsToMany(Newsletter::class, 'user_newsletters')->withTimestamps()->withPivot('is_read', 'sent_at');
     }
+
     public function userActivity()
     {
         return $this->hasMany(UserActivity::class);

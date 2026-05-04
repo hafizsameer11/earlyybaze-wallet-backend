@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class NairaWallet extends Model
+class NairaWallet extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
-        'balance'
+        'balance',
     ];
 }

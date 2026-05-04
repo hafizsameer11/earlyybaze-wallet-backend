@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes; // ← Import trait
 
-class WithdrawRequest extends Model
+class WithdrawRequest extends BaseModel
 {
     use HasFactory, SoftDeletes; // ← Apply SoftDeletes
 
@@ -38,7 +37,7 @@ class WithdrawRequest extends Model
     public function getBalanceBeforeAttribute($value)
     {
         // If already set, return it
-        if (!is_null($value)) {
+        if (! is_null($value)) {
             return $value;
         }
 
@@ -58,18 +57,18 @@ class WithdrawRequest extends Model
      * Get formatted bank account object - uses relationship if bank_account_id exists,
      * otherwise uses direct fields (bank_account_name, bank_account_code, account_name, account_number)
      * Always returns in consistent format regardless of source
-     * 
+     *
      * @return array|null
      */
     public function getFormattedBankAccount()
     {
         // Priority 1: If bank_account_id exists, use the relationship (old implementation)
-        if (!is_null($this->bank_account_id)) {
+        if (! is_null($this->bank_account_id)) {
             // Load relationship if not already loaded
-            if (!$this->relationLoaded('bankAccount')) {
+            if (! $this->relationLoaded('bankAccount')) {
                 $this->load('bankAccount');
             }
-            
+
             if ($this->bankAccount) {
                 return [
                     'id' => $this->bankAccount->id,
@@ -85,11 +84,11 @@ class WithdrawRequest extends Model
             }
             // If bank_account_id exists but relationship is null (orphaned), fall through to direct fields
         }
-        
+
         // Priority 2: If bank_account_id doesn't exist (or relationship failed), use direct fields (new implementation)
-        if (!is_null($this->bank_account_name) || 
-            !is_null($this->account_name) || 
-            !is_null($this->account_number)) {
+        if (! is_null($this->bank_account_name) ||
+            ! is_null($this->account_name) ||
+            ! is_null($this->account_number)) {
             return [
                 'id' => $this->bank_account_id, // Keep the ID if it exists (even if orphaned)
                 'user_id' => $this->user_id,
@@ -102,7 +101,7 @@ class WithdrawRequest extends Model
                 'updated_at' => null,
             ];
         }
-        
+
         // No bank account data available
         return null;
     }

@@ -115,9 +115,12 @@ class UserService
             $user->save();
 
             return $user;
-        } catch (Exception $e) {
-            Log::error('User registration error: '.$e->getMessage());
-            throw new Exception('User registration failed.');
+        } catch (\Throwable $e) {
+            Log::error('User registration error (admin createUser): '.$e->getMessage(), [
+                'exception' => $e::class,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw new Exception('User registration failed: '.$e->getMessage());
         }
     }
 
@@ -380,6 +383,26 @@ class UserService
             return $virtualAccounts;
         } catch (Exception $e) {
             Log::error('Get user assets error: '.$e->getMessage());
+            throw new Exception('Get user assets failed. '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Same asset shape as the wallet `/user/assets` endpoint: lazy v2 provision when needed,
+     * v2 deposit addresses only, no private keys in the payload.
+     */
+    public function getUserAssetsForAdmin(int $userId)
+    {
+        try {
+            $user = User::find($userId);
+            if (! $user) {
+                throw new Exception('User not found.');
+            }
+            EnsureV2WalletsProvisioned::dispatchIfNeeded($user);
+
+            return $this->userRepository->getuserAssets($userId);
+        } catch (Exception $e) {
+            Log::error('Get user assets (admin) error: '.$e->getMessage());
             throw new Exception('Get user assets failed. '.$e->getMessage());
         }
     }

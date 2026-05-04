@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ResetPassword extends Model
+class ResetPassword extends BaseModel
 {
     use HasFactory;
 
@@ -14,6 +13,7 @@ class ResetPassword extends Model
         'otp',
         'user_id',
     ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

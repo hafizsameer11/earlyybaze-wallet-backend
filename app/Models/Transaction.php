@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Transaction extends Model
+class Transaction extends BaseModel
 {
     use HasFactory;
 
@@ -22,7 +21,7 @@ class Transaction extends Model
         'amount_usd',
         'fee',
         'fee_usd',
-        'transfer_type'
+        'transfer_type',
     ];
 
     protected $appends = ['details'];
@@ -75,6 +74,7 @@ class Transaction extends Model
 
                 if ($withdraw && $withdraw->withdraw_request) {
                     $withdrawRequest = $withdraw->withdraw_request->load('bankAccount');
+
                     // Merge withdraw_transaction + withdraw_request (excluding nested object)
                     return array_merge(
                         $withdraw->toArray(),

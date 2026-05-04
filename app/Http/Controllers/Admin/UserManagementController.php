@@ -11,20 +11,22 @@ use App\Repositories\UserRepository;
 use App\Services\BankAccountService;
 use App\Services\UserService;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
-    protected $userService, $bankAccountService,$userRepo;
-    public function __construct(UserService $userService, BankAccountService $bankAccountService,UserRepository $userRepository)
+    protected $userService;
+
+    protected $bankAccountService;
+
+    protected $userRepo;
+
+    public function __construct(UserService $userService, BankAccountService $bankAccountService, UserRepository $userRepository)
     {
         $this->userService = $userService;
         $this->userRepo = $userRepository;
         $this->bankAccountService = $bankAccountService;
     }
-
-
 
     public function deleteUser($id)
     {
@@ -35,7 +37,7 @@ class UserManagementController extends Controller
             $timestamp = now()->timestamp;
 
             // Update email before soft-deleting
-            $user->email = $user->email . '-deleted-' . $timestamp;
+            $user->email = $user->email.'-deleted-'.$timestamp;
             $user->save();
 
             // Perform soft delete
@@ -47,10 +49,11 @@ class UserManagementController extends Controller
             'message' => 'User soft deleted and email updated',
         ]);
     }
+
     public function blockUser($id)
     {
         $user = User::findOrFail($id);
-        $user->is_active = !$user->is_active; // Toggle the value
+        $user->is_active = ! $user->is_active; // Toggle the value
         $user->save();
 
         return response()->json([
@@ -58,96 +61,116 @@ class UserManagementController extends Controller
             'message' => $user->is_active ? 'User unblocked' : 'User blocked',
         ]);
     }
-        public function getUserManagementData()
+
+    public function getUserManagementData()
     {
         try {
             $data = $this->userService->getUserManagementData();
+
             return ResponseHelper::success($data, 'User details fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getUserAssets($userId)
     {
         try {
-            $data = $this->userRepo->getUserAssets($userId);
+            $data = $this->userService->getUserAssetsForAdmin((int) $userId);
+
             return ResponseHelper::success($data, 'User assets fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getUserDetails($userId)
     {
         try {
             $data = $this->userService->userDetails($userId);
+
             return ResponseHelper::success($data, 'User details fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getBanksForUser($userId)
     {
         try {
-            if (!$userId) {
+            if (! $userId) {
                 return ResponseHelper::error('User id is required', 500);
             }
             $data = $this->bankAccountService->getforUser($userId);
+
             return ResponseHelper::success($data, 'Bank details fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function adminVirtualAccounts()
     {
         try {
             $user = User::where('role', 'admin')->first();
             $data = $this->userService->getUserVirtualAccounts($user->id);
+
             return ResponseHelper::success($data, 'User virtual accounts fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getUserVirtualAccounts($userId)
     {
         try {
             $data = $this->userService->getUserVirtualAccounts($userId);
+
             return ResponseHelper::success($data, 'User virtual accounts fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getNonUsers()
     {
         try {
             $data = $this->userService->getNonUsers();
+
             return ResponseHelper::success($data, 'Non users fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function createUser(RegisterRequest $request)
     {
         try {
             $user = $this->userService->createUser($request->validated());
+
             // $user;
             return ResponseHelper::success($user, 'User created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function createBankAccount(BankAccountRequest $request, $userId)
     {
         try {
             $data = $this->bankAccountService->createBankAccount($request->validated(), $userId);
+
             return ResponseHelper::success($data, 'Bank account created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
     public function getUserBalances()
     {
         try {
             $data = $this->userService->getUserBalances();
+
             return ResponseHelper::success($data, 'User balances fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -158,14 +181,18 @@ class UserManagementController extends Controller
     {
         try {
             $data = $this->userService->getBalanceByCurrency($currencyId);
+
             return ResponseHelper::success($data, 'User balances fetched successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
-    public function deactivateUser($userId){
+
+    public function deactivateUser($userId)
+    {
         try {
             $data = $this->userService->deactivateUser($userId);
+
             return ResponseHelper::success($data, 'User deactivated successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -181,15 +208,15 @@ class UserManagementController extends Controller
         try {
             // Get user with trashed (bypass soft delete scope)
             $user = User::withTrashed()->find($userId);
-            
-            if (!$user) {
+
+            if (! $user) {
                 return ResponseHelper::error('User not found', 404);
             }
 
             // Get all withdraw requests (including soft deleted)
             $withdrawRequests = \App\Models\WithdrawRequest::withTrashed()
                 ->where('user_id', $userId)
-                ->with(['bankAccount' => function($query) {
+                ->with(['bankAccount' => function ($query) {
                     $query->withTrashed();
                 }])
                 ->orderBy('created_at', 'desc')
@@ -217,9 +244,9 @@ class UserManagementController extends Controller
                 ->with([
                     'transaction',
                     'virtualAccount.walletCurrency',
-                    'user' => function($query) {
+                    'user' => function ($query) {
                         $query->withTrashed();
-                    }
+                    },
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -230,21 +257,21 @@ class UserManagementController extends Controller
                         // Method 1: Find corresponding TransactionSend record by reference (most reliable)
                         $sendTransaction = \App\Models\TransactionSend::where('tx_id', $receive->reference)
                             ->orWhere('tx_id', $receive->tx_id)
-                            ->with(['user' => function($q) {
+                            ->with(['user' => function ($q) {
                                 $q->withTrashed();
                             }])
                             ->first();
-                        
+
                         if ($sendTransaction && $sendTransaction->user) {
                             $sender = $sendTransaction->user;
                         } else {
                             // Method 2: Find sender by deposit address (sender_address is deposit address for internal)
                             $depositAddress = \App\Models\DepositAddress::where('address', $receive->sender_address)
-                                ->with(['virtualAccount.user' => function($q) {
+                                ->with(['virtualAccount.user' => function ($q) {
                                     $q->withTrashed();
                                 }])
                                 ->first();
-                            
+
                             if ($depositAddress && $depositAddress->virtualAccount && $depositAddress->virtualAccount->user) {
                                 $sender = $depositAddress->virtualAccount->user;
                             } else {
@@ -252,11 +279,11 @@ class UserManagementController extends Controller
                                 $sender = \App\Models\User::withTrashed()
                                     ->where('email', $receive->sender_address)
                                     ->first();
-                                
+
                                 // Method 4: Try to find by virtual account ID
-                                if (!$sender) {
+                                if (! $sender) {
                                     $sender = \App\Models\User::withTrashed()
-                                        ->whereHas('virtualAccounts', function($q) use ($receive) {
+                                        ->whereHas('virtualAccounts', function ($q) use ($receive) {
                                             $q->where('account_id', $receive->sender_address);
                                         })
                                         ->first();
@@ -264,7 +291,7 @@ class UserManagementController extends Controller
                             }
                         }
                     }
-                    
+
                     return [
                         'id' => $receive->id,
                         'user_id' => $receive->user_id,
@@ -299,28 +326,28 @@ class UserManagementController extends Controller
             $sendTransactions = \App\Models\TransactionSend::where('user_id', $userId)
                 ->with([
                     'transaction',
-                    'receiver' => function($query) {
+                    'receiver' => function ($query) {
                         $query->withTrashed();
                     },
-                    'user' => function($query) {
+                    'user' => function ($query) {
                         $query->withTrashed();
-                    }
+                    },
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($send) {
                     // If receiver_id is missing but receiver_address exists (for internal transactions)
                     $receiver = $send->receiver;
-                    if (!$receiver && $send->transaction_type === 'internal' && $send->receiver_address) {
+                    if (! $receiver && $send->transaction_type === 'internal' && $send->receiver_address) {
                         // Try to find receiver by email or virtual account
                         $receiver = \App\Models\User::withTrashed()
                             ->where('email', $send->receiver_address)
-                            ->orWhereHas('virtualAccounts', function($q) use ($send) {
+                            ->orWhereHas('virtualAccounts', function ($q) use ($send) {
                                 $q->where('account_id', $send->receiver_virtual_account_id);
                             })
                             ->first();
                     }
-                    
+
                     return [
                         'id' => $send->id,
                         'user_id' => $send->user_id,
@@ -363,7 +390,7 @@ class UserManagementController extends Controller
 
             // Get all buy transactions
             $buyTransactions = \App\Models\BuyTransaction::where('user_id', $userId)
-                ->with(['bankAccount' => function($query) {
+                ->with(['bankAccount' => function ($query) {
                     $query->withTrashed();
                 }])
                 ->orderBy('created_at', 'desc')
@@ -375,16 +402,16 @@ class UserManagementController extends Controller
                 ->get();
 
             // Get all withdraw transactions (through transaction relationship since withdraw_transactions doesn't have user_id)
-            $withdrawTransactions = \App\Models\WithdrawTransaction::whereHas('transaction', function($query) use ($userId) {
-                    $query->where('user_id', $userId);
-                })
+            $withdrawTransactions = \App\Models\WithdrawTransaction::whereHas('transaction', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
                 ->with([
                     'transaction',
-                    'withdraw_request' => function($query) {
-                        $query->withTrashed()->with(['bankAccount' => function($q) {
+                    'withdraw_request' => function ($query) {
+                        $query->withTrashed()->with(['bankAccount' => function ($q) {
                             $q->withTrashed();
                         }]);
-                    }
+                    },
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -393,9 +420,9 @@ class UserManagementController extends Controller
             $receivedAssets = \App\Models\ReceivedAsset::where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             // Debug: Log count to verify all are retrieved
-            \Illuminate\Support\Facades\Log::info("Received Assets Count for User {$userId}: " . $receivedAssets->count());
+            \Illuminate\Support\Facades\Log::info("Received Assets Count for User {$userId}: ".$receivedAssets->count());
 
             // Get referral earnings
             $referralEarnings = \App\Models\ReferalEarning::where('user_id', $userId)

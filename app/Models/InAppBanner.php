@@ -3,15 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class InAppBanner extends Model
+class InAppBanner extends BaseModel
 {
     use HasFactory;
-    protected $fillable=[
+
+    protected $fillable = [
         'title',
         'url',
-        'attachment'
+        'attachment',
     ];
-    
 }

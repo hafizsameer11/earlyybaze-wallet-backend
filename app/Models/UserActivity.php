@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class UserActivity extends Model
+class UserActivity extends BaseModel
 {
     use HasFactory;
     // public $timestamps = false; // since we are only using created_at manually

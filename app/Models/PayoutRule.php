@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class PayoutRule extends Model
+class PayoutRule extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'trigger_event',
         'trade_amount',
@@ -16,6 +16,6 @@ class PayoutRule extends Model
         'wallet_type',
         'payout_amount',
         'description',
-        'status'
+        'status',
     ];
 }

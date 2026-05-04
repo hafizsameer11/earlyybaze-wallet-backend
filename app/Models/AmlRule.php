@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class AmlRule extends Model
+class AmlRule extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'transaction_type',
         'condition_operator',

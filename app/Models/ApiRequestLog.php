@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ApiRequestLog extends Model
+class ApiRequestLog extends BaseModel
 {
     use HasFactory;
-     protected $fillable = ['email', 'method', 'url', 'headers', 'body','ip'];
+
+    protected $fillable = ['email', 'method', 'url', 'headers', 'body', 'ip'];
 
     protected $casts = [
         'headers' => 'array',
-        'body'    => 'array',
+        'body' => 'array',
     ];
 }

@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ExchangeRate extends Model
+class ExchangeRate extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'currency_id',
         'rate',
@@ -16,6 +16,7 @@ class ExchangeRate extends Model
         'rate_naira',
         'rate_usd',
     ];
+
     public function currency()
     {
         return $this->belongsTo(WalletCurrency::class, 'currency_id');

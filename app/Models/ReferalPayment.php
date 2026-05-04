@@ -3,17 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ReferalPayment extends Model
+class ReferalPayment extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'type',
         'amount',
-        'percentage'
+        'percentage',
     ];
+
     protected $hidden = [
-        'updated_at'
+        'updated_at',
     ];
 }

@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes; // ← Import SoftDeletes
 
-class BankAccount extends Model
+class BankAccount extends BaseModel
 {
     use HasFactory, SoftDeletes; // ← Use SoftDeletes
 

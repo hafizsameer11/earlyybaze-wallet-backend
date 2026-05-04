@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class WalletCurrency extends Model
+class WalletCurrency extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'blockchain',
         'currency',
@@ -19,10 +19,12 @@ class WalletCurrency extends Model
         'contract_address',
         'is_token',
     ];
+
     public function virtualAccounts()
     {
         return $this->hasMany(VirtualAccount::class);
     }
+
     public function exchangeRates()
     {
         return $this->hasMany(ExchangeRate::class);

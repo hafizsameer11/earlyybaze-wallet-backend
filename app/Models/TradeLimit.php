@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class TradeLimit extends Model
+class TradeLimit extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
         'type',
         'amount',

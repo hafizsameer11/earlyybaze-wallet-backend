@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class ReferalPayOut extends Model
+class ReferalPayOut extends BaseModel
 {
     use HasFactory;
+
     protected $fillable = [
-        'user_id','referal_earning_id','status','amount','paid_to_account','paid_to_bank','paid_to_name','exchange_rate','month','paid_at'
+        'user_id', 'referal_earning_id', 'status', 'amount', 'paid_to_account', 'paid_to_bank', 'paid_to_name', 'exchange_rate', 'month', 'paid_at',
     ];
-    public function user(){
+
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 }

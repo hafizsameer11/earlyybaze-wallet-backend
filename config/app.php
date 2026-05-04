@@ -69,7 +69,7 @@ return [
     |
     */
 
-'timezone' => 'Africa/Lagos',   // or 'Europe/Berlin' or any other GMT+1 city
+    'timezone' => env('APP_TIMEZONE', 'Africa/Lagos'),
 
     /*
     |--------------------------------------------------------------------------
