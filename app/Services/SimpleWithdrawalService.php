@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Helpers\BlockChainHelper;
 use App\Models\DepositAddress;
 use App\Models\ReceivedAsset;
 use App\Models\TransferLog;
@@ -519,9 +520,23 @@ class SimpleWithdrawalService
             return ['success' => false, 'message' => "Unsupported currency {$currency}"];
         }
 
+        $isNative = $this->isNativeTransfer($map);
+
         $plan = ['chain' => $map['chain'], 'currency' => $currency, 'destination' => $destination, 'groups' => [], 'dry_run' => $dryRun];
         foreach ($groups as $sender => $agg) {
-            $plan['groups'][] = ['from' => $sender, 'amount' => $agg['amount'], 'rows' => count($agg['ids'])];
+            $groupPlan = ['from' => $sender, 'amount' => $agg['amount'], 'rows' => count($agg['ids'])];
+            if ($isNative) {
+                $resolved = $this->resolveNativeFlushAmount($sender, $destination, $currency, $map, (float) $agg['amount'], $apiKey, $base);
+                if ($resolved) {
+                    $groupPlan['on_chain_balance'] = $resolved['balance'];
+                    $groupPlan['gas_reserve']      = $resolved['gas_cost'];
+                    $groupPlan['sendable_amount']  = $resolved['amount'];
+                } else {
+                    $groupPlan['sendable_amount'] = 0;
+                    $groupPlan['error']           = 'Insufficient balance after gas reserve';
+                }
+            }
+            $plan['groups'][] = $groupPlan;
         }
         if ($dryRun) return ['success' => true, 'message' => 'Dry run', 'plan' => $plan];
 
@@ -537,11 +552,23 @@ class SimpleWithdrawalService
                 continue;
             }
 
-            // ensure gas on sender for native/tokens
-            $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
-            $amount=(float)$agg['amount'];
-            //cut down the amount by 0.35%
-            // $amount=$amount;
+            $feePayload = null;
+            if ($isNative) {
+                $resolved = $this->resolveNativeFlushAmount($sender, $destination, $currency, $map, (float) $agg['amount'], $apiKey, $base);
+                if (!$resolved) {
+                    Log::warning('AB: insufficient native balance after gas', ['sender' => $sender, 'ledger_amount' => $agg['amount']]);
+                    $fail++;
+                    continue;
+                }
+                $amount     = $resolved['amount'];
+                $feePayload = $resolved['fee'];
+                $gasCost    = $resolved['gas_cost'];
+            } else {
+                $this->ensureNativeGas($map['chain'], $sender, $apiKey, $base);
+                $amount  = (float) $agg['amount'];
+                $gasCost = null;
+            }
+
             $payload = [
                 'fromPrivateKey' => $pk,
                 'to'             => $destination,
@@ -554,12 +581,15 @@ class SimpleWithdrawalService
             if (!empty($map['contractAddress'])) {
                 $payload['contractAddress'] = $map['contractAddress']; // exact name for Tatum
             }
+            if ($feePayload) {
+                $payload['fee'] = $feePayload;
+            }
 
             $resp = Http::withHeaders($this->headers($apiKey))
                 ->timeout(90)->post($base . $map['endpoint'], $payload);
 
             if ($resp->failed()) {
-                Log::warning('AB send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $resp->json(), 'payload' => $payload]);
+                Log::warning('AB send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $resp->json(), 'payload' => array_merge($payload, ['fromPrivateKey' => '***'])]);
                 $fail++;
                 continue;
             }
@@ -568,11 +598,11 @@ class SimpleWithdrawalService
             $txId = $body['txId'] ?? $body['hash'] ?? null;
             $txs[] = $txId;
 
-            DB::transaction(function () use ($items, $sender, $destination, $currency, $agg, $body, $txId) {
+            DB::transaction(function () use ($items, $sender, $destination, $currency, $amount, $body, $txId, $gasCost) {
                 TransferLog::create([
                     'from_address' => $sender,
                     'to_address'   => $destination,
-                    'amount'       => (float)$agg['amount'],
+                    'amount'       => (float) $amount,
                     'currency'     => $currency,
                     'tx'           => json_encode($body),
                 ]);
@@ -582,8 +612,8 @@ class SimpleWithdrawalService
                     $it->status            = 'completed';
                     $it->transfer_address  = $sender;
                     $it->transfered_tx     = $txId;
-                    $it->transfered_amount = (float)$it->amount;
-                    $it->gas_fee           = null;
+                    $it->transfered_amount = (float) $it->amount;
+                    $it->gas_fee           = $gasCost;
                     $it->address_to_send   = $destination;
                     $it->save();
                 }
@@ -593,6 +623,108 @@ class SimpleWithdrawalService
         }
 
         return ['success' => $ok > 0, 'message' => "Account flush ok={$ok} fail={$fail}", 'txIds' => $txs, 'plan' => $plan];
+    }
+
+    private function isNativeTransfer(array $map): bool
+    {
+        return empty($map['contractAddress']);
+    }
+
+    /**
+     * For native coin flushes (ETH, BNB, MATIC): reserve gas from the on-chain balance
+     * so Tatum does not reject the tx with "insufficient funds for transfer".
+     */
+    private function resolveNativeFlushAmount(
+        string $sender,
+        string $destination,
+        string $currency,
+        array $map,
+        float $ledgerAmount,
+        string $apiKey,
+        string $base
+    ): ?array {
+        $balance = $this->nativeBalance($map['chain'], $sender, $apiKey, $base);
+        if ($balance <= 0) {
+            return null;
+        }
+
+        $probeAmount = (string) min($ledgerAmount, $balance);
+        $chainForGas = match ($map['chain']) {
+            'ETH'     => 'ETH',
+            'BSC'     => 'BSC',
+            'POLYGON' => 'MATIC',
+            default   => 'ETH',
+        };
+
+        try {
+            $gasEst = BlockChainHelper::estimateGasFee($sender, $destination, $probeAmount, $currency, $chainForGas);
+        } catch (\Throwable $e) {
+            Log::warning('AB: gas estimation failed', ['sender' => $sender, 'err' => $e->getMessage()]);
+            return null;
+        }
+
+        $originalGasLimit = (int) ($gasEst['gasLimit'] ?? 21000);
+        $minGasPrice      = match ($map['chain']) {
+            'ETH'     => 10000000000,
+            'BSC'     => 3000000000,
+            'POLYGON' => 30000000000,
+            default   => 1000000000,
+        };
+        $gasPrice         = max((int) ($gasEst['gasPrice'] ?? $minGasPrice), $minGasPrice);
+        $bufferedGasLimit = (int) ceil($originalGasLimit * 1.3) + 70000;
+
+        $requiredGasWei    = bcmul((string) $gasPrice, (string) $bufferedGasLimit);
+        $requiredGasNative = (float) bcdiv($requiredGasWei, bcpow('10', '18'), 18);
+
+        $maxSendable = $balance - $requiredGasNative;
+        $sendAmount  = min($ledgerAmount, $maxSendable);
+        $sendAmount  = floor($sendAmount * 1e8) / 1e8;
+
+        $dust = match ($map['chain']) {
+            'ETH'     => 0.00001,
+            'BSC'     => 0.0001,
+            'POLYGON' => 0.01,
+            default   => 0.00001,
+        };
+
+        if ($sendAmount <= $dust) {
+            Log::warning('AB: sendable amount below dust after gas', [
+                'sender'       => $sender,
+                'balance'      => $balance,
+                'gas_cost'     => $requiredGasNative,
+                'ledger_amount'=> $ledgerAmount,
+            ]);
+            return null;
+        }
+
+        $gasPriceGwei = (string) max(1, (int) ceil($gasPrice / 1e9));
+
+        return [
+            'amount'   => $sendAmount,
+            'balance'  => $balance,
+            'gas_cost' => $requiredGasNative,
+            'fee'      => [
+                'gasLimit' => (string) $bufferedGasLimit,
+                'gasPrice' => $gasPriceGwei,
+            ],
+        ];
+    }
+
+    private function nativeBalance(string $chain, string $sender, string $apiKey, string $base): float
+    {
+        $endpoint = match ($chain) {
+            'ETH'     => '/ethereum/account/balance/',
+            'BSC'     => '/bsc/account/balance/',
+            'POLYGON' => '/polygon/account/balance/',
+            default   => null,
+        };
+        if (!$endpoint) {
+            return 0.0;
+        }
+
+        $res = Http::withHeaders(['x-api-key' => $apiKey])->get($base . $endpoint . $sender);
+
+        return $res->ok() ? (float) ($res->json('balance') ?? 0) : 0.0;
     }
 
 
