@@ -432,6 +432,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::prefix('assets')->group(function () {
             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
+            Route::get('/rejected-deposits', [AssetController::class, 'getRejectedDeposits']);
             Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);

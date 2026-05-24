@@ -9,8 +9,10 @@ use App\Models\ReceivedAsset;
 use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
+use App\Support\AllowedFungibleContracts;
 use App\Repositories\transactionRepository;
 use App\Services\NotificationService;
+use App\Services\RejectedDepositWebhookRecorder;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,18 +26,6 @@ use Illuminate\Support\Facades\Log;
 class ProcessTatumV4DepositWebhook implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    private const TRON_MAINNET_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-
-    private const TRON_MAINNET_USDC_CONTRACT = 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8';
-
-    private const ETH_MAINNET_USDT_CONTRACT = '0xdac17f958d2ee523a2206206994597c13d831ec7';
-
-    private const ETH_MAINNET_USDC_CONTRACT = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
-
-    private const BSC_MAINNET_USDT_CONTRACT = '0x55d398326f99059ff775485246999027b3197955';
-
-    private const BSC_MAINNET_USDC_CONTRACT = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
 
     public function __construct(
         public array $data
@@ -70,6 +60,37 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             return;
         }
 
+        if ($this->isDuplicateOnChainDeposit($txId, $data)) {
+            Log::info('v4 webhook ignored: duplicate tx_id/logIndex already credited', [
+                'txId' => $txId,
+                'logIndex' => AllowedFungibleContracts::payloadLogIndex($data),
+            ]);
+
+            return;
+        }
+
+        if (AllowedFungibleContracts::isFungiblePayload($data)) {
+            $contract = AllowedFungibleContracts::payloadContract($data);
+            if (! AllowedFungibleContracts::isAllowed($contract)) {
+                RejectedDepositWebhookRecorder::record(
+                    'v2',
+                    AllowedFungibleContracts::REJECT_NON_ALLOWLISTED_CONTRACT,
+                    $data,
+                    null,
+                    $reference
+                );
+                Log::info('v4 webhook ignored: fungible tx with non-allowlisted contract', [
+                    'txId' => $txId,
+                    'contractAddress' => $contract,
+                    'to' => $data['to'] ?? null,
+                    'currency' => $data['currency'] ?? null,
+                    'symbol' => $data['tokenMetadata']['symbol'] ?? null,
+                ]);
+
+                return;
+            }
+        }
+
         $deposit = $this->findDeposit($data);
         if (! $deposit) {
             Log::warning('v4 webhook: no matching v2 deposit', ['payload' => $data]);
@@ -88,6 +109,20 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             Log::warning('v4 webhook ignored: not v2 on-chain (ledger or v1 user)', [
                 'deposit_id' => $deposit->id,
                 'virtual_account_id' => $account->id,
+            ]);
+
+            return;
+        }
+
+        $fungibleReject = AllowedFungibleContracts::rejectReasonForFungibleDeposit($account, $data);
+        if ($fungibleReject !== null) {
+            RejectedDepositWebhookRecorder::record('v2', $fungibleReject, $data, $account, $reference);
+            Log::info('v4 webhook ignored: '.AllowedFungibleContracts::rejectionReasonLabel($fungibleReject), [
+                'txId' => $txId,
+                'reason' => $fungibleReject,
+                'account_currency' => $account->currency,
+                'contractAddress' => AllowedFungibleContracts::payloadContract($data),
+                'payload_currency' => $data['currency'] ?? null,
             ]);
 
             return;
@@ -297,6 +332,9 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                     return ['USDC', 'USDC_ETH'];
                 }
             }
+
+            // Do not fall back to payload currency for fungible events (e.g. fake "ETH" tokens).
+            return [];
         }
 
         $top = strtoupper(trim((string) ($data['currency'] ?? '')));
@@ -370,64 +408,12 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
 
     private function fungibleDepositMatches(VirtualAccount $va, array $data): bool
     {
-        if ($this->fungibleContractMatches($va, $data['contractAddress'] ?? null)) {
-            return true;
-        }
-
-        return $this->virtualAccountMatchesPayload($va, $data, 'INCOMING_FUNGIBLE_TX');
-    }
-
-    private function fungibleContractMatches(VirtualAccount $va, mixed $payloadContract): bool
-    {
-        $wc = $va->walletCurrency;
-        if (! $wc) {
-            return false;
-        }
-
-        $their = trim((string) $payloadContract);
-        $theirUpper = strtoupper($their);
-        $ours = trim((string) ($wc->contract_address ?? ''));
-        $vaCur = strtoupper((string) $va->currency);
-
-        if ($ours !== '' && $their !== '' && $this->addressesEqual($ours, $their)) {
-            return true;
-        }
-
-        if ($theirUpper === 'USDT_TRON' && $vaCur === 'USDT_TRON') {
-            return true;
-        }
-        if ($theirUpper === 'USDC_TRON' && $vaCur === 'USDC_TRON') {
-            return true;
-        }
-        if ($theirUpper === 'USDT_BSC' && $vaCur === 'USDT_BSC') {
-            return true;
-        }
-        if ($theirUpper === 'USDC_BSC' && $vaCur === 'USDC_BSC') {
-            return true;
-        }
-
-        if ($vaCur === 'USDT_TRON' && $their !== '' && strcasecmp($their, self::TRON_MAINNET_USDT_CONTRACT) === 0) {
-            return true;
-        }
-        if ($vaCur === 'USDC_TRON' && $their !== '' && strcasecmp($their, self::TRON_MAINNET_USDC_CONTRACT) === 0) {
-            return true;
-        }
-
-        if (in_array($vaCur, ['USDT', 'USDT_ETH'], true) && $their !== '' && $this->addressesEqual($their, self::ETH_MAINNET_USDT_CONTRACT)) {
-            return true;
-        }
-        if (in_array($vaCur, ['USDC', 'USDC_ETH'], true) && $their !== '' && $this->addressesEqual($their, self::ETH_MAINNET_USDC_CONTRACT)) {
-            return true;
-        }
-
-        if (in_array($vaCur, ['USDT_BSC'], true) && $their !== '' && $this->addressesEqual($their, self::BSC_MAINNET_USDT_CONTRACT)) {
-            return true;
-        }
-        if (in_array($vaCur, ['USDC_BSC'], true) && $their !== '' && $this->addressesEqual($their, self::BSC_MAINNET_USDC_CONTRACT)) {
-            return true;
-        }
-
-        return false;
+        // Fungible deposits must match an allowlisted contract for this wallet currency.
+        // Never fall back to payload currency/symbol (prevents fake tokens credited as ETH).
+        return AllowedFungibleContracts::matchesVirtualAccount(
+            $va,
+            $data['contractAddress'] ?? null
+        );
     }
 
     private function isV2OnChainDeposit(DepositAddress $deposit, VirtualAccount $account): bool
@@ -451,5 +437,20 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         }
 
         return strcasecmp($a, $b) === 0;
+    }
+
+    private function isDuplicateOnChainDeposit(string $txId, array $data): bool
+    {
+        if ($txId === '') {
+            return false;
+        }
+
+        $q = ReceivedAsset::query()->where('tx_id', $txId);
+        $logIndex = AllowedFungibleContracts::payloadLogIndex($data);
+        if ($logIndex !== null) {
+            $q->where('index', $logIndex);
+        }
+
+        return $q->exists();
     }
 }

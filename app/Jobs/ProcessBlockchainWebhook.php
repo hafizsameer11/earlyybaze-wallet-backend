@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Helpers\ExchangeFeeHelper;
 use App\Models\FailedMasterTransfer;
+use App\Support\AllowedFungibleContracts;
 use App\Models\MasterWallet;
 use App\Models\ReceivedAsset;
 use App\Models\ReceiveTransaction;
@@ -18,6 +19,7 @@ use App\Services\EthereumService;
 use App\Services\LitecoinService;
 use App\Services\NotificationService;
 use App\Services\SolanaService;
+use App\Services\RejectedDepositWebhookRecorder;
 use App\Services\TronTransferService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -79,6 +81,16 @@ class ProcessBlockchainWebhook implements ShouldQueue
             return;
         }
 
+        $txId = (string) ($data['txId'] ?? '');
+        if ($this->isDuplicateOnChainDeposit($txId, $data)) {
+            Log::info('v1 webhook ignored: duplicate tx_id/logIndex already credited', [
+                'txId' => $txId,
+                'logIndex' => AllowedFungibleContracts::payloadLogIndex($data),
+            ]);
+
+            return;
+        }
+
         if (!isset($data['accountId'])) {
             Log::warning('❌ accountId not found in webhook payload');
             return;
@@ -86,15 +98,70 @@ class ProcessBlockchainWebhook implements ShouldQueue
 
         $account = VirtualAccount::where('account_id', $data['accountId'])->with('user')->first();
 
-        if (!$account) {
+        if (! $account) {
             Log::warning('❌ Virtual account not found for accountId', ['accountId' => $data['accountId']]);
             return;
         }
 
+        if (AllowedFungibleContracts::isFungiblePayload($data)) {
+            $contract = AllowedFungibleContracts::payloadContract($data);
+            if (! AllowedFungibleContracts::isAllowed($contract)) {
+                RejectedDepositWebhookRecorder::record(
+                    'v1',
+                    AllowedFungibleContracts::REJECT_NON_ALLOWLISTED_CONTRACT,
+                    $data,
+                    $account,
+                    $data['reference'] ?? null
+                );
+                Log::info('v1 webhook ignored: fungible tx with non-allowlisted contract', [
+                    'accountId' => $data['accountId'],
+                    'txId' => $txId,
+                    'contractAddress' => $contract,
+                    'currency' => $data['currency'] ?? null,
+                    'symbol' => $data['tokenMetadata']['symbol'] ?? null,
+                ]);
+
+                return;
+            }
+        }
+
+        $fungibleReject = AllowedFungibleContracts::rejectReasonForFungibleDeposit($account, $data);
+        if ($fungibleReject !== null) {
+            RejectedDepositWebhookRecorder::record(
+                'v1',
+                $fungibleReject,
+                $data,
+                $account,
+                $data['reference'] ?? null
+            );
+            Log::info('v1 webhook ignored: '.AllowedFungibleContracts::rejectionReasonLabel($fungibleReject), [
+                'accountId' => $data['accountId'],
+                'txId' => $txId,
+                'reason' => $fungibleReject,
+                'account_currency' => $account->currency,
+                'contractAddress' => AllowedFungibleContracts::payloadContract($data),
+                'payload_currency' => $data['currency'] ?? null,
+            ]);
+
+            return;
+        }
+
         $userId = $account->user->id;
-        $amount = (string) $data['amount'];
+        $amount = (string) ($data['amount'] ?? $data['value'] ?? '');
+        if ($amount === '' || bccomp($amount, '0', 8) <= 0) {
+            Log::warning('v1 webhook ignored: missing or zero amount', ['accountId' => $data['accountId'], 'txId' => $txId]);
+
+            return;
+        }
+
+        if (! isset($data['reference']) || $data['reference'] === '') {
+            Log::warning('v1 webhook ignored: missing reference', ['accountId' => $data['accountId'], 'txId' => $txId]);
+
+            return;
+        }
+
         $reference = $data['reference'];
-        $currency = $data['currency'];
+        $currency = strtoupper((string) $account->currency);
 
         // Lock to avoid duplicate job execution (BEFORE any processing)
         $lockKey = 'webhook_lock_' . $reference;
@@ -106,8 +173,14 @@ class ProcessBlockchainWebhook implements ShouldQueue
         }
 
         try {
+            $logIndex = AllowedFungibleContracts::payloadLogIndex($data);
+            $txMs = $data['date'] ?? $data['txTimestamp'] ?? $data['blockTimestamp'] ?? null;
+            $transactionDate = is_numeric($txMs)
+                ? Carbon::createFromTimestampMs((int) $txMs)
+                : now();
+
             // Use database transaction to ensure atomicity
-            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $account, $userId, $amount, $reference, $currency) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $account, $userId, $amount, $reference, $currency, $logIndex, $transactionDate) {
                 // Lock virtual account to prevent concurrent balance updates
                 $lockedAccount = VirtualAccount::where('id', $account->id)
                     ->lockForUpdate()
@@ -139,12 +212,12 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'reference'          => $reference,
             'currency'           => $currency,
             'tx_id'              => $data['txId'],
-            'block_height'       => $data['blockHeight'],
-            'block_hash'         => $data['blockHash'],
+            'block_height'       => $data['blockHeight'] ?? $data['blockNumber'] ?? null,
+            'block_hash'         => $data['blockHash'] ?? null,
             'from_address'       => $data['from'] ?? 'not provided',
             'to_address'         => $data['to'],
-            'transaction_date'   => Carbon::createFromTimestampMs($data['date']),
-            'index'              => $data['index'] ?? null,
+            'transaction_date'   => $transactionDate,
+            'index'              => $logIndex,
         ]);
         ReceivedAsset::create([
             'account_id'        => $data['accountId'],
@@ -155,9 +228,9 @@ class ProcessBlockchainWebhook implements ShouldQueue
             'tx_id'             => $data['txId'],
             'from_address'      => $data['from'] ?? 'not provided',
             'to_address'        => $data['to'] ?? null,
-            'transaction_date'  => Carbon::createFromTimestampMs($data['date']),
+            'transaction_date'  => $transactionDate,
             'status'            => 'inWallet', // default unless you want to pass something dynamic
-            'index'             => $data['index'] ?? null,
+            'index'             => $logIndex,
             'user_id'           => $userId,
         ]);
 
@@ -225,5 +298,20 @@ class ProcessBlockchainWebhook implements ShouldQueue
         } finally {
             optional($lock)->release();
         }
+    }
+
+    private function isDuplicateOnChainDeposit(string $txId, array $data): bool
+    {
+        if ($txId === '') {
+            return false;
+        }
+
+        $q = ReceivedAsset::query()->where('tx_id', $txId);
+        $logIndex = AllowedFungibleContracts::payloadLogIndex($data);
+        if ($logIndex !== null) {
+            $q->where('index', $logIndex);
+        }
+
+        return $q->exists();
     }
 }
