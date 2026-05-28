@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AmlRuleController;
+use App\Http\Controllers\Admin\AiAuditController;
 use App\Http\Controllers\Admin\AutoFlushController;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -404,6 +405,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('auto-flush')->group(function () {
             Route::get('/config', [AutoFlushController::class, 'config']);
             Route::post('/config', [AutoFlushController::class, 'updateConfig']);
+        });
+        Route::prefix('ai-audit')->group(function () {
+            Route::get('/', [AiAuditController::class, 'index']);
+            Route::post('/run', [AiAuditController::class, 'run']);
         });
 
         Route::prefix('roles')->group(function () {

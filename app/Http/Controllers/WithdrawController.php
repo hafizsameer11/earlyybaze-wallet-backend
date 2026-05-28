@@ -8,7 +8,6 @@ use App\Http\Requests\WithdrawRequest;
 use App\Services\WithdrawRequestService;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class WithdrawController extends Controller
 {
@@ -20,18 +19,9 @@ class WithdrawController extends Controller
     public function create(WithdrawRequest $request)
     {
         try {
-            $user = Auth::user();
-            $fullName = trim((string)($user->fullName ?? ''));
-            $fallbackName = trim((string)($user->name ?? ''));
-            if ($fullName === '' || $fullName === $fallbackName) {
-                return ResponseHelper::error(
-                    'Please update your real full name in profile before making withdrawals.',
-                    422
-                );
-            }
-
             $withdraw = $this->withdrawService->create($request->all());
             UserActivityHelper::LoggedInUserActivity('User created a withdraw request');
+
             return ResponseHelper::success($withdraw, 'Withdraw created successfully', 200);
         } catch (Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

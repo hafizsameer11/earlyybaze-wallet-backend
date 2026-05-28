@@ -3,15 +3,16 @@
 namespace App\Services;
 
 use App\Models\Fee;
+use App\Models\UserAccount;
 use App\Repositories\WithdrawRequestRepository;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class WithdrawRequestService
 {
     public function __construct(
         protected WithdrawRequestRepository $WithdrawRequestRepository,
-        protected FiatBalanceService $fiatBalanceService,
     ) {}
 
     public function all()
@@ -28,20 +29,25 @@ class WithdrawRequestService
     {
         try {
             $user = Auth::user();
-            $currency = FiatBalanceService::normalizeCurrency($data);
+
+            $userAccount = UserAccount::where('user_id', $user->id)->first();
+            if (! $userAccount) {
+                throw new Exception('User Account not found');
+            }
 
             $data['user_id'] = $user->id;
             $data['status'] = 'pending';
             $data['reference'] = 'EarlyBaze'.time();
-            $data['currency'] = $currency;
-            $data['asset'] = FiatBalanceService::assetLabel($currency);
+
+            // Legacy NGN flow — do not pass currency unless column exists (avoids prod migration issues).
+            unset($data['currency']);
+            if (Schema::hasColumn('withdraw_requests', 'currency')) {
+                $data['currency'] = 'NGN';
+            }
 
             $amount = (string) $data['amount'];
 
-            $feeType = FiatBalanceService::withdrawFeeType($currency);
-            $fee = Fee::where('type', $feeType)->orderByDesc('id')->first()
-                ?? Fee::where('type', 'withdraw')->orderByDesc('id')->first();
-
+            $fee = Fee::where('type', 'withdraw')->orderByDesc('id')->first();
             if (! $fee) {
                 throw new Exception('No withdraw fee defined.');
             }
@@ -53,7 +59,7 @@ class WithdrawRequestService
             $data['fee'] = $calculatedFee;
             $data['total'] = bcadd($amount, $calculatedFee, 8);
 
-            $currentBalance = $this->fiatBalanceService->getAvailableBalance($user->id, $currency);
+            $currentBalance = (string) $userAccount->naira_balance;
             if (bccomp($currentBalance, $data['total'], 8) < 0) {
                 throw new Exception('Insufficient Balance');
             }
