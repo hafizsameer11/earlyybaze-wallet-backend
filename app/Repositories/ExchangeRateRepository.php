@@ -122,6 +122,11 @@ class ExchangeRateRepository
             throw new \Exception('Invalid USD rate');
         }
 
+        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
+        if (! $nairaExchangeRate) {
+            throw new \Exception('NGN exchange rate not found');
+        }
+
         $amountUsd = '0.00';
         $amountCoin = '0.00';
         $amountNaira = '0.00';
@@ -129,11 +134,11 @@ class ExchangeRateRepository
         if ($amount_in === 'coin') {
             $amountCoin = $amount;
             $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);
-            $amountNaira = bcmul($amountCoin, $exchangeRate->rate_naira, 8);
+            $amountNaira = bcmul($amountUsd, (string) $nairaExchangeRate->rate_naira, 8);
         } else {
             $amountUsd = $amount;
             $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8);
-            $amountNaira = bcmul($amountUsd, $exchangeRate->rate_naira, 8);
+            $amountNaira = bcmul($amountUsd, (string) $nairaExchangeRate->rate_naira, 8);
         }
 
         $feeSummary = null;
@@ -178,7 +183,8 @@ class ExchangeRateRepository
 
         return [
             'amount'         => $amountCoin,
-            'amount_usd'     => $amountUsd,
+            // Legacy app reads coin from amount_usd when user typed USD (amount_in=usd).
+            'amount_usd'     => $amount_in === 'coin' ? $amountUsd : $amountCoin,
             'amount_naira'   => $amountNaira,
             'fee_summary'    => $feeSummary,
         ];
