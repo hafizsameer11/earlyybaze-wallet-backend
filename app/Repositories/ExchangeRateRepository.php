@@ -116,17 +116,9 @@ class ExchangeRateRepository
         $exchangeRate->save();
         return $exchangeRate;
     }
-    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd', $fiatCurrency = 'NGN')
+    /** Legacy NGN-only calculation — do not add ZAR or fiat_currency here. */
+    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd')
     {
-        $fiatCurrency = FiatExchangeHelper::normalizeFiat($fiatCurrency);
-        // Log::info("data received", [
-        //     'currency' => $currency,
-        //     'input_amount' => $amount,
-        //     'amount_in' => $amount_in,
-        //     'type' => $type,
-        //     'to' => $to
-        // ]);
-
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
         if (!$exchangeRate) {
             throw new \Exception('Exchange rate not found');
@@ -135,37 +127,21 @@ class ExchangeRateRepository
         if (bccomp($exchangeRate->rate_usd, '0', 8) == 0) {
             throw new \Exception('Invalid USD rate');
         }
-        $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
-        // Initialize vars
+
         $amountUsd = '0.00';
         $amountCoin = '0.00';
         $amountNaira = '0.00';
-        $amountZar = '0.00';
 
         if ($amount_in === 'coin') {
             $amountCoin = $amount;
             $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);
+            $amountNaira = bcmul($amountCoin, $exchangeRate->rate_naira, 8);
         } else {
             $amountUsd = $amount;
             $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8);
+            $amountNaira = bcmul($amountUsd, $exchangeRate->rate_naira, 8);
         }
 
-        $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
-
-        $amountZar = '0.00';
-        if ($fiatCurrency === 'ZAR') {
-            $amountZar = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR');
-        }
-
-        $amountFiat = $fiatCurrency === 'ZAR' ? $amountZar : $amountNaira;
-
-        Log::info('Calculated amounts', [
-            'amountCoin' => $amountCoin,
-            'amountUsd' => $amountUsd,
-            'amountNaira' => $amountNaira,
-            'amountZar' => $amountZar,
-            'fiatCurrency' => $fiatCurrency,
-        ]);
         $feeSummary = null;
 
         if ($type === 'send' && $to) {
@@ -181,7 +157,7 @@ class ExchangeRateRepository
             Log::info("Calculating fee for currency $currency from $from to $to");
 
             $fee = ExchangeFeeHelper::caclulateFee(
-                $amountCoin, // always send fee in coin
+                $amountCoin,
                 $currency,
                 $type,
                 $isEmail ? null : 'external_transfer',
@@ -189,33 +165,108 @@ class ExchangeRateRepository
                 $to,
                 auth()->id()
             );
-            if($fee==null){
+            if ($fee == null) {
                 $feeSummary = [
                     'platform_fee_usd'    => '0.00',
                     'blockchain_fee_usd'  => '0.00',
                     'total_fee_usd'       => '0.00',
-                    'amount_after_fee'    => $amountUsd, // No fee applied
+                    'amount_after_fee'    => $amountUsd,
                 ];
-            }else{
-                  $feeSummary = [
-                'platform_fee_usd'    => $fee['platform_fee_usd'] ?? '0.00',
-                'blockchain_fee_usd'  => $fee['blockchain_fee_usd'] ?? '0.00',
-                'total_fee_usd'       => $fee['total_fee_usd'] ?? '0.00',
-                'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8) ?? '0.00', // Subtract from USD base
-            ];
+            } else {
+                $feeSummary = [
+                    'platform_fee_usd'    => $fee['platform_fee_usd'] ?? '0.00',
+                    'blockchain_fee_usd'  => $fee['blockchain_fee_usd'] ?? '0.00',
+                    'total_fee_usd'       => $fee['total_fee_usd'] ?? '0.00',
+                    'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8) ?? '0.00',
+                ];
             }
-
         }
 
         return [
             'amount'         => $amountCoin,
-            'amount_usd'     => $amount_in === 'coin' ? $amountUsd : $amountCoin,
+            'amount_usd'     => $amountUsd,
             'amount_naira'   => $amountNaira,
             'fee_summary'    => $feeSummary,
-        ] + ($fiatCurrency === 'ZAR' ? [
-            'amount_zar'     => $amountZar,
+        ];
+    }
+
+    /** v3: NGN or ZAR fiat conversion for swap/send preview. */
+    public function calculateFiatExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd', $fiatCurrency = 'NGN')
+    {
+        $fiatCurrency = FiatExchangeHelper::normalizeFiat($fiatCurrency);
+
+        $exchangeRate = ExchangeRate::where('currency', $currency)->first();
+        if (! $exchangeRate) {
+            throw new \Exception('Exchange rate not found');
+        }
+
+        if (bccomp($exchangeRate->rate_usd, '0', 8) == 0) {
+            throw new \Exception('Invalid USD rate');
+        }
+
+        $amountUsd = '0.00';
+        $amountCoin = '0.00';
+
+        if ($amount_in === 'coin') {
+            $amountCoin = $amount;
+            $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);
+        } else {
+            $amountUsd = $amount;
+            $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8);
+        }
+
+        $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
+        $amountZar = '0.00';
+        if ($fiatCurrency === 'ZAR') {
+            $amountZar = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR');
+        }
+        $amountFiat = $fiatCurrency === 'ZAR' ? $amountZar : $amountNaira;
+
+        $feeSummary = null;
+
+        if ($type === 'send' && $to) {
+            $isEmail = filter_var($to, FILTER_VALIDATE_EMAIL);
+            if ($isEmail) {
+                $from = Auth::user()->email;
+            } else {
+                $walletCurrency = WalletCurrency::where('currency', $currency)->first();
+                $fromWallet = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
+                $from = $fromWallet?->address;
+            }
+
+            $fee = ExchangeFeeHelper::caclulateFee(
+                $amountCoin,
+                $currency,
+                $type,
+                $isEmail ? null : 'external_transfer',
+                $from,
+                $to,
+                auth()->id()
+            );
+            if ($fee == null) {
+                $feeSummary = [
+                    'platform_fee_usd'    => '0.00',
+                    'blockchain_fee_usd'  => '0.00',
+                    'total_fee_usd'       => '0.00',
+                    'amount_after_fee'    => $amountUsd,
+                ];
+            } else {
+                $feeSummary = [
+                    'platform_fee_usd'    => $fee['platform_fee_usd'] ?? '0.00',
+                    'blockchain_fee_usd'  => $fee['blockchain_fee_usd'] ?? '0.00',
+                    'total_fee_usd'       => $fee['total_fee_usd'] ?? '0.00',
+                    'amount_after_fee'    => bcsub($amountUsd, $fee['total_fee_usd'], 8) ?? '0.00',
+                ];
+            }
+        }
+
+        return [
+            'amount'         => $amountCoin,
+            'amount_usd'     => $amountUsd,
+            'amount_naira'   => $amountNaira,
             'amount_fiat'    => $amountFiat,
             'fiat_currency'  => $fiatCurrency,
-        ] : []);
+            'fee_summary'    => $feeSummary,
+        ] + ($fiatCurrency === 'ZAR' ? ['amount_zar' => $amountZar] : []);
     }
 }

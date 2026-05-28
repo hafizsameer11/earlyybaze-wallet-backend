@@ -247,7 +247,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('user/push-token', [V3UserController::class, 'setPushToken']);
         Route::get('exchange-rate/zar', fn () => app(ExchangeRateController::class)->getByCurrency('ZAR'));
         Route::post('fee/calculate-withdraw-fee', [V3FeeController::class, 'calculateWithdrawFee']);
-        Route::post('exchange-rate/calculate', [ExchangeRateController::class, 'calculateExchangeRate']);
+        Route::post('exchange-rate/calculate', [ExchangeRateController::class, 'calculateFiatExchangeRate']);
     });
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
