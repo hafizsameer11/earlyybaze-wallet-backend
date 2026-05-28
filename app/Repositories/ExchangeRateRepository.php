@@ -16,7 +16,14 @@ class ExchangeRateRepository
 {
     public function all()
     {
-        return ExchangeRate::where('currency','NGN')->orderBy('id', 'desc')->get();
+        return $this->allByFiatAnchor('NGN');
+    }
+
+    public function allByFiatAnchor(string $fiat): \Illuminate\Database\Eloquent\Collection
+    {
+        $fiat = FiatExchangeHelper::normalizeFiat($fiat);
+
+        return ExchangeRate::where('currency', $fiat)->orderByDesc('id')->get();
     }
 
     public function find($id)

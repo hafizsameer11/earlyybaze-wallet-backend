@@ -23,6 +23,15 @@ class ExchangeRateService
         }
     }
 
+    public function allByFiatAnchor(string $fiat)
+    {
+        try {
+            return $this->ExchangeRateRepository->allByFiatAnchor($fiat);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
+
     public function find($id)
     {
         try {

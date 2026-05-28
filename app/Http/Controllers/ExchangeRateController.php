@@ -23,6 +23,17 @@ class ExchangeRateController extends Controller
             return  ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
+    public function indexZar()
+    {
+        try {
+            $exchangeRates = $this->exchangeRateService->allByFiatAnchor('ZAR');
+
+            return ResponseHelper::success($exchangeRates, 'ZAR exchange rates fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     public function store(ExchangeRequest $request)
     {
         try {

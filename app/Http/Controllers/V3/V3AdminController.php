@@ -164,7 +164,7 @@ class V3AdminController extends Controller
         $revenueNgn = 0.0;
 
         Transaction::whereBetween('created_at', [$from, $to])
-            ->select('amount', 'currency')
+            ->select('id', 'amount', 'currency')
             ->chunkById(500, function ($chunk) use (&$revenueNgn, $rates, $ngnUsd) {
                 foreach ($chunk as $tx) {
                     $amount = (float) $tx->amount;

@@ -108,6 +108,7 @@ Route::post('/create-wallet-currency', [WalletCurrencyController::class, 'create
 Route::post('/update-wallet-currency/{id}', [WalletCurrencyController::class, 'update']);
 Route::get('/wallet-currencies', [WalletCurrencyController::class, 'index']);
 Route::get('/wallet-currencies-ngn', [WalletCurrencyController::class, 'ngnCurrency']);
+Route::get('/wallet-currencies-zar', [WalletCurrencyController::class, 'zarCurrency']);
 Route::prefix('master-wallet')->group(function () {
     Route::post('/', [MasterWalletController::class, 'create']); // Create a master wallet
     Route::get('/', [MasterWalletController::class, 'index']);  // Get all master wallets
@@ -215,10 +216,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::prefix('exchange-rate')->group(function () {
         Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
+        Route::get('/get-zar-exchange-rates', [ExchangeRateController::class, 'indexZar']);
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
         Route::post('/update-exchange-rate/{id}', [ExchangeRateController::class, 'update']);
         Route::get('/get-ngn-exchange-rate', [ExchangeRateController::class, 'getNgNexchangeRate']);
+        Route::get('/get-zar-exchange-rate', fn () => app(ExchangeRateController::class)->getByCurrency('ZAR'));
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
@@ -432,6 +435,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
+        Route::get('/exchange-rate/get-zar-exchange-rates', [ExchangeRateController::class, 'indexZar']);
 
         Route::prefix('v3')->group(function () {
             Route::get('/dashboard', [V3AdminController::class, 'dashboard']);
@@ -439,6 +443,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/user-balances/get-all', [V3AdminController::class, 'userBalances']);
             Route::get('/reports/swap-summary', [V3AdminController::class, 'swapReport']);
             Route::post('/InAppNotifications/create', [V3AdminController::class, 'createNotification']);
+            Route::get('/exchange-rate/zar', [ExchangeRateController::class, 'indexZar']);
+            Route::post('/exchange-rate/zar', [ExchangeRateController::class, 'store']);
+            Route::post('/exchange-rate/zar/{id}', [ExchangeRateController::class, 'update']);
             Route::prefix('newsletters')->group(function () {
                 Route::get('/get-all', [NewsletterController::class, 'index']);
                 Route::post('/create', [V3AdminController::class, 'createNewsletter']);

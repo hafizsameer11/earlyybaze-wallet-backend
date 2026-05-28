@@ -23,6 +23,11 @@ class WalletCurrencyService
         return $this->WalletCurrencyRepository->ngnCurrency();
     }
 
+    public function zarCurrency()
+    {
+        return $this->WalletCurrencyRepository->zarCurrency();
+    }
+
     public function find($id)
     {
         return $this->WalletCurrencyRepository->find($id);

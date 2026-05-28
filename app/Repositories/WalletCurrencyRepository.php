@@ -23,6 +23,17 @@ class WalletCurrencyRepository
         // return WalletCurrency::where('currency', 'NGN')->latest()->get();
     }
 
+    public function zarCurrency()
+    {
+        return [[
+            'id' => 1,
+            'currency' => 'ZAR',
+            'symbol' => 'R',
+            'blockchain' => 'ZAR',
+            'blockhain_name' => 'Rand',
+        ]];
+    }
+
     public function find($id)
     {
         return WalletCurrency::find($id);

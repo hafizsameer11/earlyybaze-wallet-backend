@@ -42,6 +42,13 @@ class WalletCurrencyController extends Controller
         return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
     }
 
+    public function zarCurrency()
+    {
+        $walletCurrencies = $this->walletCurrencyService->zarCurrency();
+
+        return ResponseHelper::success($walletCurrencies, 'Wallet Currencies retrieved successfully', 200);
+    }
+
     public function getNetworks($currency_id)
     {
         try {
