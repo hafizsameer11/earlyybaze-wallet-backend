@@ -10,6 +10,7 @@ use App\Services\SwapTransactionService;
 use App\Services\TransactionSendService;
 use App\Services\transactionService;
 use App\Services\WithdrawRequestService;
+use App\Support\AdminRegionScope;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -108,6 +109,7 @@ class TransactionManagementController extends Controller
             'status' => $request->query('status'), // 'completed', 'pending', 'rejected', or 'all' (ignore if 'all')
             'type' => $request->query('type'), // 'send', 'receive', 'buy', 'swap', 'withdrawTransaction', or 'all' (ignore if 'all')
             'transfer_type' => $request->query('transfer_type'), // 'internal', 'external', or 'all' (ignore if 'all')
+            'region' => $request->query('region') ?: AdminRegionScope::resolve($request),
             'export' => $isExport, // Export mode flag
             'page' => $isExport ? 1 : $request->query('page', 1), // Ignore page for export
             'per_page' => $isExport ? null : $request->query('per_page', 20), // Ignore per_page for export

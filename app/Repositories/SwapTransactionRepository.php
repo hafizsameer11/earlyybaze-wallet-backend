@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use App\Support\FiatExchangeHelper;
+use App\Services\NotificationService;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Exception;
@@ -50,10 +52,15 @@ class SwapTransactionRepository
                 $percentageFeeConverted = bcdiv($percentageFeeAmount, 100, 8);
                 $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
 
-                // Fetch exchange rate
+                $fiatCurrency = FiatExchangeHelper::normalizeFiat($data['fiat_currency'] ?? 'NGN');
+
                 $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->firstOrFail();
                 $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
-                Log::info("exchange rate", [$exchangeRate]);
+                $exchangeRateZar = ExchangeRate::where('currency', 'ZAR')->latest()->first();
+                if ($fiatCurrency === 'ZAR' && ! $exchangeRateZar) {
+                    throw new Exception('ZAR exchange rate not configured. Add a ZAR row in admin exchange rates.');
+                }
+                Log::info('exchange rate', [$exchangeRate, 'fiat' => $fiatCurrency]);
                 // Fee in token and converted currencies
                 $miniumumTrade = MinimumTrade::where('type', 'swap')->latest()->first();
                 if (!$miniumumTrade) {
@@ -62,17 +69,23 @@ class SwapTransactionRepository
                 $miniumumTradeAmount = $miniumumTrade->amount;
                 $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
                 $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
-                $amountNaira = bcmul($amountUsd, $exchangeRatenaira->rate_naira, 8);
-                $feeNaira = bcmul($totalFee, $exchangeRatenaira->rate, 8);
+                $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
+                $amountZar = $exchangeRateZar
+                    ? FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR')
+                    : '0';
+                $feeNaira = bcmul($totalFee, (string) $exchangeRatenaira->rate, 8);
                 if (bccomp($amountUsd, $miniumumTradeAmount, 8) < 0) {
                     throw new Exception('Minimum trade amount is ' . $miniumumTradeAmount);
                 }
-                // Add calculated values to data
                 $data['amount_usd'] = $amountUsd;
                 $data['amount_naira'] = $amountNaira;
+                $data['amount_zar'] = $amountZar;
+                $data['fiat_currency'] = $fiatCurrency;
                 $data['fee_naira'] = $feeNaira;
                 $data['fee'] = $feeCurrency;
-                $data['exchange_rate'] = $exchangeRatenaira->rate_naira;
+                $data['exchange_rate'] = $fiatCurrency === 'ZAR'
+                    ? (string) ($exchangeRateZar->rate ?? '0')
+                    : (string) $exchangeRatenaira->rate_naira;
 
                 $reference = 'EarlyBaze' . time();
                 Log::info("swap data", [$data]);
@@ -120,6 +133,13 @@ class SwapTransactionRepository
                 $data['reference'] = $reference;
                 $data['transaction_id'] = $transaction->id;
                 $swapTransaction = SwapTransaction::create($data);
+
+                app(NotificationService::class)->notifyUser(
+                    (int) $user->id,
+                    'Swap submitted',
+                    "Your swap of {$amount} {$currency} is pending completion.",
+                    'swap_pending'
+                );
 
                 return $swapTransaction;
             });
@@ -202,7 +222,10 @@ public function completeSwapTransaction($id)
 
             // 3) normalize amounts
             $amount       = (string)$swap->amount;
-            $amountNaira  = (string)$swap->amount_naira;
+            $fiatCurrency = FiatExchangeHelper::normalizeFiat($swap->fiat_currency ?? 'NGN');
+            $amountFiat = $fiatCurrency === 'ZAR'
+                ? (string) ($swap->amount_zar ?? '0')
+                : (string) $swap->amount_naira;
 
             if (stripos($amount, 'e') !== false) {
                 $amount = sprintf('%.8f', (float)$amount);
@@ -217,12 +240,20 @@ public function completeSwapTransaction($id)
             $va->available_balance = bcsub($va->available_balance, $amount, 8);
             $va->save();
 
-            // 5) lock/create user account and credit NGN
+            // 5) lock/create user account and credit fiat wallet
             $ua = UserAccount::where('user_id', $userId)->lockForUpdate()->first();
-            if (!$ua) {
-                $ua = new UserAccount(['user_id' => $userId, 'naira_balance' => '0.00000000']);
+            if (! $ua) {
+                $ua = new UserAccount([
+                    'user_id' => $userId,
+                    'naira_balance' => '0.00000000',
+                    'zar_balance' => '0.00000000',
+                ]);
             }
-            $ua->naira_balance = bcadd($ua->naira_balance, $amountNaira, 8);
+            if ($fiatCurrency === 'ZAR') {
+                $ua->zar_balance = bcadd((string) ($ua->zar_balance ?? '0'), $amountFiat, 8);
+            } else {
+                $ua->naira_balance = bcadd((string) $ua->naira_balance, $amountFiat, 8);
+            }
             $ua->save();
 
             // 6) flip statuses atomically
@@ -234,9 +265,16 @@ public function completeSwapTransaction($id)
             // Transaction::where('id', $swap->transaction_id)->where('status', 'pending')
             //     ->update(['status' => 'completed']);
 
-            DB::afterCommit(function () use ($id) {
+            DB::afterCommit(function () use ($id, $userId, $amountFiat, $fiatCurrency) {
                 $fresh = SwapTransaction::find($id);
                 app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($fresh);
+                $symbol = $fiatCurrency === 'ZAR' ? 'R' : '₦';
+                app(NotificationService::class)->notifyUser(
+                    (int) $userId,
+                    'Swap completed',
+                    'Your swap completed. '.$symbol.number_format((float) $amountFiat, 2).' credited to your '.($fiatCurrency === 'ZAR' ? 'ZAR' : 'naira').' wallet.',
+                    'swap_completed'
+                );
             });
 
             return $swap->fresh();

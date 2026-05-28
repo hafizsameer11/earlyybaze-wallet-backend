@@ -13,7 +13,15 @@ class UserAccount extends BaseModel
         'account_number',
         'referral_earning_naira',
         'naira_balance',
+        'zar_balance',
     ];
+
+    protected $appends = ['rand_balance'];
+
+    public function getRandBalanceAttribute(): string
+    {
+        return (string) ($this->attributes['zar_balance'] ?? '0');
+    }
 
     public function user()
     {

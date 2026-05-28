@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Helpers\ResponseHelper;
 use App\Models\AdminTransfer;
+use App\Models\FailedMasterTransfer;
 use App\Models\ReceivedAsset;
 use App\Models\RejectedDepositWebhook;
 use App\Support\AllowedFungibleContracts;
@@ -12,6 +13,82 @@ use Illuminate\Http\Request;
 
 class AssetController extends Controller
 {
+    public function getTatumFailures(Request $request)
+    {
+        $rejectedQ = RejectedDepositWebhook::query()->with('user:id,email,name');
+        $failedTransferQ = FailedMasterTransfer::query()->with([
+            'virtualAccount.user:id,name,email',
+            'webhookResponse:id,reference,txid,status,raw_json',
+        ]);
+
+        if ($request->filled('reason')) {
+            $reason = (string) $request->input('reason');
+            $rejectedQ->where('rejection_reason', $reason);
+            $failedTransferQ->where('reason', 'like', '%'.$reason.'%');
+        }
+        if ($request->filled('tx_id')) {
+            $txId = (string) $request->input('tx_id');
+            $rejectedQ->where('tx_id', $txId);
+            $failedTransferQ->whereHas('webhookResponse', function ($q) use ($txId) {
+                $q->where('txid', $txId);
+            });
+        }
+
+        $rejectedRows = $rejectedQ->latest('id')->limit(300)->get()->map(function (RejectedDepositWebhook $row) {
+            return [
+                'id' => $row->id,
+                'source' => 'rejected_deposit',
+                'reason' => $row->rejection_reason,
+                'tx_id' => $row->tx_id,
+                'reference' => $row->reference,
+                'chain' => $row->chain,
+                'currency' => $row->payload_currency ?: $row->account_currency,
+                'amount' => $row->amount,
+                'user' => $row->user ? [
+                    'id' => $row->user->id,
+                    'name' => $row->user->name,
+                    'email' => $row->user->email,
+                ] : null,
+                'payload_ref' => $row->reference,
+                'created_at' => $row->created_at,
+            ];
+        });
+
+        $failedRows = $failedTransferQ->latest('id')->limit(300)->get()->map(function (FailedMasterTransfer $row) {
+            return [
+                'id' => $row->id,
+                'source' => 'failed_master_transfer',
+                'reason' => $row->reason,
+                'tx_id' => $row->webhookResponse->txid ?? null,
+                'reference' => $row->webhookResponse->reference ?? null,
+                'chain' => null,
+                'currency' => null,
+                'amount' => null,
+                'user' => $row->virtualAccount?->user ? [
+                    'id' => $row->virtualAccount->user->id,
+                    'name' => $row->virtualAccount->user->name,
+                    'email' => $row->virtualAccount->user->email,
+                ] : null,
+                'payload_ref' => $row->webhook_response_id,
+                'created_at' => $row->created_at,
+            ];
+        });
+
+        $merged = $rejectedRows
+            ->concat($failedRows)
+            ->sortByDesc(fn ($item) => strtotime((string) $item['created_at']))
+            ->values();
+
+        return ResponseHelper::success([
+            'rows' => $merged,
+            'meta' => [
+                'rejected_count' => $rejectedRows->count(),
+                'failed_transfer_count' => $failedRows->count(),
+                'total' => $merged->count(),
+            ],
+        ], 'Tatum failure records fetched', 200);
+    }
+
     public function getAvaialbleAsset()
     {
         $assets = ReceivedAsset::with('user')->latest()->get();
@@ -43,12 +120,6 @@ class AssetController extends Controller
 
         $perPage = min(100, max(1, (int) $request->input('per_page', 25)));
         $paginated = $q->latest('id')->paginate($perPage);
-
-        $paginated->getCollection()->transform(function (RejectedDepositWebhook $row) {
-            $row->rejection_reason_label = AllowedFungibleContracts::rejectionReasonLabel($row->rejection_reason);
-
-            return $row;
-        });
 
         return ResponseHelper::success($paginated, 'Rejected deposit webhooks fetched', 200);
     }

@@ -390,6 +390,7 @@ class UserRepository
             $userAccount = UserAccount::create([
                 'user_id' => $userId,
                 'naira_balance' => '0',
+                'zar_balance' => '0',
                 'crypto_balance' => '0',
             ]);
         }
@@ -502,6 +503,20 @@ class UserRepository
             ];
         });
 
+        // ===== ZAR balance stats (user_accounts.zar_balance) =====
+        $zarAccounts = \App\Models\UserAccount::with('user:id,name,email')
+            ->select('user_id', 'zar_balance')
+            ->get();
+
+        $totalRandBalance = $zarAccounts->sum('zar_balance');
+        $randByUser = $zarAccounts->map(function ($item) {
+            return [
+                'user' => $item->user,
+                'rand_balance' => $item->zar_balance,
+            ];
+        });
+        $totalRandWallets = $zarAccounts->count();
+
         // ===== Final Response =====
         return [
             'balances' => $mapped,
@@ -512,6 +527,9 @@ class UserRepository
             'total_naira_balance' => $totalNairaBalance,
             'total_naira_wallets' => $totalNairaWallets,
             'naira_wallets' => $userNairaBalances,
+            'total_rand_balance' => $totalRandBalance,
+            'total_rand_wallets' => $totalRandWallets,
+            'rand_wallets' => $randByUser,
         ];
     }
 

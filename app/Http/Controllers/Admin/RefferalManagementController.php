@@ -222,6 +222,13 @@ public function getRefferalManagement()
         $payout->paid_at = now();
         $payout->save();
 
+        app(\App\Services\NotificationService::class)->notifyUser(
+            (int) $userId,
+            'Referral payout sent',
+            'Your referral earnings for this month have been marked as paid.',
+            'referral_payout'
+        );
+
         return response()->json(['message' => 'Payout marked as paid successfully']);
     }
 
@@ -244,6 +251,12 @@ public function getRefferalManagement()
                 $payout->status = 'paid';
                 $payout->paid_at = now();
                 $payout->save();
+                app(\App\Services\NotificationService::class)->notifyUser(
+                    (int) $userId,
+                    'Referral payout sent',
+                    'Your referral earnings for this month have been marked as paid.',
+                    'referral_payout'
+                );
                 $updated++;
             }
         }

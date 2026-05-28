@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Kyc;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class KycRepository
@@ -73,7 +74,15 @@ class KycRepository
             $path = $data['document_back']->store('document_back', 'public');
             $data['document_back'] = $path;
         }
-        return Kyc::create($data);
+        $kyc = Kyc::create($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $user->id,
+            'KYC submitted',
+            'Your KYC documents were submitted and are under review.',
+            'kyc_submitted'
+        );
+
+        return $kyc;
     }
     public function getKycByUserId($userId)
     {
@@ -92,6 +101,21 @@ class KycRepository
                 $data['rejection_reason'] = $data['rejection_reason'] ?? null;
             }
             $kyc->update(['status' => $status]);
+            if ($status === 'approved') {
+                app(NotificationService::class)->notifyUser(
+                    (int) $kyc->user_id,
+                    'KYC approved',
+                    'Your identity verification was approved.',
+                    'kyc_approved'
+                );
+            } elseif ($status === 'rejected') {
+                app(NotificationService::class)->notifyUser(
+                    (int) $kyc->user_id,
+                    'KYC rejected',
+                    $data['rejection_reason'] ?? 'Your KYC was rejected. Please resubmit.',
+                    'kyc_rejected'
+                );
+            }
         }
         // $kyc->update($data);
         return $kyc;

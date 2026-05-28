@@ -10,6 +10,7 @@ use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
 use App\Models\WithdrawRequest;
+use App\Services\NotificationService;
 use App\Services\transactionService;
 use Illuminate\Support\Facades\Log;
 
@@ -83,6 +84,13 @@ class BuyTransactionRepository
         $data['reference'] = $refference;
         $data['status'] = 'pending';
         $buyTransaction = BuyTransaction::create($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $data['user_id'],
+            'Buy order placed',
+            'Your buy order is pending. Upload your payment receipt when ready.',
+            'buy_pending'
+        );
+
         return $buyTransaction->load('transaction', 'bankAccount');
     }
     public function attachSlip($id, array $data)
@@ -97,6 +105,13 @@ class BuyTransactionRepository
         $data['receipt'] = $path;
         $data['receipt_attached'] = true;
         $buyTransaction->update($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $buyTransaction->user_id,
+            'Receipt uploaded',
+            'Your buy order receipt was received and is under review.',
+            'buy_receipt'
+        );
+
         return $buyTransaction;
     }
 
@@ -144,6 +159,20 @@ class BuyTransactionRepository
                         'account_balance' => $newAccountBalance,
             ]);
         }
+
+                app(NotificationService::class)->notifyUser(
+                    (int) $user_id,
+                    'Buy order approved',
+                    'Your buy order was approved and crypto has been credited.',
+                    'buy_approved'
+                );
+            } elseif (isset($data['status']) && $data['status'] === 'rejected') {
+                app(NotificationService::class)->notifyUser(
+                    (int) $buyTransaction->user_id,
+                    'Buy order rejected',
+                    is_string($data['rejection_reason'] ?? null) ? $data['rejection_reason'] : 'Your buy order was rejected.',
+                    'buy_rejected'
+                );
             }
             
             return $buyTransaction->fresh();

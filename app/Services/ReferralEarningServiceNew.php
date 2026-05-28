@@ -91,6 +91,13 @@ class ReferralEarningServiceNew
                 }
             }
         });
+
+        app(NotificationService::class)->notifyUser(
+            (int) $referrer->id,
+            'Referral bonus',
+            'You earned a referral bonus from a completed swap by your invitee.',
+            'referral'
+        );
     }
 
     /**

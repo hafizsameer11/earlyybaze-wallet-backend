@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\BankAccount;
 use App\Models\WithdrawRequest;
+use App\Services\NotificationService;
 use Exception;
 
 class BankAccountRepository
@@ -26,7 +27,15 @@ class BankAccountRepository
     public function create(array $data)
     {
         $bankAccount = BankAccount::create($data);
-        //return bankaccount with user
+        if (! empty($data['user_id'])) {
+            app(NotificationService::class)->notifyUser(
+                (int) $data['user_id'],
+                'Bank account added',
+                'A new bank account was added to your profile.',
+                'bank_account'
+            );
+        }
+
         return $bankAccount;
     }
 
@@ -39,6 +48,13 @@ class BankAccountRepository
         }
         $bankAccount = BankAccount::find($id);
         $bankAccount->update($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $bankAccount->user_id,
+            'Bank account updated',
+            'Your bank account details were updated.',
+            'bank_account'
+        );
+
         return $bankAccount;
     }
 
@@ -53,7 +69,15 @@ class BankAccountRepository
         if (!$bankAccount) {
             throw new Exception('Bank Account Not Found.');
         }
+        $userId = (int) $bankAccount->user_id;
         BankAccount::destroy($id);
+        app(NotificationService::class)->notifyUser(
+            $userId,
+            'Bank account removed',
+            'A bank account was removed from your profile.',
+            'bank_account'
+        );
+
         return true;
     }
 }

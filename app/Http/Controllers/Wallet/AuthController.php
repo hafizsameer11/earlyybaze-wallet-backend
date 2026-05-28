@@ -74,35 +74,6 @@ class AuthController extends Controller
         }
     }
 
-    public function verifyPhoneOtp(Request $request)
-    {
-        $validated = $request->validate([
-            'email' => 'required|email',
-            'sms_code' => 'required|digits:6',
-        ]);
-
-        try {
-            $user = \App\Models\User::where('email', $validated['email'])->first();
-            if (! $user) {
-                return ResponseHelper::error('User not found', 404);
-            }
-
-            if ($user->sms_code !== $validated['sms_code']) {
-                return ResponseHelper::error('Invalid verification code');
-            }
-
-            $user->is_number_verified = true;
-            $user->sms_code = null;
-            $user->save();
-
-            return ResponseHelper::success($user, 'Phone number verified successfully', 200);
-        } catch (\Throwable $e) {
-            Log::error('Phone OTP verify error: '.$e->getMessage());
-
-            return ResponseHelper::error('Phone verification failed');
-        }
-    }
-
     public function login(LoginRequest $request)
     {
         try {
@@ -141,21 +112,19 @@ class AuthController extends Controller
                     'user_agent' => $userAgent,
                 ]);
 
-                // Send notification for new device
-                $this->notificationService->sendToUserById($userd['id'], 'New Device Login', 'Your account was accessed from a new device.');
-                \App\Models\UserNotification::create([
-                    'user_id' => $userd['id'],
-                    'title' => 'New Device Login',
-                    'message' => 'Your account was accessed from a new device.',
-                ]);
-
+                $this->notificationService->notifyUser(
+                    (int) $userd['id'],
+                    'New device login',
+                    'Your account was accessed from a new device.',
+                    'security'
+                );
             }
-            $this->notificationService->sendToUserById($userd['id'], 'Login Notification', 'You logged in successfully');
-            UserNotification::create([
-                'user_id' => $userd['id'],
-                'title' => 'Login Notification',
-                'message' => 'You logged in successfully',
-            ]);
+            $this->notificationService->notifyUser(
+                (int) $userd['id'],
+                'Login successful',
+                'You logged in to your EarlyBaze wallet.',
+                'auth'
+            );
             UserActivityHelper::LoggedInUserActivity('User logged in');
             $data = [
                 'user' => $user['user'],

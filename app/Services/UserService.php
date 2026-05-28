@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\VirtualAccount;
 use App\Repositories\UserAccountRepository;
 use App\Repositories\UserRepository;
+use App\Services\NotificationService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -81,6 +82,13 @@ class UserService
                 'account_number' => $accountNumber,
             ]);
 
+            app(NotificationService::class)->notifyUser(
+                $user->id,
+                'Welcome to EarlyBaze',
+                'Your account was created. Check your email for the verification code.',
+                'auth'
+            );
+
             return $user;
         } catch (Exception $e) {
             Log::error('User registration error: '.$e->getMessage());
@@ -149,52 +157,19 @@ class UserService
             $user->otp_verified = true;
             $user->save();
 
-            // ✅ After email verified → send SMS/WhatsApp OTP
-            // if ($user->phone) {
-            //     $smsCode = rand(100000, 999999);
-            //     $smsType = $this->detectSmsType($user->phone);
-
-            //     $user->sms_type = $smsType;
-            //     $user->sms_code = $smsCode;
-            //     $user->is_number_verified = false;
-            //     $user->save();
-
-            //     $message = "Your Wallet verification code is {$smsCode}";
-            //     $twilio = new \App\Services\TwilioService();
-            //     $twilio->sendVerification($user->phone, $message, $smsType);
-            // }
-
             dispatch(new ProvisionUserWalletsV2($user, 'otp'));
+
+            app(NotificationService::class)->notifyUser(
+                $user->id,
+                'Email verified',
+                'Your account is verified. Your wallets are being set up.',
+                'auth'
+            );
 
             return $user;
         } catch (Exception $e) {
             Log::error('OTP verification error: '.$e->getMessage());
             throw new Exception('OTP verification failed.'.$e->getMessage());
-        }
-    }
-
-    /**
-     * Try WhatsApp first, fallback to SMS.
-     */
-    private function detectSmsType(string $phone): string
-    {
-        try {
-            $client = new \Twilio\Rest\Client(
-                config('services.twilio.sid'),
-                config('services.twilio.token')
-            );
-
-            // send a test WhatsApp message (will only work if number joined sandbox)
-            $client->messages->create('whatsapp:'.$phone, [
-                'from' => 'whatsapp:'.config('services.twilio.from'),
-                'body' => 'Verifying WhatsApp availability (ignore this)',
-            ]);
-
-            return 'whatsapp';
-        } catch (Exception $e) {
-            Log::warning("WhatsApp not available for {$phone}, using SMS.");
-
-            return 'sms';
         }
     }
 
@@ -359,6 +334,13 @@ class UserService
             $Authuser = Auth::user();
             $user = $this->userRepository->changePassword($oldPassword, $newPassword, $Authuser->id);
 
+            app(NotificationService::class)->notifyUser(
+                (int) $Authuser->id,
+                'Password changed',
+                'Your account password was updated successfully.',
+                'security'
+            );
+
             return $user;
         } catch (Exception $e) {
             Log::error('Change password error: '.$e->getMessage());
@@ -449,8 +431,15 @@ class UserService
     public function updateUserProfile(array $data, $userId): ?User
     {
         try {
-            // $user = Auth::user();
-            return $this->userRepository->updateUserProfile($userId, $data);
+            $user = $this->userRepository->updateUserProfile($userId, $data);
+            app(NotificationService::class)->notifyUser(
+                (int) $userId,
+                'Profile updated',
+                'Your profile was updated successfully.',
+                'profile'
+            );
+
+            return $user;
         } catch (Exception $e) {
             Log::error('Update user profile error: '.$e->getMessage());
             throw new Exception('Update user profile failed. '.$e->getMessage());

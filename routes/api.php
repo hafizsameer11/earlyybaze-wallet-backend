@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AmlRuleController;
+use App\Http\Controllers\Admin\AutoFlushController;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseBackupController;
@@ -42,6 +43,9 @@ use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\V3\V3AdminController;
+use App\Http\Controllers\V3\V3FeeController;
+use App\Http\Controllers\V3\V3UserController;
 use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -132,8 +136,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/forget-password', [AuthController::class, 'forgotPassword']); // Forget password
     Route::post('/verify-forget-password-otp', [AuthController::class, 'verifyForgetPasswordOtp']); // Verify forget password OTP
     Route::post('/reset-password', [AuthController::class, 'resetPassword']); // Reset password
-    Route::post('/verify-phone', [AuthController::class, 'verifyPhoneOtp']);
-
 });
 Route::post('/user/set-pin', [UserController::class, 'setPin']);
 Route::post('/user/verify-pin', [UserController::class, 'verifyPin']);
@@ -221,6 +223,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
     Route::post('/fee/calculate-withdraw-fee', [FeeController::class, 'calculateWithdrawFee']);
+    Route::post('/v3/fee/calculate-withdraw-fee', [V3FeeController::class, 'calculateWithdrawFee']);
     Route::post('/wallet/internal-transfer', [TransactionController::class, 'sendInternalTransaction']);
     Route::post('/wallet/on-chain-transfer', [TransactionController::class, 'sendOnChain']);
     Route::post('wallet/swap', [TransactionController::class, 'swap']);
@@ -236,6 +239,16 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::get('refferal/get-all', [RefferalEarningController::class, 'getForAuthUser']); // change with getrefferalsummary when pushing to live
     Route::get('refferal/get-all-new', [RefferalEarningController::class, 'getUserReferralSummary']); // change with getrefferalsummary when pushing to live
+    Route::prefix('v3')->group(function () {
+        Route::get('referral/summary', [RefferalEarningController::class, 'getUserReferralSummary']);
+        Route::get('notification/get-all', [InAppNotificationController::class, 'index']);
+        Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']);
+        Route::get('user/balance', [V3UserController::class, 'balance']);
+        Route::post('user/push-token', [V3UserController::class, 'setPushToken']);
+        Route::get('exchange-rate/zar', fn () => app(ExchangeRateController::class)->getByCurrency('ZAR'));
+        Route::post('fee/calculate-withdraw-fee', [V3FeeController::class, 'calculateWithdrawFee']);
+        Route::post('exchange-rate/calculate', [ExchangeRateController::class, 'calculateExchangeRate']);
+    });
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
     Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']); // Get all notifications
@@ -305,6 +318,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/referral/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
         Route::post('/referral/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
         Route::post('/referral/set-exchange-rate', [RefferalManagementController::class, 'setExchangeRate']);
+        Route::prefix('v3/referral')->group(function () {
+            Route::get('/management', [RefferalManagementController::class, 'getRefferalManagement']);
+            Route::get('/user/{id}', [RefferalEarningController::class, 'getForUser']);
+            Route::post('/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
+            Route::post('/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
+            Route::post('/set-exchange-rate', [RefferalManagementController::class, 'setExchangeRate']);
+            Route::get('/wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
+            Route::post('/wallet-topup', [RefferalManagementController::class, 'topUpRefferalWallet']);
+        });
 
         Route::prefix('InAppNotifications')->group(function () {
             Route::get('/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
@@ -371,6 +393,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
             Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
         });
+        Route::prefix('auto-flush')->group(function () {
+            Route::get('/config', [AutoFlushController::class, 'config']);
+            Route::post('/config', [AutoFlushController::class, 'updateConfig']);
+        });
 
         Route::prefix('roles')->group(function () {
             Route::get('/get-all', [RoleController::class, 'index']);
@@ -407,6 +433,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
 
+        Route::prefix('v3')->group(function () {
+            Route::get('/dashboard', [V3AdminController::class, 'dashboard']);
+            Route::get('/transactions/get-all', [V3AdminController::class, 'transactions']);
+            Route::get('/user-balances/get-all', [V3AdminController::class, 'userBalances']);
+            Route::get('/reports/swap-summary', [V3AdminController::class, 'swapReport']);
+            Route::post('/InAppNotifications/create', [V3AdminController::class, 'createNotification']);
+            Route::prefix('newsletters')->group(function () {
+                Route::get('/get-all', [NewsletterController::class, 'index']);
+                Route::post('/create', [V3AdminController::class, 'createNewsletter']);
+                Route::get('/get-single/{id}', [NewsletterController::class, 'show']);
+            });
+        });
+
         Route::prefix('newsletters')->group(function () {
             Route::get('/get-all', [NewsletterController::class, 'index']);
             Route::post('/create', [NewsletterController::class, 'store']);
@@ -433,6 +472,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('assets')->group(function () {
             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
             Route::get('/rejected-deposits', [AssetController::class, 'getRejectedDeposits']);
+            Route::get('/tatum-failures', [AssetController::class, 'getTatumFailures']);
             Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);

@@ -17,6 +17,7 @@ class WithdrawRequest extends BaseModel
         'fee',
         'total',
         'asset',
+        'currency',
         'bank_account_id',
         'bank_account_name',
         'bank_account_code',

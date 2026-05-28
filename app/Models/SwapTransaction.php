@@ -15,6 +15,8 @@ class SwapTransaction extends BaseModel
         'fee',
         'amount_usd',
         'amount_naira',
+        'amount_zar',
+        'fiat_currency',
         'status',
         'exchange_rate',
         'fee_naira',

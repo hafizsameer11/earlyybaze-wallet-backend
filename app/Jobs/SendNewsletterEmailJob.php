@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\NewsletterMail;
+use App\Models\Newsletter;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,15 +19,17 @@ class SendNewsletterEmailJob implements ShouldQueue
     protected array $userIds;
     protected string $subject;
     protected string $htmlContent;
+    protected ?int $newsletterId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(array $userIds, string $subject, string $htmlContent)
+    public function __construct(array $userIds, string $subject, string $htmlContent, ?int $newsletterId = null)
     {
         $this->userIds = $userIds;
         $this->subject = $subject;
         $this->htmlContent = $htmlContent;
+        $this->newsletterId = $newsletterId;
     }
 
     /**
@@ -40,7 +43,18 @@ class SendNewsletterEmailJob implements ShouldQueue
             Mail::to($user->email)->send(
                 new NewsletterMail($this->subject, $this->htmlContent)
             );
-            usleep(200000); // optional delay between sends (200ms)
+
+            if ($this->newsletterId) {
+                Newsletter::find($this->newsletterId)?->users()->updateExistingPivot($user->id, [
+                    'sent_at' => now(),
+                ]);
+            }
+
+            usleep(200000);
+        }
+
+        if ($this->newsletterId) {
+            Newsletter::where('id', $this->newsletterId)->update(['status' => 'completed']);
         }
     }
 }

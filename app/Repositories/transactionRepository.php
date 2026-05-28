@@ -19,6 +19,7 @@ public function all(array $params)
     $status = $params['status'] ?? null;
     $type = $params['type'] ?? null;
     $transferType = $params['transfer_type'] ?? null;
+    $region = $params['region'] ?? null;
     $isExport = $params['export'] ?? false;
     $page = $isExport ? 1 : (int) ($params['page'] ?? 1);
     $perPage = $isExport ? null : (int) ($params['per_page'] ?? 15);
@@ -100,6 +101,11 @@ public function all(array $params)
     // -------- Apply transfer_type filter (ignore if 'all' or null)
     if ($transferType && $transferType !== 'all') {
         $query->where('transfer_type', $transferType);
+    }
+
+    if ($region && $region !== 'all') {
+        $fiat = $region === 'south_africa' ? 'ZAR' : 'NGN';
+        $query->where('currency', $fiat);
     }
 
     // -------- Apply search filter (enhanced to search multiple fields)

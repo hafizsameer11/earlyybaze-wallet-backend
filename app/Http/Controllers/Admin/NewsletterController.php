@@ -32,17 +32,12 @@ class NewsletterController extends Controller
 
         $userIds = $data['users'];
         $newsletter->users()->attach($userIds);
-        dispatch(new SendNewsletterEmailJob($userIds, $data['title'], $data['content']));
+        dispatch(new SendNewsletterEmailJob($userIds, $data['title'], $data['content'], $newsletter->id));
 
-        foreach (User::whereIn('id', $userIds)->get() as $user) {
-            $newsletter->users()->updateExistingPivot($user->id, [
-                'sent_at' => now()
-            ]);
-        }
-
-        $newsletter->update(['status' => 'completed']);
-
-        return response()->json(['message' => 'Newsletter sent successfully.']);
+        return response()->json([
+            'message' => 'Newsletter queued for delivery.',
+            'newsletter' => $newsletter->fresh(),
+        ], 202);
     }
 
     public function show($id)

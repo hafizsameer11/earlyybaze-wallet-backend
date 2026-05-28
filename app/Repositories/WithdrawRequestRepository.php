@@ -2,9 +2,9 @@
 
 namespace App\Repositories;
 
-use App\Models\UserAccount;
-use App\Models\UserNotification;
 use App\Models\WithdrawRequest;
+use App\Services\FiatBalanceService;
+use App\Services\NotificationService;
 
 // use App\Models\WithdrawRequest;
 
@@ -27,36 +27,26 @@ class WithdrawRequestRepository
 
     public function create(array $data)
     {
-        // Use database transaction to ensure atomicity and prevent race conditions
         return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
-            // Lock the user account row for update to prevent concurrent withdrawals
-            $userAccount = UserAccount::where('user_id', $data['user_id'])
-                ->lockForUpdate()
-                ->first();
-            
-            if (!$userAccount) {
-                throw new \Exception('User Account not found');
-            }
+            $currency = FiatBalanceService::normalizeCurrency($data);
+            $fiat = app(FiatBalanceService::class);
 
-            // Store balance before deduction
-            $data['balance_before'] = $userAccount->naira_balance;
-            
-            // Double-check balance using BCMath (prevent race condition)
-            $currentBalance = (string) $userAccount->naira_balance;
-            $requiredTotal = $data['total'];
-            
-            if (bccomp($currentBalance, $requiredTotal, 8) < 0) {
-                throw new \Exception('Insufficient Balance');
-            }
+            $data['balance_before'] = $fiat->deduct(
+                (int) $data['user_id'],
+                $currency,
+                (string) $data['total']
+            );
 
-            // Create withdrawal request
             $withdraw = WithdrawRequest::create($data);
-            
-            // Deduct balance using BCMath for precision
-            $newBalance = bcsub($currentBalance, $requiredTotal, 8);
-            $userAccount->naira_balance = $newBalance;
-        $userAccount->save();
-            
+
+            $symbol = $currency === 'ZAR' ? 'R' : '₦';
+            app(NotificationService::class)->notifyUser(
+                (int) $data['user_id'],
+                'Withdrawal requested',
+                "Your {$symbol}{$data['total']} {$currency} withdrawal is pending review.",
+                'withdraw_pending'
+            );
+
             return $withdraw;
         });
     }
@@ -94,38 +84,36 @@ class WithdrawRequestRepository
                 'user_id' => $withdraw->user_id
             ]);
               
-                UserNotification::create([
-                    'user_id' => $withdraw->user_id,
-                    'type' => 'withdraw_approved',
-                    'message' => 'Your withdraw request has been approved.'
-                ]);
+                app(NotificationService::class)->notifyUser(
+                    (int) $withdraw->user_id,
+                    'Withdrawal approved',
+                    'Your withdrawal has been approved and is being processed.',
+                    'withdraw_approved'
+                );
         } elseif ($status == 'rejected') {
             $withdraw->status = 'rejected';
-                
-                // Lock user account to prevent concurrent refunds
-                $userAccount = UserAccount::where('user_id', $withdraw->user_id)
-                    ->lockForUpdate()
-                    ->first();
-                    
-                if ($userAccount) {
-                    // Refund balance using BCMath for precision
-                    $refundAmount = (string) $withdraw->total;
-                    $currentBalance = (string) $userAccount->naira_balance;
-                    $newBalance = bcadd($currentBalance, $refundAmount, 8);
-                    $userAccount->naira_balance = $newBalance;
-                    $userAccount->save();
-                }
+
+                $currency = FiatBalanceService::normalizeCurrency([
+                    'currency' => $withdraw->currency ?? null,
+                    'asset' => $withdraw->asset ?? null,
+                ]);
+                app(FiatBalanceService::class)->credit(
+                    (int) $withdraw->user_id,
+                    $currency,
+                    (string) $withdraw->total
+                );
                 
             $withdraw->save();
             $this->withdrawTransactionRepository->create([
                 'withdraw_request_id' => $withdraw->id,
                 'user_id' => $withdraw->user_id
             ]);
-                UserNotification::create([
-                    'user_id' => $withdraw->user_id,
-                    'type' => 'withdraw_rejected',
-                    'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.'
-                ]);
+                app(NotificationService::class)->notifyUser(
+                    (int) $withdraw->user_id,
+                    'Withdrawal rejected',
+                    'Your withdrawal was rejected. The amount has been refunded to your account.',
+                    'withdraw_rejected'
+                );
         }
             return $withdraw->fresh();
         });

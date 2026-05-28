@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 // use Illuminate\Http\Request;
 use App\Services\SimpleWithdrawalService;
+use App\Services\AutoFlushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -17,7 +18,7 @@ class SimpleWithdrawalController extends Controller
      *  - limit? (int)             cap rows processed this call
      *  - dry_run? (bool)          don't broadcast, just return plan
      */
-     public function flush(Request $req, SimpleWithdrawalService $svc)
+     public function flush(Request $req, SimpleWithdrawalService $svc, AutoFlushNotificationService $notifier)
     {
         $v = Validator::make($req->all(), [
             'currency' => ['required','string','max:32'],
@@ -52,6 +53,8 @@ class SimpleWithdrawalController extends Controller
             (int)($data['limit'] ?? 0),
             (bool)($data['dry_run'] ?? false),
         );
+        $res['currency'] = $currency;
+        $notifier->sendResult('MANUAL FLUSH', $res);
 
         return response()->json($res, $res['success'] ? 200 : 500);
     }

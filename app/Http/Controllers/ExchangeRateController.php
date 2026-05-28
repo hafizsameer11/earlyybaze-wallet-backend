@@ -71,7 +71,8 @@ class ExchangeRateController extends Controller
             $type = $request->type;
             $to = $request->to;
             $amount_in=$request->amount_in;
-            $exchangeRate = $this->exchangeRateService->calculateExchangeRate($currency, $amount, $type, $to,$amount_in);
+            $fiatCurrency = $request->input('fiat_currency', 'NGN');
+            $exchangeRate = $this->exchangeRateService->calculateExchangeRate($currency, $amount, $type, $to, $amount_in, $fiatCurrency);
             return    ResponseHelper::success($exchangeRate, 'Exchange rate calculated successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

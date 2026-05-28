@@ -35,7 +35,7 @@ class SendPushNotificationToAllUsers implements ShouldQueue
         $users = User::whereNotNull('fcmToken')->get();
         // $users=User::where('email','b@gmail.com')->get();
         foreach ($users as $user) {
-            $notificationService->sendToUserById($user->id, $this->title, $this->body);
+            $notificationService->notifyUser($user->id, $this->title, $this->body, 'announcement');
             usleep(200000); // optional: 200ms delay to avoid flooding
         }
     }

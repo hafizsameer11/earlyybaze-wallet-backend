@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Helpers\ExchangeFeeHelper;
+use App\Support\FiatExchangeHelper;
 use App\Models\DepositAddress;
 use App\Models\ExchangeRate;
 use App\Models\MasterWallet;
@@ -39,28 +40,33 @@ class ExchangeRateRepository
    public function create(array $data)
 {
     if (isset($data['currency_id']) && $data['currency_id'] == 1) {
-        // Only allow NGN currency creation for ID 1
-        if ($data['currency'] !== 'NGN') {
-            throw new \Exception('Only NGN currency can be created with currency_id = 1.');
+        $fiat = strtoupper((string) ($data['currency'] ?? ''));
+        if (! in_array($fiat, ['NGN', 'ZAR'], true)) {
+            throw new \Exception('Fiat anchor rows must be NGN or ZAR when currency_id = 1.');
         }
-        $data['currency_id']=null;
-        // Skip USD calculation, just copy rate to rate_naira
-        $data['rate_naira'] = $data['rate'];
+        $data['currency_id'] = null;
+        if ($fiat === 'NGN') {
+            $data['rate_naira'] = $data['rate'];
+        } else {
+            $data['rate_zar'] = $data['rate'];
+        }
+
         return ExchangeRate::create($data);
     }
 
-    // For other currencies, continue with USD and Naira rate calculation
-    $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')
-        ->orderBy('id', 'desc')
-        ->first();
-
-    if (!$nairaExchangeRate) {
+    $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
+    if (! $nairaExchangeRate) {
         throw new \Exception('NGN exchange rate not found.');
     }
 
     $data['rate_usd'] = 1 / $data['rate'];
     $usdRate = $data['rate_usd'];
     $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+
+    $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderBy('id', 'desc')->first();
+    if ($zarExchangeRate) {
+        $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
+    }
 
     return ExchangeRate::create($data);
 }
@@ -82,6 +88,11 @@ class ExchangeRateRepository
             $data['rate_usd'] = 1 / $data['rate'];
             $usdRate = $data['rate_usd'];
             $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+
+            $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderBy('id', 'desc')->first();
+            if ($zarExchangeRate) {
+                $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
+            }
         }
 
         // Update the record
@@ -105,8 +116,9 @@ class ExchangeRateRepository
         $exchangeRate->save();
         return $exchangeRate;
     }
-    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd')
+    public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd', $fiatCurrency = 'NGN')
     {
+        $fiatCurrency = FiatExchangeHelper::normalizeFiat($fiatCurrency);
         // Log::info("data received", [
         //     'currency' => $currency,
         //     'input_amount' => $amount,
@@ -128,22 +140,27 @@ class ExchangeRateRepository
         $amountUsd = '0.00';
         $amountCoin = '0.00';
         $amountNaira = '0.00';
+        $amountZar = '0.00';
 
         if ($amount_in === 'coin') {
-            // Coin → USD
             $amountCoin = $amount;
-            $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);  // Coin × USD rate
-            $amountNaira = bcmul($amountUsd, $nairaExchangeRate->rate_naira, 8); // Coin × Naira rate
+            $amountUsd = bcmul($amountCoin, $exchangeRate->rate_usd, 8);
         } else {
-            // USD → Coin (default)
             $amountUsd = $amount;
-            $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8); // USD ÷ USD rate
-            $amountNaira = bcmul($amountUsd, $nairaExchangeRate->rate_naira, 8);
+            $amountCoin = bcdiv($amountUsd, $exchangeRate->rate_usd, 8);
         }
-        Log::info("Calculated amounts", [
+
+        $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
+        $amountZar = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR');
+
+        $amountFiat = $fiatCurrency === 'ZAR' ? $amountZar : $amountNaira;
+
+        Log::info('Calculated amounts', [
             'amountCoin' => $amountCoin,
             'amountUsd' => $amountUsd,
-            'amountNaira' => $amountNaira
+            'amountNaira' => $amountNaira,
+            'amountZar' => $amountZar,
+            'fiatCurrency' => $fiatCurrency,
         ]);
         $feeSummary = null;
 
@@ -190,6 +207,9 @@ class ExchangeRateRepository
             'amount'         => $amountCoin,
             'amount_usd'     => $amount_in === 'coin' ? $amountUsd : $amountCoin,
             'amount_naira'   => $amountNaira,
+            'amount_zar'     => $amountZar,
+            'amount_fiat'    => $amountFiat,
+            'fiat_currency'  => $fiatCurrency,
             'fee_summary'    => $feeSummary,
         ];
     }

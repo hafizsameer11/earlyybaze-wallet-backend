@@ -18,6 +18,18 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping(10)
             ->appendOutputTo(storage_path('logs/schedule.log'));
 
+        $schedule->command('wallet:auto-flush')
+            ->dailyAt('00:00')
+            ->timezone('Africa/Lagos')
+            ->withoutOverlapping(30)
+            ->appendOutputTo(storage_path('logs/auto-flush.log'));
+
+        $schedule->command('audit:daily-ai')
+            ->dailyAt('07:00')
+            ->timezone('Africa/Lagos')
+            ->withoutOverlapping(30)
+            ->appendOutputTo(storage_path('logs/ai-audit.log'));
+
     }
 
     /**

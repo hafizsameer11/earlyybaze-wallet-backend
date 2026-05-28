@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\SupportTicket;
 use App\Models\TicketAgent;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class SupportTicketRepository
@@ -38,8 +39,15 @@ class SupportTicketRepository
         if ($ticket) {
             throw new \Exception('You already have an open ticket for ' . $data['subject']);
         }
-        // Add logic to create data
-        return SupportTicket::create($data);
+        $ticket = SupportTicket::create($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $user->id,
+            'Support ticket opened',
+            'We received your support request: '.$data['subject'],
+            'support_ticket'
+        );
+
+        return $ticket;
     }
     public function getAllforUser($userId)
     {

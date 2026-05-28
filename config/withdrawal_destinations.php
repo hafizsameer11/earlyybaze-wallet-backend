@@ -1,15 +1,14 @@
-<?php 
-
+<?php
 
 return [
-    'BTC'        => 'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9',
-    'ETH'        => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
-    'TRON'        => 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S',
-    'USDT_TRON'  => 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S',
-    'SOL'        => '9DVkUEJt1CiW4yDvsEkBPqzmLwp2d3jFFJaRgeR5teyF',
-    'LTC'        => 'ltc1q2t55e53fx9r9lfws43wnr8mmhc9tgc095xt7dj',
-    'BSC'        => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
-    'USDT_BSC'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
-    'USDT'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
-    'USDC'   => '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+    'BTC' => env('WITHDRAW_DEST_BTC', 'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9'),
+    'LTC' => env('WITHDRAW_DEST_LTC', 'ltc1q2t55e53fx9r9lfws43wnr8mmhc9tgc095xt7dj'),
+    'TRON' => env('WITHDRAW_DEST_TRON', 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S'),
+    'USDT_TRON' => env('WITHDRAW_DEST_USDT_TRON', 'TDHLKL6aFA97rhHfqJPKkiVJh6ySVuaC1S'),
+    'ETH' => env('WITHDRAW_DEST_ETH', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
+    'USDT_ETH' => env('WITHDRAW_DEST_USDT_ETH', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
+    'BNB' => env('WITHDRAW_DEST_BNB', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
+    'USDT_BSC' => env('WITHDRAW_DEST_USDT_BSC', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
+    'MATIC' => env('WITHDRAW_DEST_MATIC', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
+    'USDT_POLYGON' => env('WITHDRAW_DEST_USDT_POLYGON', '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111'),
 ];

@@ -188,12 +188,12 @@ class TransactionSendRepository
                 'user_id' => $sender->id,
                 'amount_usd' => $amountUsd
             ]);
-            $senderNotification = $this->notificationService->sendToUserById($sender->id, "Internal Send", "You have sent $amount $currency");
-            UserNotification::create([
-                'user_id' => $sender->id,
-                'title' => 'Internal Send',
-                'message' => "You have sent $amount $currency"
-            ]);
+            $this->notificationService->notifyUser(
+                $sender->id,
+                'Transfer sent',
+                "You sent {$amount} {$currency} successfully.",
+                'send'
+            );
             TransactionSend::create([
                 'transaction_type' => 'internal',
                 'sender_virtual_account_id' => $senderAccount->account_id,
@@ -224,7 +224,12 @@ class TransactionSendRepository
                 'amount_usd' => $amountUsd,
             ]);
 
-            $noitifcation = $this->notificationService->sendToUserById($receiver->id, "Internal Receive", "You have received $amount $currency");
+            $this->notificationService->notifyUser(
+                $receiver->id,
+                'Transfer received',
+                "You received {$amount} {$currency}.",
+                'receive'
+            );
             // ⬇️ Replace 2nd TransactionSend with ReceiveTransaction
             ReceiveTransaction::create([
                 'user_id'            => $receiver->id,
@@ -343,6 +348,13 @@ class TransactionSendRepository
                 $senderAccount->available_balance = $newBalance;
                 $senderAccount->account_balance = bcsub((string) $senderAccount->account_balance, $totalCost, 8);
             $senderAccount->save();
+
+            $this->notificationService->notifyUser(
+                (int) $sender->id,
+                'On-chain transfer submitted',
+                "Your on-chain transfer of {$amount} {$currency} is {$status}.",
+                'send_onchain'
+            );
 
             return ['success' => true, 'transaction_id' => $txId, 'status' => $status];
             });

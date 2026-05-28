@@ -130,7 +130,12 @@ class TransactionController extends Controller
                 $transaction['transaction_id'] = $senderTransaction->id;
             }
         
-            $this->notificationService->sendToUserById($user->id, 'Internal Transfer', 'You have received an internal transfer');
+            $this->notificationService->notifyUser(
+                (int) $user->id,
+                'Transfer completed',
+                'Your transfer was processed successfully.',
+                'transfer'
+            );
 
 
 
@@ -204,7 +209,6 @@ class TransactionController extends Controller
             $userActivit->content = "You have successfully swapped {$data['amount']}{$data['currency']}";
             $userActivit->save();
 
-            $this->notificationService->sendToUserById($user->id, 'Swap', 'You have successfully swapped');
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
@@ -215,11 +219,7 @@ class TransactionController extends Controller
         try {
             $user = Auth::user();
             $transaction = $this->swapTransactionService->completeSwapTransaction($id);
-            UserNotification::create([
-                'user_id' => $user->id,
-                'title' => 'Swap',
-                'message' => "You have Successfully swaped"
-            ]);
+
             return ResponseHelper::success($transaction, 'Transaction sent successfully', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);

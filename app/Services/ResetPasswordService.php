@@ -7,6 +7,7 @@ use App\Repositories\ResetPasswordRepository;
 use App\Repositories\UserRepository;
 use Exception;
 use Illuminate\Support\Facades\Mail;
+use App\Services\NotificationService;
 
 class ResetPasswordService
 {
@@ -48,6 +49,14 @@ class ResetPasswordService
         if (!$user) {
             throw new Exception('User not found');
         }
-        return $this->ResetPasswordRepository->resetPassword($user, $password);
+        $result = $this->ResetPasswordRepository->resetPassword($user, $password);
+        app(NotificationService::class)->notifyUser(
+            (int) $user->id,
+            'Password reset',
+            'Your password was reset successfully.',
+            'security'
+        );
+
+        return $result;
     }
 }

@@ -6,6 +6,7 @@ use App\Models\ExchangeRate;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use App\Services\FiatBalanceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -25,15 +26,16 @@ class UserAccountRepository
             $userAccount = UserAccount::create([
                 'user_id' => $id,
                 'naira_balance' => '0',
-                'crypto_balance' => '0'
+                'zar_balance' => '0',
+                'crypto_balance' => '0',
             ]);
         }
         $currencies = WalletCurrency::all();;
 
         $userVirtualAccounts = VirtualAccount::where('user_id', $id)
             ->with('walletCurrency')
-
-            ->get();
+            ->get()
+            ->filter(fn ($account) => ! FiatBalanceService::isLedgerFiat((string) $account->currency));
 
         $totalCryptoUsd = '0';
       

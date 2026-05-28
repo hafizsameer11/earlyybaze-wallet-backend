@@ -14,6 +14,7 @@ class ExchangeRate extends BaseModel
         'currency',
         'status',
         'rate_naira',
+        'rate_zar',
         'rate_usd',
     ];
 

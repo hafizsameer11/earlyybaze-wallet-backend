@@ -28,7 +28,7 @@ class InAppNotificationRepository
     {
         $users=User::where('role', 'user')->get();
         foreach ($users as $user) {
-            $this->notificationService->sendToUserById($user->id, $data['title'], $data['message']);
+            $this->notificationService->notifyUser($user->id, $data['title'], $data['message'], 'announcement');
         }
 
         return InAppNotification::create($data); // Create a new notification

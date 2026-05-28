@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\SupportReply;
 use App\Models\SupportTicket;
+use App\Services\NotificationService;
 
 class SupportReplyRepository
 {
@@ -47,7 +48,15 @@ class SupportReplyRepository
             $data['attachment'] = $path;
         }
         $data['sender_type'] = 'support';
-        return SupportReply::create($data);
+        $reply = SupportReply::create($data);
+        app(NotificationService::class)->notifyUser(
+            (int) $ticket->user_id,
+            'Support reply',
+            'You have a new reply on your support ticket.',
+            'support_reply'
+        );
+
+        return $reply;
     }
     public function getAllByTicket($ticketId)
     {

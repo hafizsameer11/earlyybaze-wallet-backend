@@ -194,10 +194,11 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                     'user_id' => $lockedAccount->user_id,
                 ]);
 
-                $notificationService->sendToUserById(
-                    $lockedAccount->user_id,
-                    "You have received {$amount} {$currency}",
-                    'Your amount is being processed'
+                $notificationService->notifyUser(
+                    (int) $lockedAccount->user_id,
+                    'Deposit received',
+                    "You received {$amount} {$currency}. It has been credited to your wallet.",
+                    'deposit'
                 );
 
                 $transaction = $transactionRepository->create(data: [

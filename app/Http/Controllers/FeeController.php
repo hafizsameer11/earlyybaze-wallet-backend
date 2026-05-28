@@ -84,9 +84,11 @@ class FeeController extends Controller
 {
     try {
         $amount = $request->amount;
+        $currency = \App\Services\FiatBalanceService::normalizeCurrency($request->all());
+        $feeType = \App\Services\FiatBalanceService::withdrawFeeType($currency);
 
-        // latest withdraw fee config
-        $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
+        $fee = Fee::where('type', $feeType)->orderByDesc('id')->first()
+            ?? Fee::where('type', 'withdraw')->orderByDesc('id')->first();
 
         if (!$fee) {
             throw new Exception("No withdraw fee defined.");
@@ -104,6 +106,7 @@ class FeeController extends Controller
         $data = [
             'fee'       => $calculatedFee,
             'amount'    => $amount,
+            'currency'  => $currency,
             'feeObject' => $fee,
             'breakdown' => [
                 'percentage_fee' => $percentageFee,
