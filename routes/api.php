@@ -221,7 +221,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
         Route::post('/update-exchange-rate/{id}', [ExchangeRateController::class, 'update']);
         Route::get('/get-ngn-exchange-rate', [ExchangeRateController::class, 'getNgNexchangeRate']);
-        Route::get('/get-zar-exchange-rate', fn () => app(ExchangeRateController::class)->getByCurrency('ZAR'));
+        Route::get('/get-zar-exchange-rate', [ExchangeRateController::class, 'getZarExchangeRate']);
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);

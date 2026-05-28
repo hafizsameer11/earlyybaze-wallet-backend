@@ -56,6 +56,17 @@ class ExchangeRateController extends Controller
         $exchangeRate = $this->exchangeRateService->getByCurrency('NGN');
         return    ResponseHelper::success($exchangeRate, 'Exchange rate fetched successfully', 200);
     }
+
+    public function getZarExchangeRate()
+    {
+        try {
+            $exchangeRate = $this->exchangeRateService->getByCurrency('ZAR');
+
+            return ResponseHelper::success($exchangeRate, 'Exchange rate fetched successfully', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
     public function getByCurrency($currency)
     {
         try {
