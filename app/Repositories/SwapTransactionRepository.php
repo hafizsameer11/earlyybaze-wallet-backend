@@ -6,13 +6,9 @@ use App\Models\ExchangeRate;
 use App\Models\Fee;
 use App\Models\MinimumTrade;
 use App\Models\SwapTransaction;
-use App\Models\Transaction;
-use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
-use App\Support\FiatExchangeHelper;
-use App\Services\NotificationService;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Exception;
@@ -24,98 +20,92 @@ use Illuminate\Support\Facades\Log;
 class SwapTransactionRepository
 {
     protected $transactionService, $tatumService;
+
     public function __construct(transactionService $transactionService, TatumService $tatumService)
     {
         $this->transactionService = $transactionService;
         $this->tatumService = $tatumService;
     }
+
     public function swap(array $data)
     {
         try {
-            // Use database transaction to ensure atomicity and prevent race conditions
             return DB::transaction(function () use ($data) {
-                // Extract necessary parameters
                 $currency = $data['currency'];
                 $network = $data['network'];
                 $amount = $data['amount'];
 
-                // Fetch fee
                 $fee = Fee::where('type', 'swap')->orderBy('created_at', 'desc')->first();
-                if (!$fee) {
+                if (! $fee) {
                     throw new Exception('Swap fee not found.');
                 }
                 $fixedFee = $fee->amount;
                 $percentageFee = $fee->percentage;
 
-                // Calculate fee
                 $percentageFeeAmount = bcmul($amount, $percentageFee, 8);
                 $percentageFeeConverted = bcdiv($percentageFeeAmount, 100, 8);
                 $totalFee = bcadd($fixedFee, $percentageFeeConverted, 8);
 
-                $fiatCurrency = FiatExchangeHelper::normalizeFiat($data['fiat_currency'] ?? 'NGN');
-
                 $exchangeRate = ExchangeRate::where('currency', $currency)->orderBy('created_at', 'desc')->firstOrFail();
                 $exchangeRatenaira = ExchangeRate::where('currency', 'NGN')->latest()->firstOrFail();
-                $exchangeRateZar = ExchangeRate::where('currency', 'ZAR')->latest()->first();
-                if ($fiatCurrency === 'ZAR' && ! $exchangeRateZar) {
-                    throw new Exception('ZAR exchange rate not configured. Add a ZAR row in admin exchange rates.');
-                }
-                Log::info('exchange rate', [$exchangeRate, 'fiat' => $fiatCurrency]);
-                // Fee in token and converted currencies
+                Log::info('exchange rate', [$exchangeRate]);
+
                 $miniumumTrade = MinimumTrade::where('type', 'swap')->latest()->first();
-                if (!$miniumumTrade) {
+                if (! $miniumumTrade) {
                     throw new Exception('Minimum trade amount not found.');
                 }
                 $miniumumTradeAmount = $miniumumTrade->amount;
+
+                if (bccomp((string) $exchangeRate->rate_usd, '0', 8) <= 0) {
+                    throw new Exception('Invalid asset USD rate for '.$currency.'.');
+                }
+                if (bccomp((string) $exchangeRatenaira->rate_naira, '0', 8) <= 0) {
+                    throw new Exception('Invalid NGN exchange rate.');
+                }
+
                 $feeCurrency = bcdiv($totalFee, $exchangeRate->rate_usd, 8);
                 $amountUsd = bcmul($amount, $exchangeRate->rate_usd, 8);
-                $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
-                $amountZar = $exchangeRateZar
-                    ? FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR')
-                    : '0';
+                $amountNaira = bcmul($amountUsd, (string) $exchangeRatenaira->rate_naira, 8);
                 $feeNaira = bcmul($totalFee, (string) $exchangeRatenaira->rate, 8);
+
+                $this->assertSwapAmountsAreSane(
+                    $currency,
+                    (string) $amount,
+                    $amountUsd,
+                    $amountNaira,
+                    (string) $exchangeRatenaira->rate_naira,
+                    $exchangeRate
+                );
+
                 if (bccomp($amountUsd, $miniumumTradeAmount, 8) < 0) {
-                    throw new Exception('Minimum trade amount is ' . $miniumumTradeAmount);
+                    throw new Exception('Minimum trade amount is '.$miniumumTradeAmount);
                 }
+
                 $data['amount_usd'] = $amountUsd;
                 $data['amount_naira'] = $amountNaira;
-                $data['amount_zar'] = $amountZar;
-                $data['fiat_currency'] = $fiatCurrency;
                 $data['fee_naira'] = $feeNaira;
                 $data['fee'] = $feeCurrency;
-                $data['exchange_rate'] = $fiatCurrency === 'ZAR'
-                    ? (string) ($exchangeRateZar->rate ?? '0')
-                    : (string) $exchangeRatenaira->rate_naira;
+                $data['exchange_rate'] = $exchangeRatenaira->rate_naira;
 
-                $reference = 'EarlyBaze' . time();
-                Log::info("swap data", [$data]);
-                // Get admin and user
-                // $admin = User::where('email', 'admin@gmail.com')->firstOrFail();
+                $reference = 'EarlyBaze'.time();
+                Log::info('swap data', [$data]);
+
                 $user = Auth::user();
 
-                // Lock the virtual account row to prevent concurrent swaps
                 $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
                     ->where('currency', $currency)
                     ->where('blockchain', $network)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                // Calculate total to deduct (amount + fee)
                 $totalToDeduct = bcadd($amount, $feeCurrency, 8);
-                Log::info("total to deduct", [$totalToDeduct]);
-                
-                // Get current available balance
+                Log::info('total to deduct', [$totalToDeduct]);
+
                 $currentBalance = (string) $userVirtualAccount->available_balance;
-                
-                // Check if current balance is sufficient (without checking pending swaps)
                 if (bccomp($currentBalance, $totalToDeduct, 8) < 0) {
                     throw new Exception('Insufficient balance for swap.');
                 }
 
-                // Note: Balance is NOT deducted here - it's deducted in completeSwapTransaction()
-                // This is intentional as the swap is created with 'pending' status first
-
-                // Save transaction record
                 $transaction = $this->transactionService->create([
                     'type' => 'swap',
                     'amount' => $totalToDeduct,
@@ -124,27 +114,18 @@ class SwapTransactionRepository
                     'network' => $network,
                     'reference' => $reference,
                     'user_id' => $user->id,
-                    'amount_usd' => $amountUsd
+                    'amount_usd' => $amountUsd,
                 ]);
 
-                // Save swap transaction
                 $data['status'] = 'pending';
                 $data['user_id'] = $user->id;
                 $data['reference'] = $reference;
                 $data['transaction_id'] = $transaction->id;
-                $swapTransaction = SwapTransaction::create($data);
 
-                app(NotificationService::class)->notifyUser(
-                    (int) $user->id,
-                    'Swap submitted',
-                    "Your swap of {$amount} {$currency} is pending completion.",
-                    'swap_pending'
-                );
-
-                return $swapTransaction;
+                return SwapTransaction::create($data);
             });
         } catch (Exception $e) {
-            Log::error("Swap Failed: " . $e->getMessage());
+            Log::error('Swap Failed: '.$e->getMessage());
             throw new Exception($e->getMessage());
         }
     }
@@ -152,139 +133,145 @@ class SwapTransactionRepository
     public function singleSwapTransaction($id)
     {
         $swap = SwapTransaction::where('transaction_id', $id)->first();
-        //add currency symbol with it
-        if (!$swap) {
+        if (! $swap) {
             throw new Exception('Transaction not found.');
         }
         $currencySymbol = WalletCurrency::where('currency', $swap->currency)->first();
         $swap->symbol = $currencySymbol->symbol;
+
         return $swap;
     }
-    // public function completeSwapTransaction($id)
-    // {
-    //     $swap = SwapTransaction::where('id', $id)->first();
-    //     if (!$swap) {
-    //         throw new Exception('Transaction not found.');
-    //     }
-    //     $user = Auth::user();
-    //     $userVirtualAccount = VirtualAccount::where('user_id', $user->id)
-    //         ->where('currency', $swap->currency)
-    //         ->where('blockchain', $swap->network)
-    //         ->firstOrFail();
-    //     $amountNaira = $swap->amount_naira;
-    //     $amount = $swap->amount;
 
-    //     Log::info("bcsub inputs", [
-    //         'available_balance' => $userVirtualAccount->available_balance,
-    //         'amount_raw' => $amount,
-    //         'amount_dump' => var_export($amount, true)
-    //     ]);
-    //     if (strpos(strtolower($amount), 'e') !== false) {
-    //         $amount = sprintf('%.8f', (float) $amount); // or more decimal precision as needed
-    //     }
+    public function completeSwapTransaction($id)
+    {
+        $attempts = 0;
+        retry:
+        try {
+            return DB::transaction(function () use ($id) {
+                $swap = SwapTransaction::where('id', $id)->lockForUpdate()->first();
+                if (! $swap) {
+                    throw new Exception('Transaction not found.');
+                }
 
-    //     $userVirtualAccount->available_balance = bcsub($userVirtualAccount->available_balance, $amount, 8);
+                if ($swap->status !== 'pending') {
+                    return $swap;
+                }
 
+                $userId = $swap->user_id;
 
-    //     $userVirtualAccount->save();
-    //     $userAccount = UserAccount::where('user_id', $user->id)->first();
-    //     if ($userAccount) {
-    //         $userAccount->naira_balance = bcadd($userAccount->naira_balance, $amountNaira, 8);
-    //         $userAccount->save();
-    //     }
-    //     $swap->status = 'completed';
-    //     $swap->save();
-    //     app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($swap);
+                $va = VirtualAccount::where('user_id', $userId)
+                    ->where('currency', $swap->currency)
+                    ->where('blockchain', $swap->network)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-    //     return $swap;
-    // }
+                $amount = (string) $swap->amount;
+                $amountNaira = (string) $swap->amount_naira;
 
-public function completeSwapTransaction($id)
-{
-    $attempts = 0;
-    retry:
-    try {
-        return DB::transaction(function () use ($id) {
-            // 1) lock swap
-            $swap = SwapTransaction::where('id', $id)->lockForUpdate()->first();
-            if (!$swap) throw new Exception('Transaction not found.');
+                $ngnRow = ExchangeRate::where('currency', 'NGN')->latest()->first();
+                if ($ngnRow) {
+                    $this->assertSwapAmountsAreSane(
+                        (string) $swap->currency,
+                        (string) $swap->amount,
+                        (string) $swap->amount_usd,
+                        $amountNaira,
+                        (string) $ngnRow->rate_naira,
+                        ExchangeRate::where('currency', $swap->currency)->orderByDesc('created_at')->first()
+                    );
+                }
 
-            if ($swap->status !== 'pending') return $swap;
+                if (stripos($amount, 'e') !== false) {
+                    $amount = sprintf('%.8f', (float) $amount);
+                }
 
-            $userId = $swap->user_id;
+                if (bccomp($va->available_balance, $amount, 8) < 0) {
+                    throw new Exception('Insufficient balance during completion.');
+                }
 
-            // 2) lock VA
-            $va = VirtualAccount::where('user_id', $userId)
-                ->where('currency', $swap->currency)
-                ->where('blockchain', $swap->network)
-                ->lockForUpdate()
-                ->firstOrFail();
+                $va->available_balance = bcsub($va->available_balance, $amount, 8);
+                $va->save();
 
-            // 3) normalize amounts
-            $amount       = (string)$swap->amount;
-            $fiatCurrency = FiatExchangeHelper::normalizeFiat($swap->fiat_currency ?? 'NGN');
-            $amountFiat = $fiatCurrency === 'ZAR'
-                ? (string) ($swap->amount_zar ?? '0')
-                : (string) $swap->amount_naira;
+                $ua = UserAccount::where('user_id', $userId)->lockForUpdate()->first();
+                if (! $ua) {
+                    $ua = new UserAccount(['user_id' => $userId, 'naira_balance' => '0.00000000']);
+                }
+                $ua->naira_balance = bcadd((string) $ua->naira_balance, $amountNaira, 8);
+                $ua->save();
 
-            if (stripos($amount, 'e') !== false) {
-                $amount = sprintf('%.8f', (float)$amount);
-            }
+                $updated = SwapTransaction::where('id', $id)->where('status', 'pending')
+                    ->update(['status' => 'completed']);
+                if ($updated !== 1) {
+                    throw new Exception('Swap completion lost the status race.');
+                }
 
-            // TODO: if fee must also be deducted, compute $totalToDeduct here and use it instead of $amount
-            if (bccomp($va->available_balance, $amount, 8) < 0) {
-                throw new Exception('Insufficient balance during completion.');
-            }
+                DB::afterCommit(function () use ($id) {
+                    $fresh = SwapTransaction::find($id);
+                    app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($fresh);
+                });
 
-            // 4) apply VA debit
-            $va->available_balance = bcsub($va->available_balance, $amount, 8);
-            $va->save();
-
-            // 5) lock/create user account and credit fiat wallet
-            $ua = UserAccount::where('user_id', $userId)->lockForUpdate()->first();
-            if (! $ua) {
-                $ua = new UserAccount([
-                    'user_id' => $userId,
-                    'naira_balance' => '0.00000000',
-                    'zar_balance' => '0.00000000',
-                ]);
-            }
-            if ($fiatCurrency === 'ZAR') {
-                $ua->zar_balance = bcadd((string) ($ua->zar_balance ?? '0'), $amountFiat, 8);
-            } else {
-                $ua->naira_balance = bcadd((string) $ua->naira_balance, $amountFiat, 8);
-            }
-            $ua->save();
-
-            // 6) flip statuses atomically
-            $updated = SwapTransaction::where('id', $id)->where('status', 'pending')
-                ->update(['status' => 'completed']);
-            if ($updated !== 1) throw new Exception('Swap completion lost the status race.');
-
-            // If you also have a transactions row:
-            // Transaction::where('id', $swap->transaction_id)->where('status', 'pending')
-            //     ->update(['status' => 'completed']);
-
-            DB::afterCommit(function () use ($id, $userId, $amountFiat, $fiatCurrency) {
-                $fresh = SwapTransaction::find($id);
-                app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($fresh);
-                $symbol = $fiatCurrency === 'ZAR' ? 'R' : '₦';
-                app(NotificationService::class)->notifyUser(
-                    (int) $userId,
-                    'Swap completed',
-                    'Your swap completed. '.$symbol.number_format((float) $amountFiat, 2).' credited to your '.($fiatCurrency === 'ZAR' ? 'ZAR' : 'naira').' wallet.',
-                    'swap_completed'
-                );
+                return $swap->fresh();
             });
-
-            return $swap->fresh();
-        });
-    } catch (QueryException $e) {
-        if (str_contains($e->getMessage(), 'Deadlock found') && $attempts++ < 3) {
-            usleep(100000);
-            goto retry;
+        } catch (QueryException $e) {
+            if (str_contains($e->getMessage(), 'Deadlock found') && $attempts++ < 3) {
+                usleep(100000);
+                goto retry;
+            }
+            throw $e;
         }
-        throw $e;
     }
-}
+
+    /**
+     * Safety guard — blocks bad credits before they hit user wallets.
+     * Catches corrupted rate_usd (e.g. USDT treated as $127/coin → 78M naira).
+     */
+    private function assertSwapAmountsAreSane(
+        string $currency,
+        string $coinAmount,
+        string $amountUsd,
+        string $amountNaira,
+        string $ngnPerUsd,
+        ?ExchangeRate $cryptoRow = null
+    ): void {
+        if (bccomp($amountUsd, '0', 8) <= 0 || bccomp($coinAmount, '0', 8) <= 0) {
+            throw new Exception('Invalid swap amount.');
+        }
+        if (bccomp($ngnPerUsd, '0', 8) <= 0) {
+            throw new Exception('Invalid NGN exchange rate.');
+        }
+
+        $expectedNaira = bcmul($amountUsd, $ngnPerUsd, 8);
+        $nairaDiff = bcsub($amountNaira, $expectedNaira, 8);
+        if ($nairaDiff[0] === '-') {
+            $nairaDiff = substr($nairaDiff, 1);
+        }
+        $nairaTolerance = bcadd(bcmul($expectedNaira, '0.01', 8), '1', 8);
+        if (bccomp($nairaDiff, $nairaTolerance, 8) > 0) {
+            Log::error('Swap naira mismatch blocked', compact('currency', 'coinAmount', 'amountUsd', 'amountNaira', 'ngnPerUsd', 'expectedNaira'));
+            throw new Exception('Swap naira amount does not match the NGN exchange rate.');
+        }
+
+        if ($this->isUsdStablecoin($currency)) {
+            $usdPerCoin = bcdiv($amountUsd, $coinAmount, 8);
+            if (bccomp($usdPerCoin, '0.95', 8) < 0 || bccomp($usdPerCoin, '1.05', 8) > 0) {
+                Log::error('Stablecoin rate_usd out of range — swap blocked', [
+                    'currency' => $currency,
+                    'coinAmount' => $coinAmount,
+                    'amountUsd' => $amountUsd,
+                    'usdPerCoin' => $usdPerCoin,
+                    'crypto_rate_usd' => $cryptoRow?->rate_usd,
+                ]);
+                throw new Exception('Invalid stablecoin USD rate for this asset. Please contact support.');
+            }
+        }
+    }
+
+    private function isUsdStablecoin(string $currency): bool
+    {
+        $c = strtoupper($currency);
+
+        return str_contains($c, 'USDT')
+            || str_contains($c, 'USDC')
+            || str_contains($c, 'DAI')
+            || str_contains($c, 'BUSD');
+    }
 }

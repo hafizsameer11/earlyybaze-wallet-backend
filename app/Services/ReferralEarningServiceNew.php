@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\UserAccount;
 use App\Models\ReferalEarning;
 use App\Models\ReferalPayOut;
 use App\Models\SwapTransaction;
@@ -54,6 +55,14 @@ class ReferralEarningServiceNew
                 'created_at'          => $swap->created_at, // preserves month alignment
                 'updated_at'          => now(),
             ]);
+
+            $userAccount = UserAccount::firstOrCreate(['user_id' => $referrer->id]);
+            $userAccount->referral_commission_usdt = bcadd(
+                (string) ($userAccount->referral_commission_usdt ?? '0'),
+                self::BONUS_USD,
+                8
+            );
+            $userAccount->save();
 
             // 2) Keep current month payout row in sync (optional but nice UX)
             $monthKey     = Carbon::parse($swap->created_at)->format('Y-m');

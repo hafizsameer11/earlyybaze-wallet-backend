@@ -12,6 +12,7 @@ class UserAccount extends BaseModel
         'user_id',
         'account_number',
         'referral_earning_naira',
+        'referral_commission_usdt',
         'naira_balance',
         'zar_balance',
     ];

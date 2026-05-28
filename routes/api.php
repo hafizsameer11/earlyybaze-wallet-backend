@@ -32,6 +32,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\MarketDataController;
 use App\Http\Controllers\MasterWalletController;
 use App\Http\Controllers\ReferalPaymentController;
+use App\Http\Controllers\ReferralCommissionController;
 use App\Http\Controllers\RefferalEarningController;
 use App\Http\Controllers\SimpleWithdrawalController;
 use App\Http\Controllers\TronController;
@@ -244,6 +245,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('refferal/get-all-new', [RefferalEarningController::class, 'getUserReferralSummary']); // change with getrefferalsummary when pushing to live
     Route::prefix('v3')->group(function () {
         Route::get('referral/summary', [RefferalEarningController::class, 'getUserReferralSummary']);
+        Route::get('referral/transfer-options', [ReferralCommissionController::class, 'transferOptions']);
+        Route::post('referral/transfer', [ReferralCommissionController::class, 'transfer']);
         Route::get('notification/get-all', [InAppNotificationController::class, 'index']);
         Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']);
         Route::get('user/balance', [V3UserController::class, 'balance']);
@@ -326,6 +329,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/user/{id}', [RefferalEarningController::class, 'getForUser']);
             Route::post('/mark-paid/{user_id}', [RefferalManagementController::class, 'markAsPaid']);
             Route::post('/mark-paid-bulk', [RefferalManagementController::class, 'markAsPaidBulk']);
+            Route::post('/payout/{id}/approve', [RefferalManagementController::class, 'approvePayout']);
+            Route::post('/payout/{id}/reject', [RefferalManagementController::class, 'rejectPayout']);
             Route::post('/set-exchange-rate', [RefferalManagementController::class, 'setExchangeRate']);
             Route::get('/wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
             Route::post('/wallet-topup', [RefferalManagementController::class, 'topUpRefferalWallet']);

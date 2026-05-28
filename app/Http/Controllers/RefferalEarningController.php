@@ -6,15 +6,21 @@ use App\Helpers\ResponseHelper;
 use App\Models\ReferalEarning;
 use App\Models\User;
 use App\Services\RefferalEarningService;
+use App\Services\ReferralCommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class RefferalEarningController extends Controller
 {
     protected $refferalEarningService;
-    public function __construct(RefferalEarningService $refferalEarningService)
-    {
+    protected $referralCommissionService;
+
+    public function __construct(
+        RefferalEarningService $refferalEarningService,
+        ReferralCommissionService $referralCommissionService
+    ) {
         $this->refferalEarningService = $refferalEarningService;
+        $this->referralCommissionService = $referralCommissionService;
     }
     public function getForAuthUser()
     {
@@ -39,17 +45,22 @@ class RefferalEarningController extends Controller
             'referal:id,name,profile_picture',
             'swapTransaction:id,amount,amount_usd,status,created_at'
         ])
-            ->where('referal_id', $userId)
+            ->where('user_id', $userId)
             ->orderByDesc('created_at')
             ->get();
+
+        $commissionBalance = (float) $this->referralCommissionService->getAvailableBalance($userId);
 
         if ($refEarnings->isEmpty()) {
             return response()->json([
                 'user_id' => $user->id,
                 'user_name' => $user->name,
                 'user_code' => $user->user_code,
+                'reffralCode' => $user->user_code,
+                'commission_wallet_usd' => $commissionBalance,
                 'referral_summary' => [
                     'total_earned_usd' => 0,
+                    'available_commission_usd' => $commissionBalance,
                     'total_referrals' => 0,
                     'total_swaps' => 0,
                     'referred_users' => [],
@@ -113,9 +124,11 @@ class RefferalEarningController extends Controller
             'user_name' => $user->name,
             'user_code' => $user->user_code,
             'reffralCode' => $user->user_code,
+            'commission_wallet_usd' => $commissionBalance,
 
             'referral_summary' => [
                 'total_earned_usd' => $totalEarnedUsd,
+                'available_commission_usd' => $commissionBalance,
                 'total_referrals'  => $uniqueReferred,
                 'total_swaps'      => $totalSwaps,
                 'referred_users'   => $groupedReferrals,

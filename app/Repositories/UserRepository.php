@@ -448,6 +448,7 @@ class UserRepository
             'img' => asset('storage/'.$user->profile_picture),
             'total_amount_in_dollar' => $user->userAccount->crypto_balance ?? '0',
             'total_amount_in_naira' => $user->userAccount->naira_balance ?? '0',
+            'total_amount_in_rand' => $user->userAccount->zar_balance ?? '0',
             'kyc_status' => $user->kyc_status,
             'user_activity' => $user->userActivity,
             'kycDetails' => $kycdetails,
