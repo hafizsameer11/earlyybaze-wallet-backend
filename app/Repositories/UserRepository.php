@@ -9,7 +9,6 @@ use App\Models\NairaWallet;
 use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
-use App\Services\FiatBalanceService;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -31,23 +30,19 @@ class UserRepository
             $data['profile_picture'] = $path;
         }
 
-        // 👉 Check if a user with this email already exists (including soft-deleted: unique index still blocks inserts)
-        $existingUser = User::withTrashed()->where('email', $data['email'])->first();
+        // 👉 Check if a user with this email already exists
+        $existingUser = User::where('email', $data['email'])->first();
 
         if ($existingUser) {
-            if ($existingUser->trashed()) {
-                throw new Exception(
-                    'This email is tied to a deleted account. Restore that user or use a different email.'
-                );
-            }
             if ($existingUser->otp_verified) {
                 // Already verified → prevent duplicate registration
                 throw new Exception('User already registered.');
-            }
-            // Not verified → update with the new data
-            $existingUser->update($data);
+            } else {
+                // Not verified → update with the new data
+                $existingUser->update($data);
 
-            return $existingUser->fresh(); // return updated instance
+                return $existingUser->fresh(); // return updated instance
+            }
         }
 
         // 👉 No existing user → create a new one
@@ -122,15 +117,7 @@ class UserRepository
 
     public function getuserAssets($userId)
     {
-        $virtualAccounts = VirtualAccount::where('user_id', $userId)
-            ->cryptoOnly()
-            ->with([
-                'walletCurrency',
-                'depositAddresses' => function ($q): void {
-                    $q->where('version', 'v2');
-                },
-            ])
-            ->get();
+        $virtualAccounts = VirtualAccount::where('user_id', $userId)->with('walletCurrency', 'depositAddresses')->get();
         $userAccount = UserAccount::where('user_id', $userId)->first();
         $ngnExchangeRate = ExchangeRate::where('currency', 'NGN')->first();
         $virtualAccounts = $virtualAccounts->map(function ($account) use ($userAccount, $ngnExchangeRate) {
@@ -159,23 +146,6 @@ class UserRepository
                 $amountNGN = $amountUsd * $ngnExchangeRate->rate_usd;
             }
 
-            $depositAddresses = $account->depositAddresses->map(function ($d) {
-                return [
-                    'id' => $d->id,
-                    'virtual_account_id' => $d->virtual_account_id,
-                    'version' => $d->version,
-                    'blockchain' => $d->blockchain,
-                    'currency' => $d->currency,
-                    'address' => $d->address,
-                    'index' => $d->index,
-                    'tatum_v4_chain' => $d->tatum_v4_chain,
-                    'tatum_subscription_native_id' => $d->tatum_subscription_native_id,
-                    'tatum_subscription_fungible_id' => $d->tatum_subscription_fungible_id,
-                    'created_at' => $d->created_at,
-                    'updated_at' => $d->updated_at,
-                ];
-            })->values();
-
             return [
                 'id' => $account->id,
                 'name' => $account->walletCurrency->name,
@@ -185,7 +155,7 @@ class UserRepository
                 'available_balance' => $account->available_balance,
                 'ngn_balance' => $amountNGN ?? null,
                 'account_balance' => $account->account_balance,
-                'deposit_addresses' => $depositAddresses,
+                'deposit_addresses' => $account->depositAddresses,
                 'status' => $account->active == true ? 'active' : 'inactive',
                 'nairaWallet' => $userAccount->naira_balance ?? null,
                 'freezed' => $account->frozen,
@@ -207,9 +177,7 @@ class UserRepository
     public function walletCurrenyforUser($userId)
     {
         // get the wallet currency for the user from the virtual account having balance
-        $walletCurrency = VirtualAccount::where('user_id', $userId)
-            ->cryptoOnly()
-            ->where('available_balance', '>', 0)->with('walletCurrency')->get();
+        $walletCurrency = VirtualAccount::where('user_id', $userId)->where('available_balance', '>', 0)->with('walletCurrency')->get();
         $walletCurrency = $walletCurrency->map(function ($account) {
             return [
                 'balance' => $account->available_balance,
@@ -222,11 +190,7 @@ class UserRepository
 
     public function getDepostiAddress($userId, $currency, $network)
     {
-        if (FiatBalanceService::isLedgerFiat($currency)) {
-            throw new Exception('Fiat wallets (ZAR/NGN) do not use blockchain deposit addresses.');
-        }
-
-        $virtualAccount = VirtualAccount::where('user_id', $userId)->cryptoOnly()->where('currency', $currency)->where('blockchain', $network)->with('depositAddresses')->orderBy('created_at', 'desc')->first();
+        $virtualAccount = VirtualAccount::where('user_id', $userId)->where('currency', $currency)->where('blockchain', $network)->with('depositAddresses')->orderBy('created_at', 'desc')->first();
         if (! $virtualAccount) {
             throw new Exception('No virtual account found');
         }
@@ -243,7 +207,7 @@ class UserRepository
 
     public function allwalletcurrenciesforuser($userId)
     {
-        $walletCurrency = VirtualAccount::where('user_id', $userId)->cryptoOnly()->with('walletCurrency')->get();
+        $walletCurrency = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();
         $walletCurrency = $walletCurrency->map(function ($account) {
             return [
                 'balance' => $account->available_balance,
@@ -390,7 +354,6 @@ class UserRepository
         $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
         $notifications = InAppNotification::all();
         $userVirtualAccounts = VirtualAccount::where('user_id', $userId)
-            ->cryptoOnly()
             ->with('walletCurrency')
             ->get();
 
@@ -399,7 +362,6 @@ class UserRepository
             $userAccount = UserAccount::create([
                 'user_id' => $userId,
                 'naira_balance' => '0',
-                'zar_balance' => '0',
                 'crypto_balance' => '0',
             ]);
         }
@@ -448,7 +410,6 @@ class UserRepository
             'img' => asset('storage/'.$user->profile_picture),
             'total_amount_in_dollar' => $user->userAccount->crypto_balance ?? '0',
             'total_amount_in_naira' => $user->userAccount->naira_balance ?? '0',
-            'total_amount_in_rand' => $user->userAccount->zar_balance ?? '0',
             'kyc_status' => $user->kyc_status,
             'user_activity' => $user->userActivity,
             'kycDetails' => $kycdetails,
@@ -469,7 +430,7 @@ class UserRepository
     public function getUserBalances()
     {
         // ===== VirtualAccount Stats =====
-        $balances = VirtualAccount::cryptoOnly()->with('walletCurrency')
+        $balances = VirtualAccount::with('walletCurrency')
             ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
             ->groupBy('currency_id')
             ->get();
@@ -513,21 +474,6 @@ class UserRepository
             ];
         });
 
-        // ===== ZAR balance stats (user_accounts.zar_balance) =====
-        $zarAccounts = \App\Models\UserAccount::with('user:id,name,email')
-            ->select('user_id', 'zar_balance')
-            ->get();
-
-        $totalRandBalance = $zarAccounts->sum('zar_balance');
-        $randByUser = $zarAccounts->map(function ($item) {
-            return [
-                'user' => $item->user,
-                'rand_balance' => $item->zar_balance,
-            ];
-        });
-        $totalRandWallets = $zarAccounts->count();
-
-        // ===== Final Response =====
         return [
             'balances' => $mapped,
             'total_wallets' => $totalWallets,
@@ -537,25 +483,16 @@ class UserRepository
             'total_naira_balance' => $totalNairaBalance,
             'total_naira_wallets' => $totalNairaWallets,
             'naira_wallets' => $userNairaBalances,
-            'total_rand_balance' => $totalRandBalance,
-            'total_rand_wallets' => $totalRandWallets,
-            'rand_wallets' => $randByUser,
         ];
     }
 
     public function getBalanceByCurrency($currencyId)
     {
-        $walletCurrency = \App\Models\WalletCurrency::find($currencyId);
-        if ($walletCurrency && FiatBalanceService::isLedgerFiat((string) $walletCurrency->currency)) {
-            throw new Exception('Fiat balances (ZAR/NGN) are on user accounts, not virtual accounts.');
-        }
-
-        $virtualAccounts = VirtualAccount::cryptoOnly()->with(['user', 'walletCurrency'])
+        $virtualAccounts = VirtualAccount::with(['user', 'walletCurrency'])
             ->where('currency_id', $currencyId)
             ->get();
 
-        // Get exchange rate for this currency
-        $walletCurrency = $virtualAccounts->first()?->walletCurrency ?? $walletCurrency;
+        $walletCurrency = $virtualAccounts->first()?->walletCurrency;
         $currencyCode = $walletCurrency?->currency;
 
         $exchangeRate = \App\Models\ExchangeRate::latest('created_at')

@@ -9,6 +9,7 @@ use App\Models\SwapTransaction;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use App\Services\NotificationService;
 use App\Services\TatumService;
 use App\Services\transactionService;
 use Exception;
@@ -122,7 +123,18 @@ class SwapTransactionRepository
                 $data['reference'] = $reference;
                 $data['transaction_id'] = $transaction->id;
 
-                return SwapTransaction::create($data);
+                $swapTransaction = SwapTransaction::create($data);
+
+                DB::afterCommit(function () use ($swapTransaction) {
+                    app(NotificationService::class)->notifyUser(
+                        (int) $swapTransaction->user_id,
+                        'Swap submitted',
+                        'Your '.$swapTransaction->currency.' swap is pending. You will receive ₦'.$swapTransaction->amount_naira.' when completed.',
+                        'swap_pending'
+                    );
+                });
+
+                return $swapTransaction;
             });
         } catch (Exception $e) {
             Log::error('Swap Failed: '.$e->getMessage());
@@ -207,6 +219,14 @@ class SwapTransactionRepository
                 DB::afterCommit(function () use ($id) {
                     $fresh = SwapTransaction::find($id);
                     app(\App\Services\ReferralEarningServiceNew::class)->creditOnSwapCompleted($fresh);
+                    if ($fresh) {
+                        app(NotificationService::class)->notifyUser(
+                            (int) $fresh->user_id,
+                            'Swap completed',
+                            'Your swap was completed. ₦'.$fresh->amount_naira.' has been credited to your naira wallet.',
+                            'swap_completed'
+                        );
+                    }
                 });
 
                 return $swap->fresh();

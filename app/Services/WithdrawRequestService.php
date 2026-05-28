@@ -7,13 +7,15 @@ use App\Models\UserAccount;
 use App\Repositories\WithdrawRequestRepository;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 
 class WithdrawRequestService
 {
-    public function __construct(
-        protected WithdrawRequestRepository $WithdrawRequestRepository,
-    ) {}
+    protected $WithdrawRequestRepository;
+
+    public function __construct(WithdrawRequestRepository $WithdrawRequestRepository)
+    {
+        $this->WithdrawRequestRepository = $WithdrawRequestRepository;
+    }
 
     public function all()
     {
@@ -39,28 +41,24 @@ class WithdrawRequestService
             $data['status'] = 'pending';
             $data['reference'] = 'EarlyBaze'.time();
 
-            // Legacy NGN flow — do not pass currency unless column exists (avoids prod migration issues).
-            unset($data['currency']);
-            if (Schema::hasColumn('withdraw_requests', 'currency')) {
-                $data['currency'] = 'NGN';
-            }
+            $amount = $data['amount'];
 
-            $amount = (string) $data['amount'];
-
-            $fee = Fee::where('type', 'withdraw')->orderByDesc('id')->first();
+            $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
             if (! $fee) {
                 throw new Exception('No withdraw fee defined.');
             }
 
-            $percentageFee = bcmul($amount, bcdiv((string) $fee->percentage, '100', 8), 8);
-            $fixedFee = (string) ($fee->amount ?? 0);
+            $percentageFee = bcmul($amount, bcdiv($fee->percentage, '100', 8), 8);
+            $fixedFee = $fee->amount ?? 0;
             $calculatedFee = bcadd($percentageFee, $fixedFee, 8);
 
             $data['fee'] = $calculatedFee;
             $data['total'] = bcadd($amount, $calculatedFee, 8);
 
             $currentBalance = (string) $userAccount->naira_balance;
-            if (bccomp($currentBalance, $data['total'], 8) < 0) {
+            $requiredTotal = $data['total'];
+
+            if (bccomp($currentBalance, $requiredTotal, 8) < 0) {
                 throw new Exception('Insufficient Balance');
             }
 

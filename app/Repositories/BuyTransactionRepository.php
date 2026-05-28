@@ -160,19 +160,23 @@ class BuyTransactionRepository
             ]);
         }
 
-                app(NotificationService::class)->notifyUser(
-                    (int) $user_id,
-                    'Buy order approved',
-                    'Your buy order was approved and crypto has been credited.',
-                    'buy_approved'
-                );
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($user_id) {
+                    app(NotificationService::class)->notifyUser(
+                        (int) $user_id,
+                        'Buy order approved',
+                        'Your buy order was approved and crypto has been credited.',
+                        'buy_approved'
+                    );
+                });
             } elseif (isset($data['status']) && $data['status'] === 'rejected') {
-                app(NotificationService::class)->notifyUser(
-                    (int) $buyTransaction->user_id,
-                    'Buy order rejected',
-                    is_string($data['rejection_reason'] ?? null) ? $data['rejection_reason'] : 'Your buy order was rejected.',
-                    'buy_rejected'
-                );
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($buyTransaction, $data) {
+                    app(NotificationService::class)->notifyUser(
+                        (int) $buyTransaction->user_id,
+                        'Buy order rejected',
+                        is_string($data['rejection_reason'] ?? null) ? $data['rejection_reason'] : 'Your buy order was rejected.',
+                        'buy_rejected'
+                    );
+                });
             }
             
             return $buyTransaction->fresh();

@@ -16,9 +16,10 @@ class ExchangeRateRepository
 {
     public function all()
     {
-        return $this->allByFiatAnchor('NGN');
+        return ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->get();
     }
 
+    /** Used by v3 ZAR endpoints only — not legacy NGN routes. */
     public function allByFiatAnchor(string $fiat): \Illuminate\Database\Eloquent\Collection
     {
         $fiat = FiatExchangeHelper::normalizeFiat($fiat);
@@ -47,21 +48,19 @@ class ExchangeRateRepository
    public function create(array $data)
 {
     if (isset($data['currency_id']) && $data['currency_id'] == 1) {
-        $fiat = strtoupper((string) ($data['currency'] ?? ''));
-        if (! in_array($fiat, ['NGN', 'ZAR'], true)) {
-            throw new \Exception('Fiat anchor rows must be NGN or ZAR when currency_id = 1.');
+        if ($data['currency'] !== 'NGN') {
+            throw new \Exception('Only NGN currency can be created with currency_id = 1.');
         }
         $data['currency_id'] = null;
-        if ($fiat === 'NGN') {
-            $data['rate_naira'] = $data['rate'];
-        } else {
-            $data['rate_zar'] = $data['rate'];
-        }
+        $data['rate_naira'] = $data['rate'];
 
         return ExchangeRate::create($data);
     }
 
-    $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderBy('id', 'desc')->first();
+    $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')
+        ->orderBy('id', 'desc')
+        ->first();
+
     if (! $nairaExchangeRate) {
         throw new \Exception('NGN exchange rate not found.');
     }
@@ -69,11 +68,6 @@ class ExchangeRateRepository
     $data['rate_usd'] = 1 / $data['rate'];
     $usdRate = $data['rate_usd'];
     $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
-
-    $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderBy('id', 'desc')->first();
-    if ($zarExchangeRate) {
-        $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
-    }
 
     return ExchangeRate::create($data);
 }
@@ -95,14 +89,8 @@ class ExchangeRateRepository
             $data['rate_usd'] = 1 / $data['rate'];
             $usdRate = $data['rate_usd'];
             $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
-
-            $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderBy('id', 'desc')->first();
-            if ($zarExchangeRate) {
-                $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
-            }
         }
 
-        // Update the record
         $exchangeRate->update($data);
 
         return $exchangeRate;
@@ -123,7 +111,6 @@ class ExchangeRateRepository
         $exchangeRate->save();
         return $exchangeRate;
     }
-    /** Legacy NGN-only calculation — do not add ZAR or fiat_currency here. */
     public function calculateExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd')
     {
         $exchangeRate = ExchangeRate::where('currency', $currency)->first();
@@ -197,7 +184,7 @@ class ExchangeRateRepository
         ];
     }
 
-    /** v3: NGN or ZAR fiat conversion for swap/send preview. */
+    /** v3 only — ZAR/NGN fiat preview; legacy routes use calculateExchangeRate(). */
     public function calculateFiatExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = 'usd', $fiatCurrency = 'NGN')
     {
         $fiatCurrency = FiatExchangeHelper::normalizeFiat($fiatCurrency);

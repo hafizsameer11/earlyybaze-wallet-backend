@@ -3,8 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\UserAccount;
-use App\Models\UserNotification;
 use App\Models\WithdrawRequest;
+use App\Services\NotificationService;
 
 class WithdrawRequestRepository
 {
@@ -51,6 +51,15 @@ class WithdrawRequestRepository
             $userAccount->naira_balance = $newBalance;
             $userAccount->save();
 
+            \Illuminate\Support\Facades\DB::afterCommit(function () use ($withdraw) {
+                app(NotificationService::class)->notifyUser(
+                    (int) $withdraw->user_id,
+                    'Withdrawal requested',
+                    'Your ₦'.$withdraw->total.' withdrawal is pending review.',
+                    'withdraw_pending'
+                );
+            });
+
             return $withdraw;
         });
     }
@@ -83,11 +92,14 @@ class WithdrawRequestRepository
                     'user_id' => $withdraw->user_id,
                 ]);
 
-                UserNotification::create([
-                    'user_id' => $withdraw->user_id,
-                    'type' => 'withdraw_approved',
-                    'message' => 'Your withdraw request has been approved.',
-                ]);
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($withdraw) {
+                    app(NotificationService::class)->notifyUser(
+                        (int) $withdraw->user_id,
+                        'Withdrawal approved',
+                        'Your withdraw request has been approved.',
+                        'withdraw_approved'
+                    );
+                });
             } elseif ($status == 'rejected') {
                 $withdraw->status = 'rejected';
 
@@ -108,11 +120,14 @@ class WithdrawRequestRepository
                     'withdraw_request_id' => $withdraw->id,
                     'user_id' => $withdraw->user_id,
                 ]);
-                UserNotification::create([
-                    'user_id' => $withdraw->user_id,
-                    'type' => 'withdraw_rejected',
-                    'message' => 'Your withdraw request has been rejected. The amount has been refunded to your account.',
-                ]);
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($withdraw) {
+                    app(NotificationService::class)->notifyUser(
+                        (int) $withdraw->user_id,
+                        'Withdrawal rejected',
+                        'Your withdraw request has been rejected. The amount has been refunded to your account.',
+                        'withdraw_rejected'
+                    );
+                });
             }
 
             return $withdraw->fresh();

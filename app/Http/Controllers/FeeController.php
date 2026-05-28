@@ -84,34 +84,25 @@ class FeeController extends Controller
 {
     try {
         $amount = $request->amount;
-        $currency = \App\Services\FiatBalanceService::normalizeCurrency($request->all());
-        $feeType = \App\Services\FiatBalanceService::withdrawFeeType($currency);
 
-        $fee = Fee::where('type', $feeType)->orderByDesc('id')->first()
-            ?? Fee::where('type', 'withdraw')->orderByDesc('id')->first();
+        $fee = Fee::where('type', 'withdraw')->orderBy('id', 'desc')->first();
 
-        if (!$fee) {
-            throw new Exception("No withdraw fee defined.");
+        if (! $fee) {
+            throw new Exception('No withdraw fee defined.');
         }
 
-        // calculate percentage fee
         $percentageFee = bcmul($amount, bcdiv($fee->percentage, '100', 8), 8);
-
-        // add fixed fee if available (fallback 0)
         $fixedFee = $fee->amount ?? 0;
-
-        // final fee = percentage + fixed
         $calculatedFee = bcadd($percentageFee, $fixedFee, 8);
 
         $data = [
-            'fee'       => $calculatedFee,
-            'amount'    => $amount,
-            'currency'  => $currency,
+            'fee' => $calculatedFee,
+            'amount' => $amount,
             'feeObject' => $fee,
             'breakdown' => [
                 'percentage_fee' => $percentageFee,
-                'fixed_fee'      => $fixedFee
-            ]
+                'fixed_fee' => $fixedFee,
+            ],
         ];
 
         return ResponseHelper::success($data, 'Fee calculated successfully', 200);

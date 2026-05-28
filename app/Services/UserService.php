@@ -83,7 +83,7 @@ class UserService
             ]);
 
             app(NotificationService::class)->notifyUser(
-                $user->id,
+                (int) $user->id,
                 'Welcome to EarlyBaze',
                 'Your account was created. Check your email for the verification code.',
                 'auth'
@@ -160,7 +160,7 @@ class UserService
             dispatch(new ProvisionUserWalletsV2($user, 'otp'));
 
             app(NotificationService::class)->notifyUser(
-                $user->id,
+                (int) $user->id,
                 'Email verified',
                 'Your account is verified. Your wallets are being set up.',
                 'auth'
@@ -189,7 +189,7 @@ class UserService
             }
             $token = $user->createToken('auth_token')->plainTextToken;
             $userData = $user->only(['id', 'email']);
-            $virtualAccounts = $user->virtualAccounts()->cryptoOnly()->select(['id', 'currency', 'blockchain', 'currency_id', 'available_balance', 'account_balance'])->get();
+            $virtualAccounts = $user->virtualAccounts()->select(['id', 'currency', 'blockchain', 'currency_id', 'available_balance', 'account_balance'])->get();
             $virtualAccounts->each(function ($account) {
                 $account->walletCurrency = $account->walletCurrency()
                     ->select(['id', 'price', 'symbol', 'naira_price'])
