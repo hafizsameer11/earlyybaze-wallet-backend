@@ -33,9 +33,9 @@ class UserAccountRepository
         $currencies = WalletCurrency::all();;
 
         $userVirtualAccounts = VirtualAccount::where('user_id', $id)
+            ->cryptoOnly()
             ->with('walletCurrency')
-            ->get()
-            ->filter(fn ($account) => ! FiatBalanceService::isLedgerFiat((string) $account->currency));
+            ->get();
 
         $totalCryptoUsd = '0';
       

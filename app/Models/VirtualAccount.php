@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\FiatBalanceService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class VirtualAccount extends BaseModel
@@ -42,6 +44,17 @@ class VirtualAccount extends BaseModel
     public function walletCurrency()
     {
         return $this->belongsTo(WalletCurrency::class, 'currency_id', 'id');
+    }
+
+    /** Crypto/Tatum ledger accounts only — excludes fiat (ZAR, NGN) on user_accounts. */
+    public function scopeCryptoOnly(Builder $query): Builder
+    {
+        return $query->whereNotIn('currency', ['ZAR', 'RAND', 'NGN', 'NAIRA']);
+    }
+
+    public static function isFiatCurrency(string $currency): bool
+    {
+        return FiatBalanceService::isLedgerFiat($currency);
     }
 
     public function getAvailableBalanceAttribute($value)

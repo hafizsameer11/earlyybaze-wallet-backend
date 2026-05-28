@@ -46,6 +46,9 @@ class CreateVirtualAccount implements ShouldQueue
             $walletCurrencies = WalletCurrency::all();
 
             foreach ($walletCurrencies as $walletCurrency) {
+                if (\App\Services\FiatBalanceService::isLedgerFiat((string) $walletCurrency->currency)) {
+                    continue;
+                }
                 // Fetch the corresponding master wallet for the blockchain
                 $masterWallet = MasterWallet::where('blockchain', $walletCurrency->blockchain)->first();
                 if (!$masterWallet) {

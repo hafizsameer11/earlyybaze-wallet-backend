@@ -62,4 +62,14 @@ class FiatExchangeHelper
 
         return self::usdToFiat($amountUsd, $fiat);
     }
+
+    /** Same as usdToFiatViaCryptoRow but returns null when fiat anchor row is missing (legacy NGN-only flows). */
+    public static function tryUsdToFiatViaCryptoRow(string $amountUsd, ExchangeRate $cryptoRow, string $fiat): ?string
+    {
+        try {
+            return self::usdToFiatViaCryptoRow($amountUsd, $cryptoRow, $fiat);
+        } catch (\Exception) {
+            return null;
+        }
+    }
 }

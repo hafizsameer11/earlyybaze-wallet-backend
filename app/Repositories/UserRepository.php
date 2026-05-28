@@ -9,6 +9,7 @@ use App\Models\NairaWallet;
 use App\Models\User;
 use App\Models\UserAccount;
 use App\Models\VirtualAccount;
+use App\Services\FiatBalanceService;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -122,6 +123,7 @@ class UserRepository
     public function getuserAssets($userId)
     {
         $virtualAccounts = VirtualAccount::where('user_id', $userId)
+            ->cryptoOnly()
             ->with([
                 'walletCurrency',
                 'depositAddresses' => function ($q): void {
@@ -205,7 +207,9 @@ class UserRepository
     public function walletCurrenyforUser($userId)
     {
         // get the wallet currency for the user from the virtual account having balance
-        $walletCurrency = VirtualAccount::where('user_id', $userId)->where('available_balance', '>', 0)->with('walletCurrency')->get();
+        $walletCurrency = VirtualAccount::where('user_id', $userId)
+            ->cryptoOnly()
+            ->where('available_balance', '>', 0)->with('walletCurrency')->get();
         $walletCurrency = $walletCurrency->map(function ($account) {
             return [
                 'balance' => $account->available_balance,
@@ -218,7 +222,11 @@ class UserRepository
 
     public function getDepostiAddress($userId, $currency, $network)
     {
-        $virtualAccount = VirtualAccount::where('user_id', $userId)->where('currency', $currency)->where('blockchain', $network)->with('depositAddresses')->orderBy('created_at', 'desc')->first();
+        if (FiatBalanceService::isLedgerFiat($currency)) {
+            throw new Exception('Fiat wallets (ZAR/NGN) do not use blockchain deposit addresses.');
+        }
+
+        $virtualAccount = VirtualAccount::where('user_id', $userId)->cryptoOnly()->where('currency', $currency)->where('blockchain', $network)->with('depositAddresses')->orderBy('created_at', 'desc')->first();
         if (! $virtualAccount) {
             throw new Exception('No virtual account found');
         }
@@ -235,7 +243,7 @@ class UserRepository
 
     public function allwalletcurrenciesforuser($userId)
     {
-        $walletCurrency = VirtualAccount::where('user_id', $userId)->with('walletCurrency')->get();
+        $walletCurrency = VirtualAccount::where('user_id', $userId)->cryptoOnly()->with('walletCurrency')->get();
         $walletCurrency = $walletCurrency->map(function ($account) {
             return [
                 'balance' => $account->available_balance,
@@ -382,6 +390,7 @@ class UserRepository
         $kycdetails = Kyc::where('user_id', $userId)->latest()->first();
         $notifications = InAppNotification::all();
         $userVirtualAccounts = VirtualAccount::where('user_id', $userId)
+            ->cryptoOnly()
             ->with('walletCurrency')
             ->get();
 
@@ -459,7 +468,7 @@ class UserRepository
     public function getUserBalances()
     {
         // ===== VirtualAccount Stats =====
-        $balances = VirtualAccount::with('walletCurrency')
+        $balances = VirtualAccount::cryptoOnly()->with('walletCurrency')
             ->selectRaw('currency_id, COUNT(*) as account_count, SUM(available_balance) as total_balance')
             ->groupBy('currency_id')
             ->get();
@@ -535,13 +544,17 @@ class UserRepository
 
     public function getBalanceByCurrency($currencyId)
     {
-        // Fetch all virtual accounts for the given currency with their user and walletCurrency relationships
-        $virtualAccounts = VirtualAccount::with(['user', 'walletCurrency'])
+        $walletCurrency = \App\Models\WalletCurrency::find($currencyId);
+        if ($walletCurrency && FiatBalanceService::isLedgerFiat((string) $walletCurrency->currency)) {
+            throw new Exception('Fiat balances (ZAR/NGN) are on user accounts, not virtual accounts.');
+        }
+
+        $virtualAccounts = VirtualAccount::cryptoOnly()->with(['user', 'walletCurrency'])
             ->where('currency_id', $currencyId)
             ->get();
 
         // Get exchange rate for this currency
-        $walletCurrency = $virtualAccounts->first()?->walletCurrency;
+        $walletCurrency = $virtualAccounts->first()?->walletCurrency ?? $walletCurrency;
         $currencyCode = $walletCurrency?->currency;
 
         $exchangeRate = \App\Models\ExchangeRate::latest('created_at')

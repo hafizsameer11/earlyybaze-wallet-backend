@@ -151,7 +151,11 @@ class ExchangeRateRepository
         }
 
         $amountNaira = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'NGN');
-        $amountZar = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR');
+
+        $amountZar = '0.00';
+        if ($fiatCurrency === 'ZAR') {
+            $amountZar = FiatExchangeHelper::usdToFiatViaCryptoRow($amountUsd, $exchangeRate, 'ZAR');
+        }
 
         $amountFiat = $fiatCurrency === 'ZAR' ? $amountZar : $amountNaira;
 
@@ -207,10 +211,11 @@ class ExchangeRateRepository
             'amount'         => $amountCoin,
             'amount_usd'     => $amount_in === 'coin' ? $amountUsd : $amountCoin,
             'amount_naira'   => $amountNaira,
+            'fee_summary'    => $feeSummary,
+        ] + ($fiatCurrency === 'ZAR' ? [
             'amount_zar'     => $amountZar,
             'amount_fiat'    => $amountFiat,
             'fiat_currency'  => $fiatCurrency,
-            'fee_summary'    => $feeSummary,
-        ];
+        ] : []);
     }
 }

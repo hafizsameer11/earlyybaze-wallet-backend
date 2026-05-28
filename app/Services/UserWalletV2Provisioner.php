@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserBlockchainWallet;
 use App\Models\VirtualAccount;
 use App\Models\WalletCurrency;
+use App\Services\FiatBalanceService;
 use App\Support\WalletFlowV2;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,9 @@ class UserWalletV2Provisioner
 
         $byChain = [];
         foreach (WalletCurrency::all() as $wc) {
+            if (FiatBalanceService::isLedgerFiat((string) $wc->currency)) {
+                continue;
+            }
             if (! WalletFlowV2::currencyAllowedForV2($wc)) {
                 continue;
             }
@@ -125,6 +129,9 @@ class UserWalletV2Provisioner
         $fungibleSubCreated = false;
 
         foreach ($currencies as $walletCurrency) {
+            if (FiatBalanceService::isLedgerFiat((string) $walletCurrency->currency)) {
+                continue;
+            }
             $isToken = (bool) ($walletCurrency->is_token ?? false);
 
             $virtualAccount = VirtualAccount::query()
