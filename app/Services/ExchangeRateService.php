@@ -23,15 +23,6 @@ class ExchangeRateService
         }
     }
 
-    public function allByFiatAnchor(string $fiat)
-    {
-        try {
-            return $this->ExchangeRateRepository->allByFiatAnchor($fiat);
-        } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
-        }
-    }
-
     public function find($id)
     {
         try {
@@ -77,16 +68,6 @@ class ExchangeRateService
             return $this->ExchangeRateRepository->calculateExchangeRate($currency, $amount, $type, $to, $amount_in);
         } catch (\Exception $e) {
             Log::error('Error calculating exchange rate: ' . $e->getMessage());
-            throw new \Exception($e->getMessage());
-        }
-    }
-
-    public function calculateFiatExchangeRate($currency, $amount, $type = null, $to = null, $amount_in = null, $fiatCurrency = 'NGN')
-    {
-        try {
-            return $this->ExchangeRateRepository->calculateFiatExchangeRate($currency, $amount, $type, $to, $amount_in, $fiatCurrency);
-        } catch (\Exception $e) {
-            Log::error('Error calculating fiat exchange rate: ' . $e->getMessage());
             throw new \Exception($e->getMessage());
         }
     }

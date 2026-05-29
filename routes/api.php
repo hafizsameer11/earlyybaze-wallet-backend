@@ -46,8 +46,11 @@ use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\V3\V3AdminController;
+use App\Http\Controllers\V3\V3ExchangeRateController;
 use App\Http\Controllers\V3\V3FeeController;
+use App\Http\Controllers\V3\V3SwapController;
 use App\Http\Controllers\V3\V3UserController;
+use App\Http\Controllers\V3\V3WithdrawController;
 use App\Http\Controllers\WithdrawController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -218,12 +221,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::prefix('exchange-rate')->group(function () {
         Route::get('/get-exchange-rates', [ExchangeRateController::class, 'index']);
-        Route::get('/get-zar-exchange-rates', [ExchangeRateController::class, 'indexZar']);
         Route::post('/create-exchange-rate', [ExchangeRateController::class, 'store']);
         Route::get('/get-exchange-rate/{currency}', [ExchangeRateController::class, 'getByCurrency']);
         Route::post('/update-exchange-rate/{id}', [ExchangeRateController::class, 'update']);
         Route::get('/get-ngn-exchange-rate', [ExchangeRateController::class, 'getNgNexchangeRate']);
-        Route::get('/get-zar-exchange-rate', [ExchangeRateController::class, 'getZarExchangeRate']);
         Route::post('/calculate-exchange-rate', [ExchangeRateController::class, 'calculateExchangeRate']);
     });
     Route::post('/fee/calculate-fee', [FeeController::class, 'calculateFee']);
@@ -252,9 +253,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('notification/get-unread', [InAppNotificationController::class, 'getUnreadCount']);
         Route::get('user/balance', [V3UserController::class, 'balance']);
         Route::post('user/push-token', [V3UserController::class, 'setPushToken']);
-        Route::get('exchange-rate/zar', fn () => app(ExchangeRateController::class)->getByCurrency('ZAR'));
+        Route::get('exchange-rate/zar', [V3ExchangeRateController::class, 'getZar']);
+        Route::get('exchange-rate/zar/list', [V3ExchangeRateController::class, 'indexZar']);
+        Route::post('exchange-rate/calculate', [V3ExchangeRateController::class, 'calculate']);
         Route::post('fee/calculate-withdraw-fee', [V3FeeController::class, 'calculateWithdrawFee']);
-        Route::post('exchange-rate/calculate', [ExchangeRateController::class, 'calculateFiatExchangeRate']);
+        Route::post('wallet/swap', [V3SwapController::class, 'swap']);
+        Route::post('wallet/swap-complete/{id}', [V3SwapController::class, 'completeSwapTransaction']);
+        Route::get('wallet/single-swap/{id}', [V3SwapController::class, 'singleSwapTransaction']);
+        Route::post('withdraw/create', [V3WithdrawController::class, 'create']);
     });
     Route::get('user-asset-transaction', [TransactionController::class, 'getUserAssetTransactions']);
     Route::get('notification/get-all', [InAppNotificationController::class, 'index']); // Get all notifications
@@ -445,7 +451,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::get('/get-dashboard-data', [DashboardController::class, 'dashboardData']);
-        Route::get('/exchange-rate/get-zar-exchange-rates', [ExchangeRateController::class, 'indexZar']);
+        Route::get('/exchange-rate/get-zar-exchange-rates', [V3ExchangeRateController::class, 'indexZar']);
 
         Route::prefix('v3')->group(function () {
             Route::get('/dashboard', [V3AdminController::class, 'dashboard']);
@@ -453,9 +459,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/user-balances/get-all', [V3AdminController::class, 'userBalances']);
             Route::get('/reports/swap-summary', [V3AdminController::class, 'swapReport']);
             Route::post('/InAppNotifications/create', [V3AdminController::class, 'createNotification']);
-            Route::get('/exchange-rate/zar', [ExchangeRateController::class, 'indexZar']);
-            Route::post('/exchange-rate/zar', [ExchangeRateController::class, 'store']);
-            Route::post('/exchange-rate/zar/{id}', [ExchangeRateController::class, 'update']);
+            Route::get('/exchange-rate/zar', [V3ExchangeRateController::class, 'indexZar']);
+            Route::post('/exchange-rate/zar', [V3ExchangeRateController::class, 'store']);
+            Route::post('/exchange-rate/zar/{id}', [V3ExchangeRateController::class, 'update']);
+            Route::post('/withdraw/update-status/{id}', [V3WithdrawController::class, 'updateStatus']);
             Route::prefix('newsletters')->group(function () {
                 Route::get('/get-all', [NewsletterController::class, 'index']);
                 Route::post('/create', [V3AdminController::class, 'createNewsletter']);

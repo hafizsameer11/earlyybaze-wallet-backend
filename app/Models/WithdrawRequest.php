@@ -24,6 +24,7 @@ class WithdrawRequest extends BaseModel
         'account_number',
         'send_account',
         'balance_before',
+        'currency',
     ];
 
     /**
