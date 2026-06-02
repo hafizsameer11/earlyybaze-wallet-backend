@@ -37,15 +37,16 @@ class SimpleWithdrawalController extends Controller
         $data = $v->validated();
         $currency = strtoupper($data['currency']);
 
-        // 🔒 Force destination from config
-        $destinations = config('withdrawal_destinations');
-        if (!isset($destinations[$currency])) {
+        // 🔒 Force destination from config/withdrawal_destinations.php (not .env)
+        $destinations = config('withdrawal_destinations', []);
+        $destination = $destinations[$currency] ?? null;
+        if (!is_string($destination) || trim($destination) === '') {
             return response()->json([
                 'success' => false,
                 'message' => "No safe destination configured for {$currency}.",
             ], 400);
         }
-        $destination = $destinations[$currency];
+        $destination = trim($destination);
 
         $res = $svc->flush(
             $currency,

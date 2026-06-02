@@ -27,13 +27,13 @@ class InternalTransferRequest extends FormRequest
             'network' => 'required|string',
             'email' => 'nullable',
             'address' => 'nullable|string',
-            'amount' => 'required|numeric',
+            'amount' => 'required|numeric|gt:0',
 
             'fee_summary' => 'nullable|array',
-            'fee_summary.platform_fee_usd' => 'required_with:fee_summary|numeric',
-            'fee_summary.network_fee_usd' => 'required_with:fee_summary|numeric',
-            'fee_summary.total_fee_usd' => 'required_with:fee_summary|numeric',
-            'fee_summary.amount_after_fee' => 'required_with:fee_summary|numeric',
+            'fee_summary.platform_fee_usd' => 'required_with:fee_summary|numeric|gte:0',
+            'fee_summary.network_fee_usd' => 'required_with:fee_summary|numeric|gte:0',
+            'fee_summary.total_fee_usd' => 'required_with:fee_summary|numeric|gte:0',
+            'fee_summary.amount_after_fee' => 'required_with:fee_summary|numeric|gt:0',
         ];
     }
 

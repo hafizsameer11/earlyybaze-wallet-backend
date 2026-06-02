@@ -120,6 +120,9 @@ class TransactionSendRepository
                 $network = WalletCurrency::where('currency', $currency)->first()->blockchain;
             $email = $data['email'];
                 $amount = (string) $data['amount'];
+                if (bccomp($amount, '0', 8) <= 0) {
+                    throw new \Exception('Amount must be greater than zero');
+                }
             $sendingType = $data['sending_type'];
             $receiver = User::where('email', $email)->first();
             if (!$receiver) {
