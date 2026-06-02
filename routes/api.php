@@ -48,6 +48,7 @@ use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\V3\V3AdminController;
 use App\Http\Controllers\V3\V3ExchangeRateController;
 use App\Http\Controllers\V3\V3FeeController;
+use App\Http\Controllers\V3\V3ReferralLeaderboardController;
 use App\Http\Controllers\V3\V3SwapController;
 use App\Http\Controllers\V3\V3UserController;
 use App\Http\Controllers\V3\V3WithdrawController;
@@ -247,6 +248,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('refferal/get-all-new', [RefferalEarningController::class, 'getUserReferralSummary']); // change with getrefferalsummary when pushing to live
     Route::prefix('v3')->group(function () {
         Route::get('referral/summary', [RefferalEarningController::class, 'getUserReferralSummary']);
+        Route::get('referral/leaderboard', [V3ReferralLeaderboardController::class, 'index']);
         Route::get('referral/transfer-options', [ReferralCommissionController::class, 'transferOptions']);
         Route::post('referral/transfer', [ReferralCommissionController::class, 'transfer']);
         Route::get('notification/get-all', [InAppNotificationController::class, 'index']);
