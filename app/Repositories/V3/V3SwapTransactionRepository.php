@@ -34,7 +34,10 @@ class V3SwapTransactionRepository
             return DB::transaction(function () use ($data) {
                 $currency = $data['currency'];
                 $network = $data['network'];
-                $amount = $data['amount'];
+                $amount = (string) $data['amount'];
+                if (bccomp($amount, '0', 8) <= 0) {
+                    throw new Exception('Amount must be greater than zero');
+                }
                 $fiatCurrency = FiatExchangeHelper::normalizeFiat($data['fiat_currency'] ?? 'ZAR');
 
                 if ($fiatCurrency !== 'ZAR') {

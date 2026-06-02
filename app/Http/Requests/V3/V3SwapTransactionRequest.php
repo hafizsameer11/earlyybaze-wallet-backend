@@ -18,7 +18,7 @@ class V3SwapTransactionRequest extends FormRequest
         return [
             'currency' => 'required|string',
             'network' => 'required|string',
-            'amount' => 'required|numeric',
+            'amount' => 'required|numeric|gt:0',
             'exchange_rate' => 'required',
             'fiat_currency' => 'required|in:ZAR,RAND',
         ];
