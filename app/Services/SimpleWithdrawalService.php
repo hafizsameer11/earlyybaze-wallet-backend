@@ -30,13 +30,31 @@ class SimpleWithdrawalService
 
         $items = $q->get();
         if ($items->isEmpty()) {
-            return ['success' => true, 'message' => "No pending {$currency} items.", 'count' => 0];
+            return [
+                'success' => true,
+                'message' => "No pending {$currency} items.",
+                'count' => 0,
+                'debug' => [
+                    'total_rows' => 0,
+                    'query' => [
+                        'currency' => $currency,
+                        'statuses' => ['inWallet', 'pending'],
+                        'limit' => $limit > 0 ? $limit : null,
+                    ],
+                ],
+            ];
         }
 
         // 2) Group by sender and aggregate
-        $groups = $this->groupBySender($items);
+        $analysis = $this->analyzeFlushItems($items);
+        $groups = $analysis['groups'];
         if (empty($groups)) {
-            return ['success' => false, 'message' => 'No valid items found (missing sender/amount).'];
+            return [
+                'success' => true,
+                'message' => "No flushable {$currency} items found.",
+                'count' => 0,
+                'debug' => $analysis['debug'],
+            ];
         }
 
         // 3) Branch by family
@@ -732,24 +750,204 @@ class SimpleWithdrawalService
 
     private function groupBySender($items): array
     {
+        return $this->analyzeFlushItems($items)['groups'];
+    }
+
+    /**
+     * @return array{groups: array, debug: array}
+     */
+    private function analyzeFlushItems($items): array
+    {
         $groups = [];
+        $debug = [
+            'total_rows' => $items->count(),
+            'grouped_senders' => 0,
+            'skipped_rows' => 0,
+            'valid_rows' => 0,
+            'skip_reasons' => [
+                'missing_sender' => 0,
+                'invalid_amount' => 0,
+            ],
+            'problem_rows' => [],
+            'valid_row_details' => [],
+        ];
+
         foreach ($items as $it) {
             $sender = $this->senderOf($it);
-            $amt    = (float) $it->amount;
+            $amt = (float) $it->amount;
 
-            if (!$sender || $amt <= 0) {
-                Log::info("skipping row and bad sender/amount", [
-                    'row_id' => $it->id,
-                    'sender_candidate' => [$it->transfer_address, $it->deposit_address, $it->address, $it->to_address, $it->from_address],
-                    'amount' => $it->amount,
-                ]);            // Log::channel('withdrawals')->warning('Skipping row: bad sender/amount', );
+            if (! $sender) {
+                $debug['skipped_rows']++;
+                $debug['skip_reasons']['missing_sender']++;
+                $debug['problem_rows'][] = $this->flushRowDebug($it, 'missing_sender');
+                Log::info('Flush skip: missing sender', ['row_id' => $it->id, 'currency' => $it->currency]);
                 continue;
             }
-            if (!isset($groups[$sender])) $groups[$sender] = ['amount' => 0.0, 'ids' => []];
+
+            if ($amt <= 0) {
+                $debug['skipped_rows']++;
+                $debug['skip_reasons']['invalid_amount']++;
+                $debug['problem_rows'][] = $this->flushRowDebug($it, 'invalid_amount');
+                Log::info('Flush skip: invalid amount', ['row_id' => $it->id, 'amount' => $it->amount]);
+                continue;
+            }
+
+            if (! isset($groups[$sender])) {
+                $groups[$sender] = ['amount' => 0.0, 'ids' => []];
+            }
             $groups[$sender]['amount'] += $amt;
-            $groups[$sender]['ids'][]   = $it->id;
+            $groups[$sender]['ids'][] = $it->id;
+
+            $debug['valid_rows']++;
+            $debug['valid_row_details'][] = [
+                'received_asset_id' => $it->id,
+                'sender_address' => $sender,
+                'amount' => $amt,
+                'currency' => $it->currency,
+                'status' => $it->status,
+                'tx_id' => $it->tx_id ?? null,
+                'to_address' => $it->to_address ?? null,
+                'account_id' => $it->account_id ?? null,
+                'user_id' => $it->user_id ?? null,
+            ];
         }
-        return $groups;
+
+        $debug['grouped_senders'] = count($groups);
+        $debug['problem_row_ids'] = array_map(
+            static fn (array $row) => $row['received_asset_id'] ?? $row['row']['id'] ?? null,
+            $debug['problem_rows']
+        );
+
+        return ['groups' => $groups, 'debug' => $debug];
+    }
+
+    private function flushRowDebug($it, string $reason): array
+    {
+        $diagnosis = $this->diagnoseSenderResolution($it);
+
+        return [
+            'received_asset_id' => $it->id,
+            'reason' => $reason,
+            'issue' => $reason === 'missing_sender'
+                ? 'No deposit address could be resolved for this row (not in deposit_addresses or missing links).'
+                : 'Amount must be greater than zero.',
+            'row' => $this->receivedAssetSnapshot($it),
+            'sender_resolution' => $diagnosis,
+        ];
+    }
+
+    private function receivedAssetSnapshot($it): array
+    {
+        return [
+            'id' => $it->id,
+            'account_id' => $it->account_id ?? null,
+            'user_id' => $it->user_id ?? null,
+            'subscription_type' => $it->subscription_type ?? null,
+            'amount' => $it->amount,
+            'currency' => $it->currency ?? null,
+            'status' => $it->status ?? null,
+            'tx_id' => $it->tx_id ?? null,
+            'reference' => $it->reference ?? null,
+            'from_address' => $it->from_address ?? null,
+            'to_address' => $it->to_address ?? null,
+            'transfer_address' => $it->transfer_address ?? null,
+            'transfered_tx' => $it->transfered_tx ?? null,
+            'transfered_amount' => $it->transfered_amount ?? null,
+            'address_to_send' => $it->address_to_send ?? null,
+            'transaction_date' => $it->transaction_date ?? null,
+            'created_at' => $it->created_at?->toDateTimeString(),
+            'updated_at' => $it->updated_at?->toDateTimeString(),
+        ];
+    }
+
+    private function diagnoseSenderResolution($it): array
+    {
+        $fieldMap = [
+            'transfer_address' => $it->transfer_address ?? null,
+            'deposit_address' => $it->deposit_address ?? null,
+            'address' => $it->address ?? null,
+            'to_address' => $it->to_address ?? null,
+            'from_address' => $it->from_address ?? null,
+        ];
+
+        $candidate_checks = [];
+        foreach ($fieldMap as $field => $value) {
+            $candidate_checks[$field] = $this->checkAddressCandidate($value);
+        }
+
+        $accountLookup = ['attempted' => ! empty($it->account_id), 'account_id' => $it->account_id ?? null];
+        if (! empty($it->account_id)) {
+            $va = VirtualAccount::where('account_id', $it->account_id)->first();
+            $accountLookup['virtual_account_found'] = (bool) $va;
+            $accountLookup['virtual_account_id'] = $va?->id;
+            if ($va) {
+                $dep = DepositAddress::where('virtual_account_id', $va->id)->orderByDesc('id')->first();
+                $accountLookup['deposit_address_found'] = (bool) $dep;
+                $accountLookup['deposit_address'] = $dep ? [
+                    'id' => $dep->id,
+                    'address' => $dep->address,
+                    'blockchain' => $dep->blockchain ?? null,
+                ] : null;
+            }
+        }
+
+        $userLookup = ['attempted' => ! empty($it->user_id), 'user_id' => $it->user_id ?? null];
+        if (! empty($it->user_id)) {
+            $chainHints = $this->chainHintsForCurrency($it->currency ?? null);
+            $userLookup['chain_hints'] = $chainHints;
+            $depQuery = DepositAddress::whereHas('virtualAccount', function ($q) use ($it) {
+                $q->where('user_id', $it->user_id);
+            });
+            if (! empty($chainHints)) {
+                $depQuery->where(function ($q) use ($chainHints) {
+                    foreach ($chainHints as $hint) {
+                        $q->orWhereRaw('LOWER(blockchain) = ?', [strtolower($hint)]);
+                    }
+                });
+            }
+            $dep = $depQuery->orderByDesc('id')->first();
+            $userLookup['deposit_address_found'] = (bool) $dep;
+            $userLookup['deposit_address'] = $dep ? [
+                'id' => $dep->id,
+                'address' => $dep->address,
+                'blockchain' => $dep->blockchain ?? null,
+            ] : null;
+        }
+
+        return [
+            'resolved_sender' => $this->senderOf($it),
+            'candidate_checks' => $candidate_checks,
+            'account_id_lookup' => $accountLookup,
+            'user_id_lookup' => $userLookup,
+        ];
+    }
+
+    private function checkAddressCandidate(mixed $value): array
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return ['value' => $value, 'status' => 'empty'];
+        }
+
+        $v = trim($value);
+        if (strlen($v) <= 20) {
+            return ['value' => $v, 'status' => 'too_short', 'min_length' => 21];
+        }
+
+        $dep = DepositAddress::whereRaw('LOWER(address) = ?', [strtolower($v)])->first();
+        if ($dep) {
+            return [
+                'value' => $v,
+                'status' => 'matched',
+                'deposit_address_id' => $dep->id,
+                'canonical_address' => $dep->address,
+                'blockchain' => $dep->blockchain ?? null,
+            ];
+        }
+
+        return [
+            'value' => $v,
+            'status' => 'not_in_deposit_addresses',
+        ];
     }
 
 
@@ -795,8 +993,12 @@ class SimpleWithdrawalService
             $depQuery = DepositAddress::whereHas('virtualAccount', function ($q) use ($it) {
                 $q->where('user_id', $it->user_id);
             });
-            if (!empty($chainHints)) {
-                $depQuery->whereIn('blockchain', $chainHints);
+            if (! empty($chainHints)) {
+                $depQuery->where(function ($q) use ($chainHints) {
+                    foreach ($chainHints as $hint) {
+                        $q->orWhereRaw('LOWER(blockchain) = ?', [strtolower($hint)]);
+                    }
+                });
             }
             $dep = $depQuery->orderByDesc('id')->first();
             if (!empty($dep?->address)) {
@@ -811,12 +1013,13 @@ class SimpleWithdrawalService
     {
         $c = strtoupper((string) $currency);
         return match ($c) {
-            'ETH', 'USDT', 'USDC', 'USDT_ETH', 'USDC_ETH' => ['eth', 'usdt', 'usdc'],
-            'BNB', 'BSC', 'USDT_BSC', 'USDC_BSC' => ['bsc', 'usdt_bsc', 'usdc_bsc'],
+            'ETH', 'USDT', 'USDC', 'USDT_ETH', 'USDC_ETH' => ['ethereum', 'eth', 'usdt', 'usdc'],
+            'BNB', 'BSC', 'USDT_BSC', 'USDC_BSC' => ['bsc', 'binance', 'bnb', 'usdt_bsc', 'usdc_bsc'],
             'TRON', 'USDT_TRON' => ['tron', 'usdt_tron'],
             'MATIC', 'POLYGON', 'USDT_POLYGON', 'USDC_POLYGON' => ['polygon', 'matic', 'usdt_polygon', 'usdc_polygon'],
             'BTC' => ['bitcoin', 'btc'],
             'LTC' => ['litecoin', 'ltc'],
+            'SOL' => ['solana', 'sol'],
             default => [],
         };
     }

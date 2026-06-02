@@ -57,6 +57,11 @@ class SimpleWithdrawalController extends Controller
         $res['currency'] = $currency;
         $notifier->sendResult('MANUAL FLUSH', $res);
 
-        return response()->json($res, $res['success'] ? 200 : 500);
+        $status = ($res['success'] ?? false) ? 200 : 500;
+        if (($res['count'] ?? null) === 0 && ($res['debug'] ?? null) !== null) {
+            $status = 200;
+        }
+
+        return response()->json($res, $status);
     }
 }
