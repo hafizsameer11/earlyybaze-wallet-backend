@@ -36,4 +36,17 @@ return [
         'from'  => env('TWILIO_PHONE_FROM'),
     ],
 
+    'sentdm' => [
+        'api_key' => env('SENT_DM_API_KEY'),
+        'base_url' => env('SENT_DM_BASE_URL', 'https://api.sent.dm'),
+        'whatsapp_template_id' => env('SENT_DM_WHATSAPP_TEMPLATE_ID'),
+        'template_name' => env('SENT_DM_TEMPLATE_NAME'),
+        'otp_parameter' => env('SENT_DM_OTP_PARAMETER'),
+        'channels' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('SENT_DM_CHANNELS', 'whatsapp'))
+        ))),
+        'sandbox' => filter_var(env('SENT_DM_SANDBOX', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
 ];

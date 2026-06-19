@@ -7,7 +7,7 @@ use App\Mail\OtpMail;
 use App\Models\User;
 use App\Repositories\V3\V3AuthRepository;
 use App\Services\NotificationService;
-use App\Services\TwilioService;
+use App\Services\SentDmService;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +17,7 @@ class V3AuthService
 {
     public function __construct(
         private V3AuthRepository $repository,
-        private TwilioService $twilioService,
+        private SentDmService $sentDmService,
     ) {}
 
     public function register(array $data): array
@@ -25,7 +25,7 @@ class V3AuthService
         $data['password'] = Hash::make($data['password']);
         $data['otp'] = (string) random_int(100000, 999999);
         $data['sms_code'] = (string) random_int(100000, 999999);
-        $data['sms_type'] = 'sms';
+        $data['sms_type'] = 'whatsapp';
         $data['is_number_verified'] = false;
         $data['wallet_flow_version'] = 'v3';
         $data['user_code'] = $this->generateUserCode($data['name']);
@@ -207,11 +207,13 @@ class V3AuthService
 
     private function sendPhoneVerificationCode(User $user): void
     {
-        $message = "Your EarlyBaze verification code is: {$user->sms_code}";
-        $sent = $this->twilioService->sendVerification($user->phone, $message);
+        $sent = $this->sentDmService->sendWhatsAppVerification(
+            $user->phone,
+            (string) $user->sms_code
+        );
 
         if (! $sent) {
-            Log::warning('V3 phone verification SMS failed', [
+            Log::warning('V3 phone verification via Sent.dm failed', [
                 'user_id' => $user->id,
                 'phone' => $user->phone,
             ]);
