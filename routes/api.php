@@ -45,6 +45,7 @@ use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\V3\V3AuthController;
 use App\Http\Controllers\V3\V3AdminController;
 use App\Http\Controllers\V3\V3ExchangeRateController;
 use App\Http\Controllers\V3\V3FeeController;
@@ -131,6 +132,27 @@ Route::prefix('master-wallet')->group(function () {
 Route::prefix('v2/auth')->group(function () {
     Route::post('/register', [AuthController::class, 'registerWalletV2']);
     Route::post('/otp-verification', [AuthController::class, 'otpVerification']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Wallet flow v3 — public auth (phone + email verification; new app only)
+|--------------------------------------------------------------------------
+| POST /api/v3/auth/register
+| POST /api/v3/auth/otp-verification
+| POST /api/v3/auth/phone/send-code
+| POST /api/v3/auth/phone/verify
+| POST /api/v3/auth/resend-otp
+| POST /api/v3/auth/login
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v3/auth')->group(function () {
+    Route::post('/register', [V3AuthController::class, 'register']);
+    Route::post('/otp-verification', [V3AuthController::class, 'verifyEmailOtp']);
+    Route::post('/phone/send-code', [V3AuthController::class, 'sendPhoneCode']);
+    Route::post('/phone/verify', [V3AuthController::class, 'verifyPhoneOtp']);
+    Route::post('/resend-otp', [V3AuthController::class, 'resendEmailOtp']);
+    Route::post('/login', [V3AuthController::class, 'login']);
 });
 
 // Customer route (v1)
