@@ -70,9 +70,15 @@ class V3AuthController extends Controller
     public function sendPhoneCode(V3ResendPhoneOtpRequest $request)
     {
         try {
-            $this->service->sendPhoneCode($request->validated('email'));
+            $delivery = $this->service->sendPhoneCode($request->validated('email'));
 
-            return ResponseHelper::success(null, 'Phone verification code sent successfully', 200);
+            return ResponseHelper::success(
+                ['phone_delivery' => $delivery],
+                ($delivery['success'] ?? false)
+                    ? 'Phone verification code sent successfully'
+                    : 'Phone code generated but delivery failed — check server logs',
+                ($delivery['success'] ?? false) ? 200 : 502
+            );
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         }

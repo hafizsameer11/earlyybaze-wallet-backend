@@ -34,7 +34,7 @@ class V3AuthService
         $user = $this->repository->create($data);
 
         Mail::to($user->email)->send(new OtpMail($user->otp));
-        $this->sendPhoneVerificationCode($user);
+        $phoneDelivery = $this->sendPhoneVerificationCode($user);
 
         $this->repository->createNairaWallet($user);
         $this->repository->createUserAccount($user, $this->generateAccountNumber());
@@ -49,6 +49,7 @@ class V3AuthService
         return $this->publicUserPayload($user, [
             'email_verification_required' => true,
             'phone_verification_required' => true,
+            'phone_delivery' => $phoneDelivery,
         ]);
     }
 
@@ -129,7 +130,7 @@ class V3AuthService
         Mail::to($user->email)->send(new OtpMail($user->otp));
     }
 
-    public function sendPhoneCode(string $email): void
+    public function sendPhoneCode(string $email): array
     {
         $user = $this->findV3User($email);
 
@@ -144,7 +145,7 @@ class V3AuthService
         $user->sms_code = (string) random_int(100000, 999999);
         $user->save();
 
-        $this->sendPhoneVerificationCode($user);
+        return $this->sendPhoneVerificationCode($user);
     }
 
     public function login(array $data): array
@@ -205,19 +206,29 @@ class V3AuthService
         return $this->findV3User($email);
     }
 
-    private function sendPhoneVerificationCode(User $user): void
+    private function sendPhoneVerificationCode(User $user): array
     {
-        $sent = $this->sentDmService->sendWhatsAppVerification(
+        $delivery = $this->sentDmService->sendWhatsAppVerification(
             $user->phone,
             (string) $user->sms_code
         );
 
-        if (! $sent) {
+        if (! ($delivery['success'] ?? false)) {
             Log::warning('V3 phone verification via Sent.dm failed', [
                 'user_id' => $user->id,
                 'phone' => $user->phone,
+                'delivery' => $delivery,
+            ]);
+        } else {
+            Log::info('V3 phone verification queued for user', [
+                'user_id' => $user->id,
+                'phone' => $delivery['phone'] ?? $user->phone,
+                'request_id' => $delivery['request_id'] ?? null,
+                'message_id' => $delivery['message_id'] ?? null,
             ]);
         }
+
+        return $delivery;
     }
 
     private function generateUserCode(string $username): string
@@ -236,7 +247,12 @@ class V3AuthService
 
     public function normalizePhone(string $phone): string
     {
+        $phone = trim($phone);
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        if (str_starts_with($phone, '+') && strlen($digits) >= 8) {
+            return '+'.$digits;
+        }
 
         if (str_starts_with($digits, '234')) {
             return '+'.substr($digits, 0, 13);
@@ -254,11 +270,11 @@ class V3AuthService
             return '+'.$digits;
         }
 
-        if (str_starts_with($phone, '+')) {
-            return $phone;
+        if (str_starts_with($digits, '92') && strlen($digits) >= 10) {
+            return '+'.$digits;
         }
 
-        throw new Exception('Invalid phone number. Use Nigerian format (e.g. 08012345678).');
+        throw new Exception('Invalid phone number. Select country code and enter a valid number.');
     }
 
     private function publicUserPayload(User $user, array $extra = []): array

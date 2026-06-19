@@ -19,24 +19,25 @@ class SentDmService
         return $this->fetchTemplates($apiKey);
     }
 
-    public function sendWhatsAppVerification(string $phone, string $code): bool
+    public function sendWhatsAppVerification(string $phone, string $code): array
     {
         $apiKey = config('services.sentdm.api_key');
         if (empty($apiKey)) {
             Log::error('Sent.dm is not configured (missing SENT_DM_API_KEY)');
 
-            return false;
+            return $this->deliveryResult(false, $phone, error: 'SENT_DM_API_KEY is not configured');
         }
 
         $template = $this->resolveTemplate($apiKey);
         if ($template === null) {
             Log::error('Sent.dm OTP template not found. Set SENT_DM_WHATSAPP_TEMPLATE_ID or verify your Sent account has pre-built OTP templates.');
 
-            return false;
+            return $this->deliveryResult(false, $phone, error: 'No OTP template available on Sent.dm');
         }
 
         $channels = config('services.sentdm.channels', ['whatsapp']);
         $to = $this->formatE164($phone);
+        $sandbox = (bool) config('services.sentdm.sandbox');
 
         $payload = [
             'to' => [$to],
@@ -49,9 +50,16 @@ class SentDmService
             ],
         ];
 
-        if (config('services.sentdm.sandbox')) {
+        if ($sandbox) {
             $payload['sandbox'] = true;
         }
+
+        Log::info('Sent.dm sending phone verification', [
+            'phone' => $to,
+            'template_id' => $template['id'],
+            'channels' => $channels,
+            'sandbox' => $sandbox,
+        ]);
 
         try {
             $response = Http::withHeaders([
@@ -63,41 +71,99 @@ class SentDmService
             );
 
             if (! $response->successful()) {
-                Log::error('Sent.dm WhatsApp verification failed', [
+                $body = $response->json() ?? $response->body();
+                Log::error('Sent.dm phone verification HTTP failed', [
                     'phone' => $to,
                     'template_id' => $template['id'],
                     'status' => $response->status(),
-                    'body' => $response->json() ?? $response->body(),
+                    'body' => $body,
                 ]);
 
-                return false;
+                return $this->deliveryResult(
+                    false,
+                    $to,
+                    $channels,
+                    $template['id'],
+                    sandbox: $sandbox,
+                    error: is_array($body) ? ($body['error']['message'] ?? 'Sent.dm HTTP '.$response->status()) : 'Sent.dm HTTP '.$response->status()
+                );
             }
 
             $body = $response->json();
             if (($body['success'] ?? false) !== true) {
-                Log::error('Sent.dm WhatsApp verification rejected', [
+                Log::error('Sent.dm phone verification rejected', [
                     'phone' => $to,
                     'body' => $body,
                 ]);
 
-                return false;
+                return $this->deliveryResult(
+                    false,
+                    $to,
+                    $channels,
+                    $template['id'],
+                    sandbox: $sandbox,
+                    error: $body['error']['message'] ?? 'Sent.dm rejected the request'
+                );
             }
 
-            Log::info('Sent.dm verification queued', [
+            $messageId = $body['data']['recipients'][0]['message_id'] ?? null;
+            $requestId = $body['meta']['request_id'] ?? null;
+            $status = $body['data']['status'] ?? 'QUEUED';
+
+            Log::info('Sent.dm phone verification queued', [
                 'phone' => $to,
                 'template_id' => $template['id'],
                 'channels' => $channels,
-                'request_id' => $body['meta']['request_id'] ?? null,
+                'request_id' => $requestId,
+                'message_id' => $messageId,
+                'status' => $status,
+                'sandbox' => $sandbox,
             ]);
 
-            return true;
+            return $this->deliveryResult(
+                true,
+                $to,
+                $channels,
+                $template['id'],
+                requestId: $requestId,
+                messageId: $messageId,
+                status: $status,
+                sandbox: $sandbox
+            );
         } catch (\Throwable $e) {
-            Log::error('Sent.dm verification error: '.$e->getMessage(), [
+            Log::error('Sent.dm phone verification exception: '.$e->getMessage(), [
                 'phone' => $to,
             ]);
 
-            return false;
+            return $this->deliveryResult(false, $to, error: $e->getMessage());
         }
+    }
+
+    /**
+     * @param  array<int, string>|null  $channels
+     */
+    private function deliveryResult(
+        bool $success,
+        string $phone,
+        ?array $channels = null,
+        ?string $templateId = null,
+        ?string $requestId = null,
+        ?string $messageId = null,
+        ?string $status = null,
+        bool $sandbox = false,
+        ?string $error = null,
+    ): array {
+        return [
+            'success' => $success,
+            'phone' => $this->formatE164($phone),
+            'channels' => $channels ?? config('services.sentdm.channels', ['whatsapp']),
+            'template_id' => $templateId,
+            'request_id' => $requestId,
+            'message_id' => $messageId,
+            'status' => $status,
+            'sandbox' => $sandbox,
+            'error' => $error,
+        ];
     }
 
     /**
