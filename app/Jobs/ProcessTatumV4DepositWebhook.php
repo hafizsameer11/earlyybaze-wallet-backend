@@ -2,16 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Helpers\ExchangeFeeHelper;
 use App\Models\DepositAddress;
 use App\Models\MasterWallet;
 use App\Models\ReceivedAsset;
-use App\Models\ReceiveTransaction;
 use App\Models\VirtualAccount;
 use App\Models\WebhookResponse;
 use App\Support\AllowedFungibleContracts;
-use App\Repositories\transactionRepository;
-use App\Services\NotificationService;
 use App\Services\RejectedDepositWebhookRecorder;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -31,10 +27,8 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
         public array $data
     ) {}
 
-    public function handle(
-        transactionRepository $transactionRepository,
-        NotificationService $notificationService
-    ): void {
+    public function handle(): void
+    {
         $data = $this->data;
 
         $txId = (string) ($data['txId'] ?? '');
@@ -140,47 +134,19 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
             $amount = $this->inboundAmount($data);
             $currency = strtoupper((string) $account->currency);
             $toAddr = $this->recipientAddress($data) ?? $deposit->address;
+            $txDate = $this->transactionCarbon($data);
+
+            $receivedAsset = null;
 
             DB::transaction(function () use (
-                $data, $account, $amount, $currency, $reference, $txId, $toAddr, $from,
-                $transactionRepository, $notificationService
+                $data, $account, $amount, $currency, $reference, $txId, $toAddr, $from, $txDate, &$receivedAsset
             ) {
-                if (WebhookResponse::where('reference', $reference)->exists()) {
+                if (ReceivedAsset::where('reference', $reference)->exists()) {
                     return;
                 }
 
-                $lockedAccount = VirtualAccount::where('id', $account->id)->lockForUpdate()->first();
-                if (! $lockedAccount) {
-                    throw new \RuntimeException('Virtual account missing');
-                }
-
-                $currentBalance = (string) $lockedAccount->available_balance;
-                $newBalance = bcadd($currentBalance, $amount, 8);
-                $lockedAccount->available_balance = $newBalance;
-                $lockedAccount->save();
-
-                $exchangeRate = ExchangeFeeHelper::caclulateExchangeRate($amount, $currency);
-                $amountUsd = $exchangeRate['amount_usd'];
-
-                $txDate = $this->transactionCarbon($data);
-
-                WebhookResponse::create([
-                    'account_id' => $lockedAccount->account_id,
-                    'subscription_type' => $data['subscriptionType'] ?? null,
-                    'amount' => $amount,
-                    'reference' => $reference,
-                    'currency' => $currency,
-                    'tx_id' => $txId,
-                    'block_height' => $data['blockNumber'] ?? null,
-                    'block_hash' => $data['blockHash'] ?? null,
-                    'from_address' => $from ?? 'not provided',
-                    'to_address' => $toAddr,
-                    'transaction_date' => $txDate,
-                    'index' => $data['logIndex'] ?? null,
-                ]);
-
-                ReceivedAsset::create([
-                    'account_id' => $lockedAccount->account_id,
+                $receivedAsset = ReceivedAsset::create([
+                    'account_id' => $account->account_id,
                     'subscription_type' => $data['subscriptionType'] ?? null,
                     'amount' => $amount,
                     'reference' => $reference,
@@ -189,45 +155,22 @@ class ProcessTatumV4DepositWebhook implements ShouldQueue
                     'from_address' => $from ?? 'not provided',
                     'to_address' => $toAddr,
                     'transaction_date' => $txDate,
-                    'status' => 'inWallet',
+                    'status' => 'processing',
+                    'verification_status' => 'pending',
                     'index' => $data['logIndex'] ?? null,
-                    'user_id' => $lockedAccount->user_id,
-                ]);
-
-                $notificationService->notifyUser(
-                    (int) $lockedAccount->user_id,
-                    'Deposit received',
-                    "You received {$amount} {$currency}. It has been credited to your wallet.",
-                    'deposit'
-                );
-
-                $transaction = $transactionRepository->create(data: [
-                    'type' => 'receive',
-                    'amount' => $amount,
-                    'currency' => $currency,
-                    'status' => 'completed',
-                    'network' => $lockedAccount->blockchain,
-                    'reference' => $reference,
-                    'user_id' => $lockedAccount->user_id,
-                    'amount_usd' => $amountUsd,
-                    'transfer_type' => 'external',
-                ]);
-
-                ReceiveTransaction::create([
-                    'user_id' => $lockedAccount->user_id,
-                    'virtual_account_id' => $lockedAccount->id,
-                    'transaction_id' => $transaction->id,
-                    'transaction_type' => 'on_chain',
-                    'sender_address' => $from ?? '',
-                    'reference' => $reference,
-                    'tx_id' => $txId,
-                    'amount' => $amount,
-                    'currency' => $currency,
-                    'blockchain' => $lockedAccount->blockchain,
-                    'amount_usd' => $amountUsd,
-                    'status' => 'completed',
+                    'user_id' => $account->user_id,
                 ]);
             });
+
+            if ($receivedAsset) {
+                VerifyDepositWebhookJob::dispatch(
+                    $receivedAsset->id,
+                    $data,
+                    $reference,
+                    $deposit->id,
+                    $account->id,
+                );
+            }
         } catch (\Throwable $e) {
             Log::error('ProcessTatumV4DepositWebhook failed', ['error' => $e->getMessage(), 'reference' => $reference]);
         } finally {

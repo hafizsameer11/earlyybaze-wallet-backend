@@ -27,6 +27,14 @@ class ReceivedAsset extends BaseModel
         'gas_fee',
         'address_to_send',
 
+        'verification_status',
+        'flush_status',
+        'verification_error',
+        'verified_at',
+    ];
+
+    protected $casts = [
+        'verified_at' => 'datetime',
     ];
 
     public function user()

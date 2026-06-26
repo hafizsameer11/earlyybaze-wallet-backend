@@ -22,6 +22,8 @@ class SwapTransaction extends BaseModel
         'fee_naira',
         'amount', 'reference', 'network',
         'balance_before',
+        'reversed_fiat',
+        'reversed_crypto',
     ];
 
     public function user()

@@ -44,7 +44,7 @@ return [
         'otp_parameter' => env('SENT_DM_OTP_PARAMETER'),
         'channels' => array_values(array_filter(array_map(
             'trim',
-            explode(',', env('SENT_DM_CHANNELS', 'whatsapp'))
+            explode(',', env('SENT_DM_CHANNELS', 'sms,whatsapp'))
         ))),
         'sandbox' => filter_var(env('SENT_DM_SANDBOX', false), FILTER_VALIDATE_BOOLEAN),
     ],

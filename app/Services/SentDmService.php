@@ -39,14 +39,14 @@ class SentDmService
         $to = $this->formatE164($phone);
         $sandbox = (bool) config('services.sentdm.sandbox');
 
+        $otpParams = $this->buildOtpTemplateParameters($template['otp_parameter'], $code);
+
         $payload = [
             'to' => [$to],
             'channel' => $channels,
             'template' => [
                 'id' => $template['id'],
-                'parameters' => [
-                    $template['otp_parameter'] => $code,
-                ],
+                'parameters' => $otpParams,
             ],
         ];
 
@@ -59,6 +59,7 @@ class SentDmService
             'template_id' => $template['id'],
             'channels' => $channels,
             'sandbox' => $sandbox,
+            'template_parameters' => array_keys($otpParams),
         ]);
 
         try {
@@ -137,6 +138,27 @@ class SentDmService
 
             return $this->deliveryResult(false, $to, error: $e->getMessage());
         }
+    }
+
+    /**
+     * WhatsApp AUTHENTICATION templates often use {{1}} for copy-code buttons
+     * while Sent pre-built templates expose var_1 for the body.
+     *
+     * @return array<string, string>
+     */
+    private function buildOtpTemplateParameters(string $otpParameter, string $code): array
+    {
+        $parameters = [
+            $otpParameter => $code,
+        ];
+
+        foreach (['var_1', '1', 'code'] as $alias) {
+            if (! array_key_exists($alias, $parameters)) {
+                $parameters[$alias] = $code;
+            }
+        }
+
+        return $parameters;
     }
 
     /**

@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminSwapReversalController;
 use App\Http\Controllers\Admin\AmlRuleController;
 use App\Http\Controllers\Admin\AiAuditController;
-use App\Http\Controllers\Admin\AutoFlushController;
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseBackupController;
@@ -388,6 +388,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-all-buy-request', [TransactionManagementController::class, 'getAllBuyRequest']);
             Route::post('/update-buy-transaction/{id}', [TransactionManagementController::class, 'updateBuyTransaction']);
         });
+        Route::prefix('swap-reversals')->group(function (): void {
+            Route::get('/{swapId}/preview', [AdminSwapReversalController::class, 'preview']);
+            Route::post('/{swapId}/execute', [AdminSwapReversalController::class, 'execute']);
+        });
         Route::prefix('withdrawRequest')->group(function (): void {
             Route::get('/get-all', [WithdrawController::class, 'getAllwithdrawRequests']);
             Route::get('/get-single/{id}', [WithdrawController::class, 'getwithdrawRequestStatus']);
@@ -431,10 +435,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/get-single/{id}', [MaintenanceServiceController::class, 'show']);   // Get single service by ID
             Route::post('/update/{id}', [MaintenanceServiceController::class, 'update']);    // Update service
             Route::delete('/delete/{id}', [MaintenanceServiceController::class, 'destroy']); // Delete service
-        });
-        Route::prefix('auto-flush')->group(function () {
-            Route::get('/config', [AutoFlushController::class, 'config']);
-            Route::post('/config', [AutoFlushController::class, 'updateConfig']);
         });
         Route::prefix('ai-audit')->group(function () {
             Route::get('/', [AiAuditController::class, 'index']);
@@ -521,6 +521,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
             Route::get('/rejected-deposits', [AssetController::class, 'getRejectedDeposits']);
             Route::get('/tatum-failures', [AssetController::class, 'getTatumFailures']);
+            Route::get('/verification-failures', [AssetController::class, 'getVerificationFailures']);
+            Route::get('/verification-failures/{id}', [AssetController::class, 'getVerificationFailure']);
+            Route::post('/verification-failures/{id}/approve', [AssetController::class, 'approveVerificationFailure']);
+            Route::post('/verification-failures/{id}/dismiss', [AssetController::class, 'dismissVerificationFailure']);
+            Route::post('/verification-failures/{id}/reverify', [AssetController::class, 'reverifyVerificationFailure']);
             Route::post('/set-admin-transfer', [AssetController::class, 'setAdminTransfer']);
             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);

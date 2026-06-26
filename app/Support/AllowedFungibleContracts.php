@@ -30,6 +30,16 @@ final class AllowedFungibleContracts
 
     public const REJECT_MISSING_CONTRACT = 'missing_contract_address';
 
+    public const REJECT_ON_CHAIN_TX_NOT_FOUND = 'on_chain_tx_not_found';
+
+    public const REJECT_ON_CHAIN_TX_FAILED = 'on_chain_tx_failed';
+
+    public const REJECT_ON_CHAIN_ADDRESS_MISMATCH = 'on_chain_address_mismatch';
+
+    public const REJECT_ON_CHAIN_AMOUNT_MISMATCH = 'on_chain_amount_mismatch';
+
+    public const REJECT_ON_CHAIN_CONTRACT_MISMATCH = 'on_chain_contract_mismatch';
+
     /** Native coin wallets must never be credited from fungible/token webhooks. */
     private const NATIVE_WALLET_CURRENCIES = [
         'ETH', 'BNB', 'BSC', 'BTC', 'TRON', 'TRX', 'LTC', 'MATIC', 'POLYGON',
@@ -152,6 +162,11 @@ final class AllowedFungibleContracts
             self::REJECT_FUNGIBLE_ON_NATIVE_WALLET => 'Token transfer cannot credit native wallet (e.g. fake ETH token)',
             self::REJECT_CONTRACT_WALLET_MISMATCH => 'Token contract does not match user wallet currency',
             self::REJECT_MISSING_CONTRACT => 'Fungible webhook missing contract address',
+            self::REJECT_ON_CHAIN_TX_NOT_FOUND => 'On-chain transaction not found after verification retries',
+            self::REJECT_ON_CHAIN_TX_FAILED => 'On-chain transaction failed or not confirmed',
+            self::REJECT_ON_CHAIN_ADDRESS_MISMATCH => 'On-chain recipient does not match webhook address',
+            self::REJECT_ON_CHAIN_AMOUNT_MISMATCH => 'On-chain amount does not match webhook amount',
+            self::REJECT_ON_CHAIN_CONTRACT_MISMATCH => 'On-chain token contract does not match expected contract',
             default => $code,
         };
     }

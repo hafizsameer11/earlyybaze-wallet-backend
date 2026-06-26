@@ -3,8 +3,11 @@
 
 namespace App\Services;
 
+use App\DTO\OnChainVerificationResult;
 use App\Helpers\BlockChainHelper;
+use App\Jobs\VerifyFlushTransactionJob;
 use App\Models\DepositAddress;
+use App\Services\OnChainVerificationFailureRecorder;
 use App\Models\ReceivedAsset;
 use App\Models\TransferLog;
 use App\Models\MasterWallet;
@@ -20,10 +23,14 @@ class SimpleWithdrawalService
 
     public function flush(string $currency, string $destination, int $limit = 0, bool $dryRun = false): array
     {
-        // 1) Load candidates (simple, no reservations; keep it single-run)
+        // 1) Load candidates (exclude items already submitted for flush / verified on-chain)
         $q = ReceivedAsset::query()
             ->where('currency', $currency)
             ->whereIn('status', ['inWallet', 'pending'])
+            ->where(function ($query) {
+                $query->whereNull('flush_status')
+                    ->orWhere('flush_status', 'failed');
+            })
             ->orderBy('id');
 
         if ($limit > 0) $q->limit($limit);
@@ -101,6 +108,13 @@ class SimpleWithdrawalService
         }
 
         if (empty($fromAddress)) {
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_MISSING_KEY,
+                'LTC: No decryptable inputs for flush',
+            );
+
             return ['success' => false, 'message' => 'LTC: No decryptable inputs'];
         }
 
@@ -118,6 +132,13 @@ class SimpleWithdrawalService
         // dust threshold (conservative)
         $dust = 0.00001;
         if ($send <= $dust) {
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_INSUFFICIENT,
+                'LTC: total after fee below dust',
+            );
+
             return ['success' => false, 'message' => 'LTC: total after fee below dust'];
         }
 
@@ -147,35 +168,57 @@ class SimpleWithdrawalService
             ->timeout(120)->post($base . '/litecoin/transaction', $payload);
 
         if ($resp->failed()) {
-            Log::error('LTC batch failed', ['http' => $resp->status(), 'body' => $resp->json()]);
-            return ['success' => false, 'message' => 'LTC batch failed', 'tatum' => $resp->json(), 'plan' => $plan];
+            $body = $resp->json();
+            Log::error('LTC batch failed', ['http' => $resp->status(), 'body' => $body]);
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_SUBMIT,
+                'LTC batch Tatum request failed',
+                is_array($body) ? $body : ['body' => $resp->body()],
+            );
+
+            return ['success' => false, 'message' => 'LTC batch failed', 'tatum' => $body, 'plan' => $plan];
         }
 
         $body = $resp->json();
         $txId = $body['txId'] ?? null;
         if (!$txId) {
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_MISSING_TXID,
+                'LTC: missing txId in Tatum response',
+                is_array($body) ? $body : [],
+            );
+
             return ['success' => false, 'message' => 'LTC: missing txId in response', 'tatum' => $body, 'plan' => $plan];
         }
 
-        DB::transaction(function () use ($items, $destination, $txId, $body) {
-            TransferLog::create([
-                'from_address' => 'BATCH',
-                'to_address'   => $destination,
-                'amount'       => (float) array_reduce($items->all(), fn($c, $i) => $c + (float)$i->amount, 0),
-                'currency'     => 'LTC',
-                'tx'           => json_encode($body),
-            ]);
-
+        DB::transaction(function () use ($items, $destination, $txId, $agg) {
+            $ids = [];
             foreach ($items as $it) {
                 $sender = $this->senderOf($it);
-                if (!$sender) continue;
-                $it->status            = 'completed';
-                $it->transfer_address  = $sender;
-                $it->transfered_tx     = $txId;
-                $it->transfered_amount = (float)$it->amount;
-                $it->gas_fee           = null;
-                $it->address_to_send   = $destination;
+                if (! $sender) {
+                    continue;
+                }
+                $it->flush_status = 'pending';
+                $it->transfered_tx = $txId;
+                $it->transfer_address = $sender;
+                $it->address_to_send = $destination;
                 $it->save();
+                $ids[] = $it->id;
+            }
+
+            if ($ids !== []) {
+                VerifyFlushTransactionJob::dispatch(
+                    $ids,
+                    'LTC',
+                    $txId,
+                    null,
+                    $destination,
+                    number_format((float) array_reduce($items->all(), fn ($c, $i) => $c + (float) $i->amount, 0), 8, '.', ''),
+                );
             }
         });
 
@@ -212,6 +255,13 @@ class SimpleWithdrawalService
         }
 
         if (empty($fromAddress)) {
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_MISSING_KEY,
+                'BTC: No decryptable inputs for flush',
+            );
+
             return ['success' => false, 'message' => 'BTC: No decryptable inputs'];
         }
 
@@ -386,36 +436,58 @@ class SimpleWithdrawalService
             ->post($base . '/bitcoin/transaction', $payload);
 
         if ($resp->failed()) {
-            Log::error('BTC batch failed', ['http' => $resp->status(), 'body' => $resp->json(), 'plan' => $plan, 'payload' => $payload]);
-            return ['success' => false, 'message' => 'BTC batch failed', 'tatum' => $resp->json(), 'plan' => $plan];
+            $body = $resp->json();
+            Log::error('BTC batch failed', ['http' => $resp->status(), 'body' => $body, 'plan' => $plan, 'payload' => $payload]);
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_SUBMIT,
+                'BTC batch Tatum request failed',
+                is_array($body) ? $body : ['body' => $resp->body()],
+            );
+
+            return ['success' => false, 'message' => 'BTC batch failed', 'tatum' => $body, 'plan' => $plan];
         }
 
         $body = $resp->json();
         $txId = $body['txId'] ?? null;
         if (!$txId) {
+            $this->recordFlushBatchFailure(
+                $items,
+                $destination,
+                OnChainVerificationResult::FAIL_FLUSH_MISSING_TXID,
+                'BTC: missing txId in Tatum response',
+                is_array($body) ? $body : [],
+            );
+
             return ['success' => false, 'message' => 'BTC: missing txId in response', 'tatum' => $body, 'plan' => $plan];
         }
 
         // === 5) Persist logs & mark items ===
-        DB::transaction(function () use ($items, $destination, $txId, $body) {
-            TransferLog::create([
-                'from_address' => 'BATCH',
-                'to_address'   => $destination,
-                'amount'       => (float) array_reduce($items->all(), fn($c, $i) => $c + (float) $i->amount, 0),
-                'currency'     => 'BTC',
-                'tx'           => json_encode($body),
-            ]);
-
+        DB::transaction(function () use ($items, $destination, $txId, $plan) {
+            $ids = [];
             foreach ($items as $it) {
                 $sender = $this->senderOf($it);
-                if (!$sender) continue;
-                $it->status            = 'completed';
-                $it->transfer_address  = $sender;
-                $it->transfered_tx     = $txId;
-                $it->transfered_amount = (float) $it->amount;
-                $it->gas_fee           = null;
-                $it->address_to_send   = $destination;
+                if (! $sender) {
+                    continue;
+                }
+                $it->flush_status = 'pending';
+                $it->transfered_tx = $txId;
+                $it->transfer_address = $sender;
+                $it->address_to_send = $destination;
                 $it->save();
+                $ids[] = $it->id;
+            }
+
+            if ($ids !== []) {
+                VerifyFlushTransactionJob::dispatch(
+                    $ids,
+                    'BTC',
+                    $txId,
+                    null,
+                    $destination,
+                    number_format((float) $plan['toSend'], 8, '.', ''),
+                );
             }
         });
 
@@ -450,6 +522,15 @@ class SimpleWithdrawalService
             $pk = $this->decryptPkForSender($sender);
             if (!$pk) {
                 Log::warning('TRON: missing key', ['sender' => $sender]);
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_MISSING_KEY,
+                    'TRON: missing private key for sender',
+                    null,
+                    number_format((float) $agg['amount'], 8, '.', ''),
+                );
                 $fail++;
                 continue;
             }
@@ -460,6 +541,15 @@ class SimpleWithdrawalService
                 if ($trxBal < $minTrx) {
                     $topOk = $this->topUpTrx($sender, $topupTrx, $apiKey, $base);
                     if (!$topOk) {
+                        $this->recordFlushGroupFailure(
+                            $items,
+                            $sender,
+                            $destination,
+                            OnChainVerificationResult::FAIL_FLUSH_GAS_TOPUP,
+                            'TRON: gas top-up failed before token flush',
+                            null,
+                            number_format((float) $agg['amount'], 8, '.', ''),
+                        );
                         $fail++;
                         continue;
                     }
@@ -490,33 +580,62 @@ class SimpleWithdrawalService
                 ->timeout(90)->post($base . $endpoint, $payload);
 
             if ($resp->failed()) {
-                Log::warning('TRON send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $resp->json()]);
+                $body = $resp->json();
+                Log::warning('TRON send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $body]);
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_SUBMIT,
+                    'TRON flush Tatum request failed',
+                    is_array($body) ? $body : ['body' => $resp->body()],
+                    number_format((float) $agg['amount'], 8, '.', ''),
+                );
                 $fail++;
                 continue;
             }
 
             $body = $resp->json();
             $txId = $body['txId'] ?? $body['txID'] ?? null;
+            if (! $txId) {
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_MISSING_TXID,
+                    'TRON: missing txId in Tatum response',
+                    is_array($body) ? $body : [],
+                    number_format((float) $agg['amount'], 8, '.', ''),
+                );
+                $fail++;
+                continue;
+            }
+
             $txs[] = $txId;
 
-            DB::transaction(function () use ($items, $sender, $destination, $currency, $agg, $body, $txId) {
-                TransferLog::create([
-                    'from_address' => $sender,
-                    'to_address'   => $destination,
-                    'amount'       => (float)$agg['amount'],
-                    'currency'     => $currency,
-                    'tx'           => json_encode($body),
-                ]);
-
+            DB::transaction(function () use ($items, $sender, $destination, $currency, $agg, $txId) {
+                $ids = [];
                 foreach ($items as $it) {
-                    if ($this->senderOf($it) !== $sender) continue;
-                    $it->status            = 'completed';
-                    $it->transfer_address  = $sender;
-                    $it->transfered_tx     = $txId;
-                    $it->transfered_amount = (float)$it->amount;
-                    $it->gas_fee           = null;
-                    $it->address_to_send   = $destination;
+                    if ($this->senderOf($it) !== $sender) {
+                        continue;
+                    }
+                    $it->flush_status = 'pending';
+                    $it->transfered_tx = $txId;
+                    $it->transfer_address = $sender;
+                    $it->address_to_send = $destination;
                     $it->save();
+                    $ids[] = $it->id;
+                }
+
+                if ($ids !== [] && $txId) {
+                    VerifyFlushTransactionJob::dispatch(
+                        $ids,
+                        $currency,
+                        $txId,
+                        $sender,
+                        $destination,
+                        number_format((float) $agg['amount'], 8, '.', ''),
+                    );
                 }
             });
 
@@ -566,6 +685,15 @@ class SimpleWithdrawalService
             $pk = $this->decryptPkForSender($sender);
             if (!$pk) {
                 Log::warning('AB: missing key', ['sender' => $sender]);
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_MISSING_KEY,
+                    'Account-based flush: missing private key for sender',
+                    null,
+                    number_format((float) $agg['amount'], 8, '.', ''),
+                );
                 $fail++;
                 continue;
             }
@@ -575,6 +703,15 @@ class SimpleWithdrawalService
                 $resolved = $this->resolveNativeFlushAmount($sender, $destination, $currency, $map, (float) $agg['amount'], $apiKey, $base);
                 if (!$resolved) {
                     Log::warning('AB: insufficient native balance after gas', ['sender' => $sender, 'ledger_amount' => $agg['amount']]);
+                    $this->recordFlushGroupFailure(
+                        $items,
+                        $sender,
+                        $destination,
+                        OnChainVerificationResult::FAIL_FLUSH_INSUFFICIENT,
+                        'Account-based flush: insufficient native balance after gas reserve',
+                        null,
+                        number_format((float) $agg['amount'], 8, '.', ''),
+                    );
                     $fail++;
                     continue;
                 }
@@ -607,33 +744,65 @@ class SimpleWithdrawalService
                 ->timeout(90)->post($base . $map['endpoint'], $payload);
 
             if ($resp->failed()) {
-                Log::warning('AB send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $resp->json(), 'payload' => array_merge($payload, ['fromPrivateKey' => '***'])]);
+                $body = $resp->json();
+                Log::warning('AB send failed', ['sender' => $sender, 'http' => $resp->status(), 'body' => $body, 'payload' => array_merge($payload, ['fromPrivateKey' => '***'])]);
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_SUBMIT,
+                    'Account-based flush Tatum request failed',
+                    is_array($body) ? $body : ['body' => $resp->body()],
+                    number_format((float) $amount, 8, '.', ''),
+                );
                 $fail++;
                 continue;
             }
 
             $body = $resp->json();
             $txId = $body['txId'] ?? $body['hash'] ?? null;
+            if (! $txId) {
+                $this->recordFlushGroupFailure(
+                    $items,
+                    $sender,
+                    $destination,
+                    OnChainVerificationResult::FAIL_FLUSH_MISSING_TXID,
+                    'Account-based flush: missing txId in Tatum response',
+                    is_array($body) ? $body : [],
+                    number_format((float) $amount, 8, '.', ''),
+                );
+                $fail++;
+                continue;
+            }
+
             $txs[] = $txId;
 
-            DB::transaction(function () use ($items, $sender, $destination, $currency, $amount, $body, $txId, $gasCost) {
-                TransferLog::create([
-                    'from_address' => $sender,
-                    'to_address'   => $destination,
-                    'amount'       => (float) $amount,
-                    'currency'     => $currency,
-                    'tx'           => json_encode($body),
-                ]);
-
+            DB::transaction(function () use ($items, $sender, $destination, $currency, $amount, $txId, $gasCost, $agg) {
+                $ids = $agg['ids'] ?? [];
                 foreach ($items as $it) {
-                    if ($this->senderOf($it) !== $sender) continue;
-                    $it->status            = 'completed';
-                    $it->transfer_address  = $sender;
-                    $it->transfered_tx     = $txId;
-                    $it->transfered_amount = (float) $it->amount;
-                    $it->gas_fee           = $gasCost;
-                    $it->address_to_send   = $destination;
+                    if ($this->senderOf($it) !== $sender) {
+                        continue;
+                    }
+                    $it->flush_status = 'pending';
+                    $it->transfered_tx = $txId;
+                    $it->transfer_address = $sender;
+                    $it->address_to_send = $destination;
                     $it->save();
+                    if (! in_array($it->id, $ids, true)) {
+                        $ids[] = $it->id;
+                    }
+                }
+
+                if ($ids !== [] && $txId) {
+                    VerifyFlushTransactionJob::dispatch(
+                        $ids,
+                        $currency,
+                        $txId,
+                        $sender,
+                        $destination,
+                        number_format((float) $amount, 8, '.', ''),
+                        $gasCost,
+                    );
                 }
             });
 
@@ -1218,6 +1387,83 @@ class SimpleWithdrawalService
             return false;
         }
         return true;
+    }
+
+    // ----- flush failure logging -----
+
+    /**
+     * @param  iterable<ReceivedAsset>  $items
+     */
+    private function recordFlushGroupFailure(
+        iterable $items,
+        string $sender,
+        string $destination,
+        string $failureCode,
+        string $failureMessage,
+        ?array $tatumResponse = null,
+        ?string $expectedAmount = null,
+    ): void {
+        $result = OnChainVerificationResult::flushSubmitFailed(
+            $failureCode,
+            $failureMessage,
+            $tatumResponse ?? [],
+        );
+
+        foreach ($items as $it) {
+            if ($this->senderOf($it) !== $sender) {
+                continue;
+            }
+            $it->flush_status = 'failed';
+            $it->verification_error = $failureMessage;
+            $it->address_to_send = $destination;
+            $it->transfer_address = $sender;
+            $it->save();
+
+            OnChainVerificationFailureRecorder::recordFlushFailure(
+                $it,
+                $result,
+                $sender,
+                $destination,
+                $expectedAmount ?? number_format((float) $it->amount, 8, '.', ''),
+            );
+        }
+    }
+
+    /**
+     * @param  iterable<ReceivedAsset>  $items
+     */
+    private function recordFlushBatchFailure(
+        iterable $items,
+        string $destination,
+        string $failureCode,
+        string $failureMessage,
+        ?array $tatumResponse = null,
+    ): void {
+        $result = OnChainVerificationResult::flushSubmitFailed(
+            $failureCode,
+            $failureMessage,
+            $tatumResponse ?? [],
+        );
+
+        foreach ($items as $it) {
+            $sender = $this->senderOf($it);
+            if (! $sender) {
+                continue;
+            }
+            $it->flush_status = 'failed';
+            $it->verification_error = $failureMessage;
+            $it->address_to_send = $destination;
+            $it->transfer_address = $sender;
+            $it->save();
+
+            OnChainVerificationFailureRecorder::recordFlushFailure(
+                $it,
+                $result,
+                $sender,
+                $destination,
+                number_format((float) $it->amount, 8, '.', ''),
+            );
+        }
     }
 
     // ----- tiny utils -----

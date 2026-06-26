@@ -139,14 +139,9 @@ class EthereumService
 
             sleep($delaySeconds);
         }
-        $data = [
-            'status' => true,
-            'txId' => $txHash,
-        ];
-        Log::info("Transaction still not able to fin now sending status true by sysstem");
+        Log::warning('Transaction not found after polling', ['txHash' => $txHash, 'maxRetries' => $maxRetries]);
 
-        return $data ?? null;
-        // throw new \Exception("Transaction not confirmed within timeout.");
+        return null;
     }
 
     public function getTransactionDetails($txHash)
