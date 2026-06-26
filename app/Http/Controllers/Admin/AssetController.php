@@ -23,7 +23,7 @@ class AssetController extends Controller
         $rejectedQ = RejectedDepositWebhook::query()->with('user:id,email,name');
         $failedTransferQ = FailedMasterTransfer::query()->with([
             'virtualAccount.user:id,name,email',
-            'webhookResponse:id,reference,txid,status,raw_json',
+            'webhookResponse:id,reference,tx_id',
         ]);
 
         if ($request->filled('reason')) {
@@ -35,7 +35,7 @@ class AssetController extends Controller
             $txId = (string) $request->input('tx_id');
             $rejectedQ->where('tx_id', $txId);
             $failedTransferQ->whereHas('webhookResponse', function ($q) use ($txId) {
-                $q->where('txid', $txId);
+                $q->where('tx_id', $txId);
             });
         }
 
@@ -64,7 +64,7 @@ class AssetController extends Controller
                 'id' => $row->id,
                 'source' => 'failed_master_transfer',
                 'reason' => $row->reason,
-                'tx_id' => $row->webhookResponse->txid ?? null,
+                'tx_id' => $row->webhookResponse->tx_id ?? null,
                 'reference' => $row->webhookResponse->reference ?? null,
                 'chain' => null,
                 'currency' => null,
