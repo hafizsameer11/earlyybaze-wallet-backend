@@ -104,8 +104,7 @@ public function all(array $params)
     }
 
     if ($region && $region !== 'all') {
-        $fiat = $region === 'south_africa' ? 'ZAR' : 'NGN';
-        $query->where('currency', $fiat);
+        $this->applyRegionScope($query, $region);
     }
 
     // -------- Apply search filter (enhanced to search multiple fields)
@@ -142,17 +141,26 @@ public function all(array $params)
         ];
     }
 
-    // -------- Overall totals (for stats - always calculated)
-    $totalTransactions = Transaction::count();
+    // -------- Overall totals (for stats - respect region when set)
+    $totalsQuery = Transaction::query();
+    if ($region && $region !== 'all') {
+        $this->applyRegionScope($totalsQuery, $region);
+    }
+    $totalTransactions = (clone $totalsQuery)->count();
     $totalWallets      = VirtualAccount::count();
-    $totalRevenue      = Transaction::sum('amount');
+    $totalRevenue      = (float) (clone $totalsQuery)->sum('amount');
 
     // -------- Period statistics (for dashboard stats)
-    $periodStats = function ($start, $end) {
+    $periodStats = function ($start, $end) use ($region) {
+        $q = Transaction::whereBetween('created_at', [$start, $end]);
+        if ($region && $region !== 'all') {
+            $this->applyRegionScope($q, $region);
+        }
+
         return [
-            'transactions_count' => Transaction::whereBetween('created_at', [$start, $end])->count(),
+            'transactions_count' => (clone $q)->count(),
             'wallets_count'      => VirtualAccount::whereBetween('created_at', [$start, $end])->count(),
-            'revenue'            => (float) Transaction::whereBetween('created_at', [$start, $end])->sum('amount'),
+            'revenue'            => (float) (clone $q)->sum('amount'),
         ];
     };
 
@@ -207,6 +215,19 @@ public function all(array $params)
     
     return $response;
 }
+
+    /**
+     * Limit admin transaction lists/stats to a fiat region (NGN vs ZAR).
+     */
+    private function applyRegionScope($query, string $region): void
+    {
+        $fiat = $region === 'south_africa' ? 'ZAR' : 'NGN';
+        $query->where(function ($q) use ($fiat) {
+            $q->where('currency', $fiat)
+                ->orWhereHas('swaptransaction', fn ($sq) => $sq->where('fiat_currency', $fiat))
+                ->orWhereHas('withdraw_transaction.withdraw_request', fn ($wq) => $wq->where('currency', $fiat));
+        });
+    }
 
 
 
