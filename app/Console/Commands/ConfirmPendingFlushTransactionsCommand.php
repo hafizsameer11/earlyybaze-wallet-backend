@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ReceivedAsset;
+use App\Services\FlushBatchExpectations;
 use App\Services\FlushCompletionService;
 use App\Services\TatumOnChainTxVerifier;
 use Illuminate\Console\Command;
@@ -14,8 +15,11 @@ class ConfirmPendingFlushTransactionsCommand extends Command
 
     protected $description = 'Re-check broadcast flush txs awaiting on-chain confirmation and complete verified assets';
 
-    public function handle(TatumOnChainTxVerifier $verifier, FlushCompletionService $completionService): int
-    {
+    public function handle(
+        TatumOnChainTxVerifier $verifier,
+        FlushCompletionService $completionService,
+        FlushBatchExpectations $batchExpectations,
+    ): int {
         $days = max(1, (int) $this->option('days'));
         $dryRun = (bool) $this->option('dry-run');
 
@@ -42,15 +46,16 @@ class ConfirmPendingFlushTransactionsCommand extends Command
             $first = $group->first();
             $txId = (string) $first->transfered_tx;
             $currency = (string) $first->currency;
-            $expectedFrom = $first->transfer_address ?: null;
-            $expectedTo = (string) ($first->address_to_send ?? '');
-            $expectedAmount = number_format(
+            $batch = $batchExpectations->resolveFromTx($txId, $currency);
+            $expectedFrom = $batch['expected_from'] ?? ($first->transfer_address ?: null);
+            $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : (string) ($first->address_to_send ?? '');
+            $expectedAmount = $batch['expected_amount'] ?? number_format(
                 (float) $group->sum(fn (ReceivedAsset $a) => (float) ($a->transfered_amount ?: $a->amount)),
                 8,
                 '.',
                 ''
             );
-            $ids = $group->pluck('id')->all();
+            $ids = ($batch['pending_asset_ids'] ?? []) !== [] ? $batch['pending_asset_ids'] : $group->pluck('id')->all();
 
             $result = $verifier->verifyFlush(
                 $currency,

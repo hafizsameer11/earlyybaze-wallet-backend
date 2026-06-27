@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\DTO\OnChainVerificationResult;
 use App\Models\ReceivedAsset;
+use App\Services\FlushBatchExpectations;
 use App\Services\FlushCompletionService;
 use App\Services\OnChainVerificationFailureRecorder;
 use App\Services\TatumOnChainTxVerifier;
@@ -38,24 +39,35 @@ class VerifyFlushTransactionJob implements ShouldQueue
         public ?array $tatumResponseBody = null,
     ) {}
 
-    public function handle(TatumOnChainTxVerifier $verifier, FlushCompletionService $completionService): void
-    {
+    public function handle(
+        TatumOnChainTxVerifier $verifier,
+        FlushCompletionService $completionService,
+        FlushBatchExpectations $batchExpectations,
+    ): void {
+        $batch = $batchExpectations->resolveFromTx($this->txId, $this->currency);
+        $expectedFrom = $batch['expected_from'] ?? $this->expectedFrom;
+        $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : $this->expectedTo;
+        $expectedAmount = $batch['expected_amount'] ?? $this->expectedAmount;
+        $assetIds = ($batch['pending_asset_ids'] ?? []) !== []
+            ? $batch['pending_asset_ids']
+            : $this->receivedAssetIds;
+
         $result = $verifier->verifyFlush(
             $this->currency,
             $this->txId,
-            $this->expectedFrom,
-            $this->expectedTo,
-            $this->expectedAmount,
+            $expectedFrom,
+            $expectedTo,
+            $expectedAmount,
         );
 
         if ($result->isSuccess()) {
             $completionService->completeVerifiedFlush(
-                $this->receivedAssetIds,
+                $assetIds,
                 $this->currency,
                 $this->txId,
-                $this->expectedFrom,
-                $this->expectedTo,
-                $this->expectedAmount,
+                $expectedFrom,
+                $expectedTo,
+                $expectedAmount,
                 $this->gasCost,
                 $result,
             );
@@ -104,7 +116,15 @@ class VerifyFlushTransactionJob implements ShouldQueue
 
     private function markFlushFailed(OnChainVerificationResult $result): void
     {
-        $items = ReceivedAsset::whereIn('id', $this->receivedAssetIds)->get();
+        $batch = app(FlushBatchExpectations::class)->resolveFromTx($this->txId, $this->currency);
+        $expectedFrom = $batch['expected_from'] ?? $this->expectedFrom;
+        $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : $this->expectedTo;
+        $expectedAmount = $batch['expected_amount'] ?? $this->expectedAmount;
+        $assetIds = ($batch['pending_asset_ids'] ?? []) !== []
+            ? $batch['pending_asset_ids']
+            : $this->receivedAssetIds;
+
+        $items = ReceivedAsset::whereIn('id', $assetIds)->get();
 
         foreach ($items as $it) {
             if ($it->status === 'completed' && $it->flush_status === 'verified') {
@@ -119,9 +139,9 @@ class VerifyFlushTransactionJob implements ShouldQueue
             OnChainVerificationFailureRecorder::recordFlushFailure(
                 $it,
                 $result,
-                $this->expectedFrom,
-                $this->expectedTo,
-                $this->expectedAmount,
+                $expectedFrom,
+                $expectedTo,
+                $expectedAmount,
             );
         }
 

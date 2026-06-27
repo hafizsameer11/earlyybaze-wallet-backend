@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\DTO\OnChainVerificationResult;
 use App\Models\ReceivedAsset;
+use App\Services\FlushBatchExpectations;
 use App\Services\OnChainVerificationFailureRecorder;
 use App\Services\TatumOnChainTxVerifier;
 use Illuminate\Console\Command;
@@ -15,7 +16,7 @@ class ReconcileOnChainTransactionsCommand extends Command
 
     protected $description = 'Re-verify recent completed flush transactions and flag dropped on-chain txs';
 
-    public function handle(TatumOnChainTxVerifier $verifier): int
+    public function handle(TatumOnChainTxVerifier $verifier, FlushBatchExpectations $batchExpectations): int
     {
         $days = max(1, (int) $this->option('days'));
         $dryRun = (bool) $this->option('dry-run');
@@ -44,9 +45,15 @@ class ReconcileOnChainTransactionsCommand extends Command
             $first = $group->first();
             $txId = (string) $first->transfered_tx;
             $currency = (string) $first->currency;
-            $expectedFrom = $first->transfer_address ?: null;
-            $expectedTo = (string) ($first->address_to_send ?? '');
-            $expectedAmount = number_format((float) $group->sum(fn (ReceivedAsset $a) => (float) ($a->transfered_amount ?: $a->amount)), 8, '.', '');
+            $batch = $batchExpectations->resolveFromTx($txId, $currency);
+            $expectedFrom = $batch['expected_from'] ?? ($first->transfer_address ?: null);
+            $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : (string) ($first->address_to_send ?? '');
+            $expectedAmount = $batch['expected_amount'] ?? number_format(
+                (float) $group->sum(fn (ReceivedAsset $a) => (float) ($a->transfered_amount ?: $a->amount)),
+                8,
+                '.',
+                ''
+            );
 
             $result = $verifier->verifyFlush(
                 $currency,

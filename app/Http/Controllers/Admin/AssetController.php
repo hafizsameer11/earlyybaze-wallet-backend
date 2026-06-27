@@ -12,6 +12,7 @@ use App\Models\ReceivedAsset;
 use App\Models\RejectedDepositWebhook;
 use App\Models\VirtualAccount;
 use App\Services\DepositCreditingService;
+use App\Services\FlushBatchExpectations;
 use App\Services\FlushCompletionService;
 use App\Services\TatumOnChainTxVerifier;
 use App\Support\AllowedFungibleContracts;
@@ -204,8 +205,12 @@ class AssetController extends Controller
         return ResponseHelper::success($failure, 'Verification failure dismissed', 200);
     }
 
-    public function reverifyVerificationFailure(int $id, TatumOnChainTxVerifier $verifier, FlushCompletionService $flushCompletion)
-    {
+    public function reverifyVerificationFailure(
+        int $id,
+        TatumOnChainTxVerifier $verifier,
+        FlushCompletionService $flushCompletion,
+        FlushBatchExpectations $batchExpectations,
+    ) {
         $failure = OnChainVerificationFailure::with('receivedAsset')->find($id);
         if (! $failure) {
             return ResponseHelper::error('Verification failure not found', 404);
@@ -221,29 +226,36 @@ class AssetController extends Controller
             $deposit = new DepositAddress(['address' => $asset->to_address, 'virtual_account_id' => $account?->id]);
             $result = $verifier->verifyDeposit($failure->webhook_payload ?? [], $account, $deposit);
         } else {
+            $batch = $batchExpectations->resolveFromTx((string) $failure->tx_id, (string) $asset->currency);
+            $expectedFrom = $batch['expected_from'] ?? ($failure->expected_from ?: null);
+            $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : (string) $failure->expected_to;
+            $expectedAmount = $batch['expected_amount'] ?? (string) $failure->expected_amount;
+
             $result = $verifier->verifyFlush(
                 (string) $asset->currency,
                 (string) $failure->tx_id,
-                $failure->expected_from ?: null,
-                (string) $failure->expected_to,
-                (string) $failure->expected_amount,
+                $expectedFrom,
+                $expectedTo,
+                $expectedAmount,
             );
 
             if ($result->isSuccess()) {
-                $relatedIds = ReceivedAsset::query()
-                    ->where('transfered_tx', $failure->tx_id)
-                    ->where('currency', $asset->currency)
-                    ->where('status', '!=', 'completed')
-                    ->pluck('id')
-                    ->all();
+                $relatedIds = ($batch['pending_asset_ids'] ?? []) !== []
+                    ? $batch['pending_asset_ids']
+                    : ReceivedAsset::query()
+                        ->where('transfered_tx', $failure->tx_id)
+                        ->where('currency', $asset->currency)
+                        ->where('status', '!=', 'completed')
+                        ->pluck('id')
+                        ->all();
 
                 $flushCompletion->completeVerifiedFlush(
                     $relatedIds !== [] ? $relatedIds : [$asset->id],
                     (string) $asset->currency,
                     (string) $failure->tx_id,
-                    $failure->expected_from ?: null,
-                    (string) $failure->expected_to,
-                    (string) $failure->expected_amount,
+                    $expectedFrom,
+                    $expectedTo,
+                    $expectedAmount,
                     $asset->gas_fee ? (float) $asset->gas_fee : null,
                     $result,
                 );
@@ -269,13 +281,36 @@ class AssetController extends Controller
     /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
     private function verificationFailureRows()
     {
-        return OnChainVerificationFailure::query()
+        $rows = OnChainVerificationFailure::query()
             ->with('user:id,email,name')
             ->whereNull('resolved_at')
             ->latest('id')
             ->limit(300)
-            ->get()
-            ->map(fn (OnChainVerificationFailure $row) => [
+            ->get();
+
+        $batchAmounts = [];
+        foreach ($rows as $row) {
+            if ($row->type !== OnChainVerificationFailure::TYPE_FLUSH || ! $row->tx_id) {
+                continue;
+            }
+            $key = $row->tx_id.'|'.$row->currency;
+            if (isset($batchAmounts[$key])) {
+                continue;
+            }
+            $batch = app(FlushBatchExpectations::class)->resolveFromTx((string) $row->tx_id, (string) $row->currency);
+            if ($batch !== null) {
+                $batchAmounts[$key] = [
+                    'amount' => $batch['expected_amount'],
+                    'count' => $batch['asset_count'],
+                ];
+            }
+        }
+
+        return $rows->map(function (OnChainVerificationFailure $row) use ($batchAmounts) {
+            $key = $row->tx_id ? $row->tx_id.'|'.$row->currency : null;
+            $batch = $key !== null ? ($batchAmounts[$key] ?? null) : null;
+
+            return [
                 'id' => $row->id,
                 'source' => 'on_chain_verification',
                 'reason' => $row->failure_code,
@@ -283,7 +318,8 @@ class AssetController extends Controller
                 'reference' => $row->reference,
                 'chain' => $row->chain,
                 'currency' => $row->currency,
-                'amount' => $row->expected_amount,
+                'amount' => $batch['amount'] ?? $row->expected_amount,
+                'batch_asset_count' => $batch['count'] ?? 1,
                 'user' => $row->user ? [
                     'id' => $row->user->id,
                     'name' => $row->user->name,
@@ -292,7 +328,8 @@ class AssetController extends Controller
                 'payload_ref' => $row->received_asset_id,
                 'type' => $row->type,
                 'created_at' => $row->created_at,
-            ]);
+            ];
+        });
     }
 
     public function getAvaialbleAsset()
