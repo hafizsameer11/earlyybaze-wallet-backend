@@ -154,8 +154,8 @@ class TatumOnChainTxVerifier
                 confirmed: false,
                 matches: false,
                 blockNumber: isset($body['blockNumber']) ? (int) $body['blockNumber'] : null,
-                failureCode: OnChainVerificationResult::FAIL_TX_FAILED,
-                failureMessage: 'Transaction found but not confirmed or failed on chain',
+                failureCode: OnChainVerificationResult::FAIL_TX_UNCONFIRMED,
+                failureMessage: 'Transaction found but awaiting on-chain confirmation',
                 raw: $body,
             );
         }

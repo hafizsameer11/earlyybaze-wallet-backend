@@ -23,13 +23,17 @@ class SimpleWithdrawalService
 
     public function flush(string $currency, string $destination, int $limit = 0, bool $dryRun = false): array
     {
-        // 1) Load candidates (exclude items already submitted for flush / verified on-chain)
+        // Exclude assets already broadcast (awaiting or completed flush) — prevents double-flush.
         $q = ReceivedAsset::query()
             ->where('currency', $currency)
             ->whereIn('status', ['inWallet', 'pending'])
+            ->whereNull('transfered_tx')
             ->where(function ($query) {
                 $query->whereNull('flush_status')
-                    ->orWhere('flush_status', 'failed');
+                    ->orWhere(function ($inner) {
+                        $inner->where('flush_status', 'failed')
+                            ->whereNull('transfered_tx');
+                    });
             })
             ->orderBy('id');
 
@@ -202,7 +206,7 @@ class SimpleWithdrawalService
                 if (! $sender) {
                     continue;
                 }
-                $it->flush_status = 'pending';
+                $it->flush_status = 'confirming';
                 $it->transfered_tx = $txId;
                 $it->transfer_address = $sender;
                 $it->address_to_send = $destination;
@@ -471,7 +475,7 @@ class SimpleWithdrawalService
                 if (! $sender) {
                     continue;
                 }
-                $it->flush_status = 'pending';
+                $it->flush_status = 'confirming';
                 $it->transfered_tx = $txId;
                 $it->transfer_address = $sender;
                 $it->address_to_send = $destination;
@@ -619,7 +623,7 @@ class SimpleWithdrawalService
                     if ($this->senderOf($it) !== $sender) {
                         continue;
                     }
-                    $it->flush_status = 'pending';
+                    $it->flush_status = 'confirming';
                     $it->transfered_tx = $txId;
                     $it->transfer_address = $sender;
                     $it->address_to_send = $destination;
@@ -783,7 +787,7 @@ class SimpleWithdrawalService
                     if ($this->senderOf($it) !== $sender) {
                         continue;
                     }
-                    $it->flush_status = 'pending';
+                    $it->flush_status = 'confirming';
                     $it->transfered_tx = $txId;
                     $it->transfer_address = $sender;
                     $it->address_to_send = $destination;

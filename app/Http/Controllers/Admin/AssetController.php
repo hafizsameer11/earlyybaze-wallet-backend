@@ -12,6 +12,7 @@ use App\Models\ReceivedAsset;
 use App\Models\RejectedDepositWebhook;
 use App\Models\VirtualAccount;
 use App\Services\DepositCreditingService;
+use App\Services\FlushCompletionService;
 use App\Services\TatumOnChainTxVerifier;
 use App\Support\AllowedFungibleContracts;
 use Illuminate\Http\Request;
@@ -203,7 +204,7 @@ class AssetController extends Controller
         return ResponseHelper::success($failure, 'Verification failure dismissed', 200);
     }
 
-    public function reverifyVerificationFailure(int $id, TatumOnChainTxVerifier $verifier)
+    public function reverifyVerificationFailure(int $id, TatumOnChainTxVerifier $verifier, FlushCompletionService $flushCompletion)
     {
         $failure = OnChainVerificationFailure::with('receivedAsset')->find($id);
         if (! $failure) {
@@ -227,6 +228,27 @@ class AssetController extends Controller
                 (string) $failure->expected_to,
                 (string) $failure->expected_amount,
             );
+
+            if ($result->isSuccess()) {
+                $relatedIds = ReceivedAsset::query()
+                    ->where('transfered_tx', $failure->tx_id)
+                    ->where('currency', $asset->currency)
+                    ->where('status', '!=', 'completed')
+                    ->pluck('id')
+                    ->all();
+
+                $flushCompletion->completeVerifiedFlush(
+                    $relatedIds !== [] ? $relatedIds : [$asset->id],
+                    (string) $asset->currency,
+                    (string) $failure->tx_id,
+                    $failure->expected_from ?: null,
+                    (string) $failure->expected_to,
+                    (string) $failure->expected_amount,
+                    $asset->gas_fee ? (float) $asset->gas_fee : null,
+                    $result,
+                );
+                $failure = $failure->fresh(['receivedAsset']);
+            }
         }
 
         $failure->tatum_response = $result->raw ?: $result->toArray();
@@ -237,9 +259,11 @@ class AssetController extends Controller
         $failure->save();
 
         return ResponseHelper::success([
-            'failure' => $failure->fresh(),
+            'failure' => $failure->fresh(['receivedAsset']),
             'verification' => $result->toArray(),
-        ], 'Re-verification completed', 200);
+        ], $result->isSuccess() && $failure->type === OnChainVerificationFailure::TYPE_FLUSH
+            ? 'Flush confirmed on chain and marked completed'
+            : 'Re-verification completed', 200);
     }
 
     /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */

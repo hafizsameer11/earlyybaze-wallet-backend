@@ -8,6 +8,8 @@ final class OnChainVerificationResult
 
     public const FAIL_TX_FAILED = 'tx_failed';
 
+    public const FAIL_TX_UNCONFIRMED = 'tx_unconfirmed';
+
     public const FAIL_ADDRESS_MISMATCH = 'address_mismatch';
 
     public const FAIL_AMOUNT_MISMATCH = 'amount_mismatch';

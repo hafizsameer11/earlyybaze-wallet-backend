@@ -18,6 +18,11 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping(10)
             ->appendOutputTo(storage_path('logs/schedule.log'));
 
+        $schedule->command('wallet:confirm-pending-flushes')
+            ->everyTenMinutes()
+            ->withoutOverlapping(15)
+            ->appendOutputTo(storage_path('logs/confirm-pending-flushes.log'));
+
         $schedule->command('wallet:reconcile-on-chain')
             ->dailyAt('01:00')
             ->timezone('Africa/Lagos')
