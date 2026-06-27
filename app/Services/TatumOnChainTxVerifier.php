@@ -173,7 +173,7 @@ class TatumOnChainTxVerifier
             );
         }
 
-        $match = null;
+        $matchingTransfers = [];
         foreach ($transfers as $transfer) {
             if (! AllowedFungibleContracts::addressesEqual($transfer['to'], $expectedTo)) {
                 continue;
@@ -186,11 +186,10 @@ class TatumOnChainTxVerifier
                 && ! AllowedFungibleContracts::addressesEqual($transfer['contract'], $expectedContract)) {
                 continue;
             }
-            $match = $transfer;
-            break;
+            $matchingTransfers[] = $transfer;
         }
 
-        if ($match === null) {
+        if ($matchingTransfers === []) {
             return new OnChainVerificationResult(
                 found: true,
                 confirmed: true,
@@ -201,6 +200,9 @@ class TatumOnChainTxVerifier
                 raw: $body,
             );
         }
+
+        $match = $matchingTransfers[0];
+        $onChainAmount = $this->resolveOnChainAmount($map['parser'], $expectedLogIndex, $matchingTransfers);
 
         if ($expectedFrom !== null && ($match['from'] ?? null)
             && ! AllowedFungibleContracts::addressesEqual($match['from'], $expectedFrom)) {
@@ -237,14 +239,14 @@ class TatumOnChainTxVerifier
             );
         }
 
-        if (! $this->amountsMatch($expectedAmount, $match['amount'])) {
+        if (! $this->amountsMatch($expectedAmount, $onChainAmount)) {
             return new OnChainVerificationResult(
                 found: true,
                 confirmed: true,
                 matches: false,
                 from: $match['from'],
                 to: $match['to'],
-                amount: $match['amount'],
+                amount: $onChainAmount,
                 contract: $match['contract'] ?? null,
                 logIndex: $match['log_index'] ?? null,
                 blockNumber: isset($body['blockNumber']) ? (int) $body['blockNumber'] : null,
@@ -260,12 +262,45 @@ class TatumOnChainTxVerifier
             matches: true,
             from: $match['from'],
             to: $match['to'],
-            amount: $match['amount'],
+            amount: $onChainAmount,
             contract: $match['contract'] ?? null,
             logIndex: $match['log_index'] ?? null,
             blockNumber: isset($body['blockNumber']) ? (int) $body['blockNumber'] : null,
             raw: $body,
         );
+    }
+
+    /**
+     * BTC/LTC batch flushes may split value across multiple UTXO outputs to the same address.
+     *
+     * @param  list<array{from: ?string, to: string, amount: string, contract: ?string, log_index: ?int}>  $matchingTransfers
+     */
+    private function resolveOnChainAmount(string $parserType, ?int $expectedLogIndex, array $matchingTransfers): string
+    {
+        if ($parserType !== 'utxo' || $expectedLogIndex !== null || count($matchingTransfers) === 1) {
+            return (string) $matchingTransfers[0]['amount'];
+        }
+
+        return $this->sumAmounts(array_column($matchingTransfers, 'amount'));
+    }
+
+    /** @param  list<string>  $amounts */
+    private function sumAmounts(array $amounts): string
+    {
+        if ($amounts === []) {
+            return '0';
+        }
+
+        if (function_exists('bcadd')) {
+            $sum = '0';
+            foreach ($amounts as $amount) {
+                $sum = bcadd($sum, trim((string) $amount), 8);
+            }
+
+            return $sum;
+        }
+
+        return number_format(array_sum(array_map('floatval', $amounts)), 8, '.', '');
     }
 
     private function amountsMatch(string $expected, string $actual): bool
