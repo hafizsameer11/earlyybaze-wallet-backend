@@ -8,14 +8,16 @@ use App\Models\AdminTransfer;
 use App\Models\DepositAddress;
 use App\Models\FailedMasterTransfer;
 use App\Models\OnChainVerificationFailure;
+use App\Models\ReceiveTransaction;
 use App\Models\ReceivedAsset;
 use App\Models\RejectedDepositWebhook;
 use App\Models\VirtualAccount;
+use App\Models\WebhookResponse;
+use App\Support\AllowedFungibleContracts;
 use App\Services\DepositCreditingService;
 use App\Services\FlushBatchExpectations;
 use App\Services\FlushCompletionService;
 use App\Services\TatumOnChainTxVerifier;
-use App\Support\AllowedFungibleContracts;
 use Illuminate\Http\Request;
 
 class AssetController extends Controller
@@ -370,6 +372,158 @@ class AssetController extends Controller
 
         return ResponseHelper::success($paginated, 'Rejected deposit webhooks fetched', 200);
     }
+
+    public function getRejectedDeposit(int $id)
+    {
+        $row = RejectedDepositWebhook::with('user:id,email,name')->find($id);
+        if (! $row) {
+            return ResponseHelper::error('Rejected deposit not found', 404);
+        }
+
+        $creditAudit = $this->auditRejectedDepositCreditStatus($row);
+
+        return ResponseHelper::success([
+            'rejected' => $row,
+            'credit_status' => $creditAudit['status'],
+            'credit_status_label' => $creditAudit['label'],
+            'credit_status_detail' => $creditAudit['detail'],
+            'received_asset' => $creditAudit['received_asset'],
+            'webhook_response' => $creditAudit['webhook_response'],
+            'receive_transaction' => $creditAudit['receive_transaction'],
+            'on_chain_verification_failure' => $creditAudit['on_chain_verification_failure'],
+            'rejection_reason_label' => AllowedFungibleContracts::rejectionReasonLabel(
+                (string) $row->rejection_reason
+            ),
+        ], 'Rejected deposit detail', 200);
+    }
+
+    /** @return array<string, mixed> */
+    private function auditRejectedDepositCreditStatus(RejectedDepositWebhook $row): array
+    {
+        $receivedAsset = $this->findReceivedAssetForRejectedDeposit($row);
+        $webhookResponse = $this->findWebhookResponseForRejectedDeposit($row);
+        $receiveTransaction = $this->findReceiveTransactionForRejectedDeposit($row);
+
+        $verificationFailure = null;
+        if ($receivedAsset) {
+            $verificationFailure = OnChainVerificationFailure::query()
+                ->where('received_asset_id', $receivedAsset->id)
+                ->where('type', OnChainVerificationFailure::TYPE_DEPOSIT)
+                ->latest('id')
+                ->first();
+        }
+
+        $credited = $webhookResponse !== null
+            || ($receiveTransaction && $receiveTransaction->status === 'completed')
+            || ($receivedAsset
+                && $receivedAsset->status === 'inWallet'
+                && $receivedAsset->verification_status === 'verified');
+
+        if ($credited) {
+            return [
+                'status' => 'credited',
+                'label' => 'Credited — investigate',
+                'detail' => 'A balance credit or completed receive record exists for this deposit.',
+                'received_asset' => $receivedAsset,
+                'webhook_response' => $webhookResponse,
+                'receive_transaction' => $receiveTransaction,
+                'on_chain_verification_failure' => $verificationFailure,
+            ];
+        }
+
+        if ($receivedAsset && $receivedAsset->status === 'processing') {
+            return [
+                'status' => 'pending',
+                'label' => 'Pending verification',
+                'detail' => 'Received asset is still processing; not credited yet.',
+                'received_asset' => $receivedAsset,
+                'webhook_response' => $webhookResponse,
+                'receive_transaction' => $receiveTransaction,
+                'on_chain_verification_failure' => $verificationFailure,
+            ];
+        }
+
+        if ($receivedAsset && $receivedAsset->status === 'failed') {
+            return [
+                'status' => 'not_credited',
+                'label' => 'Not credited (verification failed)',
+                'detail' => 'Deposit was rejected after on-chain verification failed.',
+                'received_asset' => $receivedAsset,
+                'webhook_response' => $webhookResponse,
+                'receive_transaction' => $receiveTransaction,
+                'on_chain_verification_failure' => $verificationFailure,
+            ];
+        }
+
+        return [
+            'status' => 'not_credited',
+            'label' => 'Not credited (blocked at webhook)',
+            'detail' => 'Webhook was rejected before any balance update.',
+            'received_asset' => $receivedAsset,
+            'webhook_response' => $webhookResponse,
+            'receive_transaction' => $receiveTransaction,
+            'on_chain_verification_failure' => $verificationFailure,
+        ];
+    }
+
+    private function findReceivedAssetForRejectedDeposit(RejectedDepositWebhook $row): ?ReceivedAsset
+    {
+        if ($row->reference) {
+            $byRef = ReceivedAsset::where('reference', $row->reference)->first();
+            if ($byRef) {
+                return $byRef;
+            }
+        }
+
+        if (! $row->tx_id) {
+            return null;
+        }
+
+        $query = ReceivedAsset::where('tx_id', $row->tx_id);
+        if ($row->user_id) {
+            $query->where('user_id', $row->user_id);
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function findWebhookResponseForRejectedDeposit(RejectedDepositWebhook $row): ?WebhookResponse
+    {
+        if ($row->reference) {
+            $byRef = WebhookResponse::where('reference', $row->reference)->first();
+            if ($byRef) {
+                return $byRef;
+            }
+        }
+
+        if (! $row->tx_id) {
+            return null;
+        }
+
+        return WebhookResponse::where('tx_id', $row->tx_id)->orderByDesc('id')->first();
+    }
+
+    private function findReceiveTransactionForRejectedDeposit(RejectedDepositWebhook $row): ?ReceiveTransaction
+    {
+        if ($row->reference) {
+            $byRef = ReceiveTransaction::where('reference', $row->reference)->first();
+            if ($byRef) {
+                return $byRef;
+            }
+        }
+
+        if (! $row->tx_id) {
+            return null;
+        }
+
+        $query = ReceiveTransaction::where('tx_id', $row->tx_id);
+        if ($row->user_id) {
+            $query->where('user_id', $row->user_id);
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
     public function setAdminTransfer(Request $request)
     {
         $blockchain = $request->input('blockchain');

@@ -520,6 +520,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('assets')->group(function () {
             Route::get('/available-assets', [AssetController::class, 'getAvaialbleAsset']);
             Route::get('/rejected-deposits', [AssetController::class, 'getRejectedDeposits']);
+            Route::get('/rejected-deposits/{id}', [AssetController::class, 'getRejectedDeposit']);
             Route::get('/tatum-failures', [AssetController::class, 'getTatumFailures']);
             Route::get('/verification-failures', [AssetController::class, 'getVerificationFailures']);
             Route::get('/verification-failures/{id}', [AssetController::class, 'getVerificationFailure']);
