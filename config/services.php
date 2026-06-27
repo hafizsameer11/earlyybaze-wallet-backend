@@ -47,6 +47,8 @@ return [
             explode(',', env('SENT_DM_CHANNELS', 'sms,whatsapp'))
         ))),
         'sandbox' => filter_var(env('SENT_DM_SANDBOX', false), FILTER_VALIDATE_BOOLEAN),
+        'webhook_secret' => env('SENT_DM_WEBHOOK_SECRET'),
+        'webhook_timestamp_tolerance' => (int) env('SENT_DM_WEBHOOK_TIMESTAMP_TOLERANCE', 300),
     ],
 
 ];

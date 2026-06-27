@@ -45,6 +45,8 @@ use App\Http\Controllers\Wallet\TransactionController;
 use App\Http\Controllers\Wallet\UserController;
 use App\Http\Controllers\WalletCurrencyController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\SentDmWebhookController;
+use App\Http\Controllers\Admin\SentDmWebhookController as AdminSentDmWebhookController;
 use App\Http\Controllers\V3\V3AuthController;
 use App\Http\Controllers\V3\V3AdminController;
 use App\Http\Controllers\V3\V3ExchangeRateController;
@@ -185,6 +187,17 @@ Route::post('/webhook', [WebhookController::class, 'webhook']);
 |--------------------------------------------------------------------------
 */
 Route::post('/webhook/v2', [WebhookController::class, 'webhookV2']);
+
+/*
+|--------------------------------------------------------------------------
+| Webhooks — Sent.dm (OTP / WhatsApp / SMS delivery status)
+|--------------------------------------------------------------------------
+| POST /api/webhook/sent
+| Configure URL + signing secret in Sent Dashboard → Webhooks
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhook/sent', [SentDmWebhookController::class, 'handle']);
+
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/2fa/resend', [AuthController::class, 'resendOtpAdmin']);
@@ -534,6 +547,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/admin-transfers', [AssetController::class, 'getAdminTransfer']);
             Route::post('/set-individual-transfer/{id}', [AssetController::class, 'setIndividualTransfer']);
         });
+        Route::get('/sent-dm/webhook-events', [AdminSentDmWebhookController::class, 'index']);
     });
 
     Route::get('devices', [UserDeviceController::class, 'index']);
