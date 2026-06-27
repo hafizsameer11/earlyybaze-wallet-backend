@@ -42,12 +42,14 @@ class ReferralEarningServiceNew
             return;
         }
 
-        DB::transaction(function () use ($swap, $referrer) {
+        $bonusUsd = $this->resolveReferrerBonusUsd($referrer);
+
+        DB::transaction(function () use ($swap, $referrer, $bonusUsd) {
             // 1) Idempotent create earning — guarded by unique index (user_id, swap_transaction_id)
             ReferalEarning::create([
                 'user_id'             => $referrer->id,    // referrer
                 'referal_id'          => $swap->user_id,   // referred (child) user
-                'amount'              => self::BONUS_USD,  // USD
+                'amount'              => $bonusUsd,
                 'currency'            => 'USD',
                 'type'                => 'swap_bonus',
                 'status'              => 'pending',
@@ -59,7 +61,7 @@ class ReferralEarningServiceNew
             $userAccount = UserAccount::firstOrCreate(['user_id' => $referrer->id]);
             $userAccount->referral_commission_usdt = bcadd(
                 (string) ($userAccount->referral_commission_usdt ?? '0'),
-                self::BONUS_USD,
+                $bonusUsd,
                 8
             );
             $userAccount->save();
@@ -131,5 +133,15 @@ class ReferralEarningServiceNew
                     'updated_at'=> now(),
                 ]);
         });
+    }
+
+    private function resolveReferrerBonusUsd(User $referrer): string
+    {
+        $custom = trim((string) ($referrer->referral_amount ?? ''));
+        if ($custom !== '' && is_numeric($custom) && (float) $custom > 0) {
+            return number_format((float) $custom, 8, '.', '');
+        }
+
+        return self::BONUS_USD;
     }
 }

@@ -45,7 +45,11 @@ public function all(array $params)
         'recievetransaction',
         'buytransaction',
         'swaptransaction' => function ($query) {
-            $query->where('status', 'completed');
+            // Keep completed swaps as before; also load reversal-related rows for audit display.
+            $query->whereIn('status', ['completed', 'partially_reversed', 'reversed'])
+                ->with(['reversals' => function ($reversalQuery) {
+                    $reversalQuery->with('admin:id,name,email')->orderByDesc('id');
+                }]);
         },
         'withdraw_transaction.withdraw_request.bankAccount',
     ];

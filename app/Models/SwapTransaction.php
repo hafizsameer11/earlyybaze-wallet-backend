@@ -35,4 +35,9 @@ class SwapTransaction extends BaseModel
     {
         return $this->belongsTo(Transaction::class);
     }
+
+    public function reversals()
+    {
+        return $this->hasMany(SwapReversal::class)->orderByDesc('id');
+    }
 }

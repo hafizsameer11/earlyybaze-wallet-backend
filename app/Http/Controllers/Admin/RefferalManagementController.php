@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class RefferalManagementController extends Controller
 {
@@ -181,7 +182,8 @@ public function getRefferalManagement()
             'user_code'        => $user->user_code,
             'referral_count'   => max($refCount, (int) ($summary['unique_referred'] ?? 0)),
             'total_earned_usd' => (float) ($summary['total_earned_usd'] ?? 0),
-            'commission'       => $user->referral_amount ? $user->referral_amount.'% custom' : 'Tier default',
+            'commission'       => self::formatReferralCommission($user->referral_amount),
+            'referral_amount'  => $user->referral_amount,
             'referred_by'      => $referredBy,
             'referred_by_id'   => $referredById,
             'tier'             => self::resolveReferralTier(max($refCount, (int) ($summary['unique_referred'] ?? 0))),
@@ -493,5 +495,101 @@ private static function resolveReferralTier(int $referralCount): string
             'message' => 'Exchange rate set successfully',
             'exchange_rate' => $exchangeRate,
         ]);
+    }
+
+    public function updateUserReferralSettings(Request $request, int $userId)
+    {
+        $user = User::where('id', $userId)->where('role', 'user')->first();
+        if (! $user) {
+            return ResponseHelper::error('User not found', 404);
+        }
+
+        $validated = $request->validate([
+            'user_code' => [
+                'nullable',
+                'string',
+                'max:64',
+                'regex:/^[a-zA-Z0-9_-]+$/',
+                Rule::unique('users', 'user_code')->ignore($userId),
+            ],
+            'referral_amount' => ['nullable', 'numeric', 'min:0', 'max:1000'],
+        ]);
+
+        if (array_key_exists('user_code', $validated)
+            && $validated['user_code']
+            && $validated['user_code'] !== $user->user_code) {
+            $oldCode = $user->user_code;
+            if ($oldCode) {
+                User::where('invite_code', $oldCode)->update(['invite_code' => $validated['user_code']]);
+            }
+            $user->user_code = $validated['user_code'];
+        }
+
+        if (array_key_exists('referral_amount', $validated)) {
+            $user->referral_amount = $validated['referral_amount'] !== null && $validated['referral_amount'] !== ''
+                ? (string) $validated['referral_amount']
+                : null;
+        }
+
+        $user->save();
+
+        return ResponseHelper::success([
+            'id' => $user->id,
+            'user_code' => $user->user_code,
+            'referral_amount' => $user->referral_amount,
+            'commission' => self::formatReferralCommission($user->referral_amount),
+        ], 'Referral settings updated', 200);
+    }
+
+    public function regenerateUserReferralCode(int $userId)
+    {
+        $user = User::where('id', $userId)->where('role', 'user')->first();
+        if (! $user) {
+            return ResponseHelper::error('User not found', 404);
+        }
+
+        $base = preg_replace('/[^a-zA-Z0-9]/', '', (string) $user->name) ?: 'user';
+        do {
+            $code = strtolower($base).'-'.random_int(100000, 999999);
+        } while (User::where('user_code', $code)->where('id', '!=', $user->id)->exists());
+
+        $oldCode = $user->user_code;
+        $user->user_code = $code;
+        $user->save();
+
+        if ($oldCode) {
+            User::where('invite_code', $oldCode)->update(['invite_code' => $code]);
+        }
+
+        return ResponseHelper::success([
+            'user_id' => $user->id,
+            'user_code' => $code,
+        ], 'Referral code regenerated', 200);
+    }
+
+    public function toggleReferralUserStatus(int $userId)
+    {
+        $user = User::where('id', $userId)->where('role', 'user')->first();
+        if (! $user) {
+            return ResponseHelper::error('User not found', 404);
+        }
+
+        $user->is_active = ! $user->is_active;
+        $user->save();
+
+        return ResponseHelper::success([
+            'user_id' => $user->id,
+            'is_active' => $user->is_active,
+            'status' => $user->is_active ? 'active' : 'banned',
+        ], 'Referral user status updated', 200);
+    }
+
+    private static function formatReferralCommission(?string $amount): string
+    {
+        if ($amount !== null && $amount !== '' && is_numeric($amount) && (float) $amount > 0) {
+            return '$'.number_format((float) $amount, 2).' per swap';
+        }
+
+        return '$0.10 default';
     }
 }

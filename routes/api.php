@@ -365,6 +365,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/set-exchange-rate', [RefferalManagementController::class, 'setExchangeRate']);
             Route::get('/wallet-balance', [RefferalManagementController::class, 'referralwalletBalance']);
             Route::post('/wallet-topup', [RefferalManagementController::class, 'topUpRefferalWallet']);
+            Route::post('/user/{userId}/settings', [RefferalManagementController::class, 'updateUserReferralSettings']);
+            Route::post('/user/{userId}/regenerate-code', [RefferalManagementController::class, 'regenerateUserReferralCode']);
+            Route::post('/user/{userId}/toggle-status', [RefferalManagementController::class, 'toggleReferralUserStatus']);
         });
 
         Route::prefix('InAppNotifications')->group(function () {

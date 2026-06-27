@@ -43,4 +43,9 @@ class SwapReversal extends BaseModel
     {
         return $this->belongsTo(User::class);
     }
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
 }

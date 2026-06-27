@@ -154,18 +154,26 @@ class V3ExchangeRateRepository
         $exchangeRate = ExchangeRate::findOrFail($id);
 
         if (isset($data['rate']) && $data['rate'] != $exchangeRate->rate) {
-            $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderByDesc('id')->first();
-            if (! $nairaExchangeRate) {
-                throw new \Exception('NGN Exchange Rate not found.');
-            }
+            $anchor = strtoupper((string) $exchangeRate->currency);
 
-            $data['rate_usd'] = 1 / $data['rate'];
-            $usdRate = $data['rate_usd'];
-            $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+            if ($anchor === 'ZAR') {
+                $data['rate_zar'] = $data['rate'];
+            } elseif ($anchor === 'NGN') {
+                $data['rate_naira'] = $data['rate'];
+            } else {
+                $nairaExchangeRate = ExchangeRate::where('currency', 'NGN')->orderByDesc('id')->first();
+                if (! $nairaExchangeRate) {
+                    throw new \Exception('NGN Exchange Rate not found.');
+                }
 
-            $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderByDesc('id')->first();
-            if ($zarExchangeRate) {
-                $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
+                $data['rate_usd'] = 1 / $data['rate'];
+                $usdRate = $data['rate_usd'];
+                $data['rate_naira'] = $nairaExchangeRate->rate * $usdRate;
+
+                $zarExchangeRate = ExchangeRate::where('currency', 'ZAR')->orderByDesc('id')->first();
+                if ($zarExchangeRate) {
+                    $data['rate_zar'] = $zarExchangeRate->rate * $usdRate;
+                }
             }
         }
 
