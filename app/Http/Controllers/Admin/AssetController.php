@@ -221,6 +221,8 @@ class AssetController extends Controller
             return ResponseHelper::error('Insufficient data to re-verify', 422);
         }
 
+        $expectedAmountUsed = null;
+
         if ($failure->type === OnChainVerificationFailure::TYPE_DEPOSIT) {
             $account = VirtualAccount::where('user_id', $asset->user_id)->where('currency', $asset->currency)->first();
             $deposit = new DepositAddress(['address' => $asset->to_address, 'virtual_account_id' => $account?->id]);
@@ -230,6 +232,7 @@ class AssetController extends Controller
             $expectedFrom = $batch['expected_from'] ?? ($failure->expected_from ?: null);
             $expectedTo = $batch['expected_to'] !== '' ? $batch['expected_to'] : (string) $failure->expected_to;
             $expectedAmount = $batch['expected_amount'] ?? (string) $failure->expected_amount;
+            $expectedAmountUsed = $expectedAmount;
 
             $result = $verifier->verifyFlush(
                 (string) $asset->currency,
@@ -273,6 +276,7 @@ class AssetController extends Controller
         return ResponseHelper::success([
             'failure' => $failure->fresh(['receivedAsset']),
             'verification' => $result->toArray(),
+            'expected_amount_used' => $expectedAmountUsed,
         ], $result->isSuccess() && $failure->type === OnChainVerificationFailure::TYPE_FLUSH
             ? 'Flush confirmed on chain and marked completed'
             : 'Re-verification completed', 200);

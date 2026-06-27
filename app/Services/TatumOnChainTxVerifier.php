@@ -239,7 +239,7 @@ class TatumOnChainTxVerifier
             );
         }
 
-        if (! $this->amountsMatch($expectedAmount, $onChainAmount)) {
+        if (! $this->flushAmountsMatch($expectedAmount, $onChainAmount, $map['parser'], $expectedLogIndex, $body)) {
             return new OnChainVerificationResult(
                 found: true,
                 confirmed: true,
@@ -301,6 +301,32 @@ class TatumOnChainTxVerifier
         }
 
         return number_format(array_sum(array_map('floatval', $amounts)), 8, '.', '');
+    }
+
+    /**
+     * Compare expected flush amount to on-chain value.
+     *
+     * UTXO batch flushes: DB rows sum to total inputs; on-chain outputs = inputs - fee
+     * (platform cut may appear as a second output to the same master address).
+     */
+    private function flushAmountsMatch(
+        string $expectedAmount,
+        string $onChainAmount,
+        string $parserType,
+        ?int $expectedLogIndex,
+        array $body,
+    ): bool {
+        if ($this->amountsMatch($expectedAmount, $onChainAmount)) {
+            return true;
+        }
+
+        if ($parserType !== 'utxo' || $expectedLogIndex !== null || ! isset($body['fee'])) {
+            return false;
+        }
+
+        $feeBtc = bcdiv((string) $body['fee'], '100000000', 8);
+
+        return $this->amountsMatch($expectedAmount, bcadd($onChainAmount, $feeBtc, 8));
     }
 
     private function amountsMatch(string $expected, string $actual): bool

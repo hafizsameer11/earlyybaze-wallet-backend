@@ -119,4 +119,35 @@ class TatumOnChainTxVerifierTest extends TestCase
         $this->assertTrue($result->matches);
         $this->assertSame('0.03690399', $result->amount);
     }
+
+    public function test_btc_flush_matches_batch_input_total_when_fee_is_deducted_on_chain(): void
+    {
+        $verifier = new TatumOnChainTxVerifier;
+        $body = [
+            'blockNumber' => 955568,
+            'fee' => 7836,
+            'outputs' => [
+                [
+                    'value' => 2396017,
+                    'address' => 'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9',
+                ],
+                [
+                    'value' => 1294382,
+                    'address' => 'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9',
+                ],
+            ],
+        ];
+
+        $result = $verifier->verifyFlush(
+            'BTC',
+            '32d61597091d7da48a48f79e4698f0d9cc410f680f772fc6a761bbe61702aa7f',
+            null,
+            'bc1quz7cf4uznl2drw5gd7me24wqfpflxu5ukktmpfyzaa8snw9cj28q0aepw9',
+            '0.03698235',
+            null,
+            $body,
+        );
+
+        $this->assertTrue($result->matches);
+    }
 }
