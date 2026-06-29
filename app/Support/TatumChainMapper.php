@@ -79,10 +79,11 @@ final class TatumChainMapper
 
     public static function tokenDecimals(string $currency): int
     {
-        return in_array(strtoupper($currency), [
-            'USDT', 'USDC', 'USDT_ETH', 'USDC_ETH',
-            'USDT_BSC', 'USDC_BSC', 'USDT_TRON', 'USDC_TRON',
-        ], true) ? 6 : 18;
+        return match (strtoupper($currency)) {
+            'USDT', 'USDC', 'USDT_ETH', 'USDC_ETH', 'USDT_TRON', 'USDC_TRON' => 6,
+            'USDT_BSC', 'USDC_BSC' => 18,
+            default => 18,
+        };
     }
 
     public static function expectedContractForCurrency(string $currency): ?string

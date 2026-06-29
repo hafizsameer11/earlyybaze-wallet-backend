@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\TatumOnChainTxVerifier;
+use App\Support\TatumChainMapper;
 use App\Support\TatumTxResponseParser;
 use Tests\TestCase;
 
@@ -57,6 +58,7 @@ class TatumOnChainTxVerifierTest extends TestCase
 
         $this->assertNotEmpty($transfers);
         $this->assertSame('0x55d398326f99059ff775485246999027b3197955', strtolower($transfers[0]['contract']));
+        $this->assertSame(18, TatumChainMapper::tokenDecimals('USDT_BSC'));
     }
 
     public function test_tron_native_parser(): void
@@ -186,5 +188,41 @@ class TatumOnChainTxVerifierTest extends TestCase
         $this->assertTrue($result->matches);
         $this->assertSame('12.01350600', $result->amount);
         $this->assertSame('0x0b9bfb82322f65635d851ef835aaee2f8fb72111', strtolower((string) $result->to));
+    }
+
+    public function test_usdt_bsc_flush_uses_18_decimal_places(): void
+    {
+        $verifier = new TatumOnChainTxVerifier;
+        $body = [
+            'hash' => '0xd1c3ef0fc11cb63388acca40e3b169bc2818f81ba2d7bed6dbe1c6637fa6d705',
+            'from' => '0x2e5189f4d8e8bc7f1f65f646c5514b9b0177f360',
+            'to' => '0x55d398326f99059ff775485246999027b3197955',
+            'value' => '0',
+            'status' => true,
+            'blockNumber' => 106689600,
+            'logs' => [[
+                'address' => '0x55d398326f99059ff775485246999027b3197955',
+                'data' => '0x000000000000000000000000000000000000000000000002d30861f65dda0000',
+                'topics' => [
+                    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+                    '0x0000000000000000000000002e5189f4d8e8bc7f1f65f646c5514b9b0177f360',
+                    '0x0000000000000000000000000b9bfb82322f65635d851ef835aaee2f8fb72111',
+                ],
+                'logIndex' => 112,
+            ]],
+        ];
+
+        $result = $verifier->verifyFlush(
+            'USDT_BSC',
+            $body['hash'],
+            '0x2e5189f4d8e8bc7f1f65f646c5514b9b0177f360',
+            '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+            '52.10000000',
+            null,
+            $body,
+        );
+
+        $this->assertTrue($result->matches);
+        $this->assertSame('52.10000000', $result->amount);
     }
 }
