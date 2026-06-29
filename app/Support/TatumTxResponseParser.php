@@ -219,7 +219,10 @@ final class TatumTxResponseParser
 
     private static function decodeEvmAddress(string $topic): ?string
     {
-        $hex = strtolower(ltrim($topic, '0x'));
+        $hex = strtolower($topic);
+        if (str_starts_with($hex, '0x')) {
+            $hex = substr($hex, 2);
+        }
         if (strlen($hex) < 40) {
             return null;
         }
@@ -229,7 +232,10 @@ final class TatumTxResponseParser
 
     private static function decodeTronTopicAddress(string $topic): ?string
     {
-        $hex = strtolower(ltrim($topic, '0x'));
+        $hex = strtolower($topic);
+        if (str_starts_with($hex, '0x')) {
+            $hex = substr($hex, 2);
+        }
         if (strlen($hex) < 40) {
             return null;
         }

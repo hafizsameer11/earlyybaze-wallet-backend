@@ -150,4 +150,41 @@ class TatumOnChainTxVerifierTest extends TestCase
 
         $this->assertTrue($result->matches);
     }
+
+    public function test_usdt_flush_parses_recipient_with_leading_zero_byte(): void
+    {
+        $verifier = new TatumOnChainTxVerifier;
+        $body = [
+            'hash' => '0xa1efa98d7fb034f6ed31efb0b66d7ec5a389082f9b8af8f1e4428a7f2ea2641d',
+            'from' => '0xb00fa5305000ed990f6964f5476d4e950a14692d',
+            'to' => '0xdac17f958d2ee523a2206206994597c13d831ec7',
+            'value' => '0',
+            'status' => true,
+            'blockNumber' => 25409579,
+            'logs' => [[
+                'address' => '0xdac17f958d2ee523a2206206994597c13d831ec7',
+                'data' => '0x0000000000000000000000000000000000000000000000000000000000b74fc2',
+                'topics' => [
+                    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+                    '0x000000000000000000000000b00fa5305000ed990f6964f5476d4e950a14692d',
+                    '0x0000000000000000000000000b9bfb82322f65635d851ef835aaee2f8fb72111',
+                ],
+                'logIndex' => 790,
+            ]],
+        ];
+
+        $result = $verifier->verifyFlush(
+            'USDT',
+            $body['hash'],
+            '0xb00fa5305000ed990f6964f5476d4e950a14692d',
+            '0x0b9BFb82322f65635d851Ef835aaeE2F8fb72111',
+            '12.01350600',
+            null,
+            $body,
+        );
+
+        $this->assertTrue($result->matches);
+        $this->assertSame('12.01350600', $result->amount);
+        $this->assertSame('0x0b9bfb82322f65635d851ef835aaee2f8fb72111', strtolower((string) $result->to));
+    }
 }
