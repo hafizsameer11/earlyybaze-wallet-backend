@@ -42,7 +42,6 @@ class FlushCompletionService
                 ->whereNotNull('transfered_tx')
                 ->where('transfered_tx', $txId)
                 ->whereIn('flush_status', ['pending', 'confirming', 'failed'])
-                ->where('status', '!=', 'completed')
                 ->lockForUpdate()
                 ->get();
 

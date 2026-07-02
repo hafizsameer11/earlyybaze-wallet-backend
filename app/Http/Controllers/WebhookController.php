@@ -14,6 +14,7 @@ use App\Models\WebhookRawPayload;
 use App\Models\WebhookResponse;
 use App\Repositories\transactionRepository;
 use App\Services\EthereumService;
+use App\Services\TatumWebhookHmacVerifier;
 use App\Services\transactionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -132,6 +133,10 @@ class WebhookController extends Controller
 
         // return response()->json(['message' => 'Webhook received'], 200);
 
+        if (! app(TatumWebhookHmacVerifier::class)->verifyOrAllow($request, WebhookRawPayload::CHANNEL_V1)) {
+            return response()->json(['message' => 'Unauthorized webhook'], 401);
+        }
+
         Log::info('🚀 Incoming Webhook Request', $request->all());
 
         WebhookRawPayload::recordIncoming($request, WebhookRawPayload::CHANNEL_V1);
@@ -143,6 +148,10 @@ class WebhookController extends Controller
 
     public function webhookV2(Request $request)
     {
+        if (! app(TatumWebhookHmacVerifier::class)->verifyOrAllow($request, WebhookRawPayload::CHANNEL_V2)) {
+            return response()->json(['message' => 'Unauthorized webhook'], 401);
+        }
+
         Log::info('🚀 Incoming Webhook v4 Request', $request->all());
 
         WebhookRawPayload::recordIncoming($request, WebhookRawPayload::CHANNEL_V2);

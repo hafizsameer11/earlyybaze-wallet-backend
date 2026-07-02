@@ -17,4 +17,23 @@ return [
     ),
     /** Chain id for v4 INCOMING_NATIVE_TX (must match your API key network). */
     'v4_btc_chain' => env('TATUM_V4_BTC_CHAIN', 'bitcoin-mainnet'),
+    /**
+     * When false, incoming deposit webhooks are credited from the webhook payload
+     * without calling Tatum on-chain verification (flush verification is unchanged).
+     */
+    'deposit_on_chain_verify' => filter_var(
+        env('TATUM_DEPOSIT_ON_CHAIN_VERIFY', true),
+        FILTER_VALIDATE_BOOLEAN
+    ),
+    /**
+     * Tatum webhook HMAC verification (x-payload-hash).
+     *
+     * Set `TATUM_WEBHOOK_HMAC_SECRET` to enable validation logic.
+     * When `TATUM_WEBHOOK_HMAC_ENFORCE=true`, invalid signatures are rejected.
+     */
+    'webhook_hmac_secret' => env('TATUM_WEBHOOK_HMAC_SECRET', ''),
+    'webhook_hmac_enforce' => filter_var(
+        env('TATUM_WEBHOOK_HMAC_ENFORCE', false),
+        FILTER_VALIDATE_BOOLEAN
+    ),
 ];

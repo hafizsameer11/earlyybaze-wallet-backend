@@ -71,6 +71,22 @@ class VerifyDepositWebhookJob implements ShouldQueue
             ]);
         }
 
+        if (! config('tatum.deposit_on_chain_verify', true)) {
+            Log::info('VerifyDepositWebhookJob: on-chain verification disabled, crediting from webhook', [
+                'received_asset_id' => $this->receivedAssetId,
+                'reference' => $this->reference,
+            ]);
+            $creditingService->creditVerifiedDeposit(
+                $asset,
+                $this->webhookPayload,
+                $account,
+                $deposit,
+                $this->reference,
+            );
+
+            return;
+        }
+
         $result = $verifier->verifyDeposit($this->webhookPayload, $account, $deposit);
 
         if ($result->isSuccess()) {

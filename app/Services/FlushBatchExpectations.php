@@ -45,7 +45,7 @@ class FlushBatchExpectations
         return [
             'asset_ids' => $assets->pluck('id')->all(),
             'pending_asset_ids' => $assets
-                ->filter(fn (ReceivedAsset $a) => $a->status !== 'completed')
+                ->filter(fn (ReceivedAsset $a) => in_array($a->flush_status, ['pending', 'confirming', 'failed'], true))
                 ->pluck('id')
                 ->values()
                 ->all(),

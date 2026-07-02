@@ -250,11 +250,11 @@ class AssetController extends Controller
                     : ReceivedAsset::query()
                         ->where('transfered_tx', $failure->tx_id)
                         ->where('currency', $asset->currency)
-                        ->where('status', '!=', 'completed')
+                        ->whereIn('flush_status', ['pending', 'confirming', 'failed'])
                         ->pluck('id')
                         ->all();
 
-                $flushCompletion->completeVerifiedFlush(
+                $completedCount = $flushCompletion->completeVerifiedFlush(
                     $relatedIds !== [] ? $relatedIds : [$asset->id],
                     (string) $asset->currency,
                     (string) $failure->tx_id,
@@ -264,6 +264,17 @@ class AssetController extends Controller
                     $asset->gas_fee ? (float) $asset->gas_fee : null,
                     $result,
                 );
+
+                if ($failure->resolved_at === null) {
+                    $failure->resolved_at = now();
+                    $failure->resolved_by = auth()->id();
+                    $failure->resolution = OnChainVerificationFailure::RESOLUTION_APPROVED;
+                    $failure->failure_code = null;
+                    $failure->failure_message = $completedCount > 0
+                        ? 'Auto-resolved: flush confirmed on chain'
+                        : 'Auto-resolved: flush confirmed on chain (already verified)';
+                }
+
                 $failure = $failure->fresh(['receivedAsset']);
             }
         }
