@@ -8,6 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Previous failed run may have created the table without the index.
+        Schema::dropIfExists('tatum_webhook_hmac_verification_events');
+
         Schema::create('tatum_webhook_hmac_verification_events', function (Blueprint $table) {
             $table->id();
             $table->string('channel', 16);
@@ -28,7 +31,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index(['channel', 'verified', 'created_at']);
+            $table->index(['channel', 'verified', 'created_at'], 'twh_hmac_evt_ch_ver_created_idx');
         });
     }
 

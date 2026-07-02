@@ -4,100 +4,103 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
 
 class EnableTatumWebhookHmacCommand extends Command
 {
     protected $signature = 'tatum:enable-webhook-hmac
-                            {--secret= : Secret to use for x-payload-hash (if empty, one will be generated)}
-                            {--enforce=0 : When 1, rejects invalid signatures (otherwise monitor/log)}
-                            {--write-env=0 : When 1, updates .env with the secret and enforce flag}
-                            {--env-path= : Path to .env (default: base_path(".env"))}
-                            {--clear-cache=0 : When 1, runs php artisan optimize:clear}';
+                            {--v3 : Also enable HMAC on legacy v3 notifications API}
+                            {--clear-cache : Run php artisan optimize:clear after success}';
 
-    protected $description = 'Enable Tatum webhook HMAC verification (x-payload-hash) via env/config';
+    protected $description = 'Enable Tatum webhook HMAC using TATUM_WEBHOOK_HMAC_SECRET from env/config';
 
     public function handle(): int
     {
-        $envPath = (string) ($this->option('env-path') ?: base_path('.env'));
-        $writeEnv = (bool) $this->option('write-env');
-        $enforce = (bool) $this->option('enforce');
-        $clearCache = (bool) $this->option('clear-cache');
+        $apiKey = trim((string) config('tatum.api_key', ''));
+        if ($apiKey === '') {
+            $this->error('TATUM_API_KEY is not set.');
 
-        $secret = (string) $this->option('secret');
-        if (trim($secret) === '') {
-            // 48 bytes -> 64 chars base64-ish length; Tatum doc says secret length <= 100.
-            $secret = base64_encode(random_bytes(48));
-        }
-
-        $secret = trim($secret);
-        if ($secret === '') {
-            $this->error('HMAC secret is empty.');
             return self::FAILURE;
         }
 
-        $this->line('Tatum webhook HMAC settings:');
-        $this->line('  TATUM_WEBHOOK_HMAC_SECRET=' . $secret);
-        $this->line('  TATUM_WEBHOOK_HMAC_ENFORCE=' . ($enforce ? 'true' : 'false'));
+        $secret = trim((string) config('tatum.webhook_hmac_secret', ''));
+        if ($secret === '') {
+            $this->error('TATUM_WEBHOOK_HMAC_SECRET is not set.');
+            $this->line('Set it in your environment, then run: php artisan optimize:clear');
+
+            return self::FAILURE;
+        }
+
+        if (strlen($secret) > 100) {
+            $this->error('TATUM_WEBHOOK_HMAC_SECRET must be 100 characters or fewer (Tatum limit).');
+
+            return self::FAILURE;
+        }
+
+        $enforce = filter_var(config('tatum.webhook_hmac_enforce', false), FILTER_VALIDATE_BOOLEAN);
+
+        $this->info('Using secret from TATUM_WEBHOOK_HMAC_SECRET (length: '.strlen($secret).')');
+        $this->line('TATUM_WEBHOOK_HMAC_ENFORCE='.($enforce ? 'true' : 'false'));
         $this->newLine();
 
-        if (! $writeEnv) {
-            $this->line('Run with --write-env=1 to update your .env automatically.');
-            $this->line('After updating .env, you should run: php artisan optimize:clear && php artisan queue:restart');
-            return self::SUCCESS;
+        $v4Base = rtrim((string) config('tatum.v4_base_url', 'https://api.tatum.io/v4'), '/');
+        $v3Base = rtrim((string) config('tatum.base_url', 'https://api.tatum.io/v3'), '/');
+
+        $v4Ok = $this->enableOnTatum($apiKey, "{$v4Base}/subscription", 'v4');
+        $v3Ok = true;
+
+        if ($this->option('v3')) {
+            $v3Ok = $this->enableOnTatum($apiKey, "{$v3Base}/subscription", 'v3');
         }
 
-        if (! is_file($envPath)) {
-            $this->error('Env file not found at: ' . $envPath);
+        if (! $v4Ok || ! $v3Ok) {
+            $this->error('Tatum HMAC enable failed on one or more APIs. See output above.');
+
             return self::FAILURE;
         }
 
-        $content = file_get_contents($envPath);
-        if ($content === false) {
-            $this->error('Failed reading env file at: ' . $envPath);
-            return self::FAILURE;
-        }
+        $this->newLine();
+        $this->info('Tatum webhook HMAC enabled successfully.');
 
-        $content = $this->upsertEnvVar($content, 'TATUM_WEBHOOK_HMAC_SECRET', $secret);
-        $content = $this->upsertEnvVar($content, 'TATUM_WEBHOOK_HMAC_ENFORCE', $enforce ? 'true' : 'false');
-
-        $ok = file_put_contents($envPath, $content);
-        if ($ok === false) {
-            $this->error('Failed writing env file at: ' . $envPath);
-            return self::FAILURE;
-        }
-
-        $this->info('Updated: ' . $envPath);
-
-        if ($clearCache) {
-            $this->info('Clearing caches (php artisan optimize:clear)…');
+        if ($this->option('clear-cache')) {
+            $this->info('Clearing caches…');
             Artisan::call('optimize:clear');
         }
 
         $this->line('Next: php artisan queue:restart');
+
         return self::SUCCESS;
     }
 
-    private function upsertEnvVar(string $envContent, string $key, string $value): string
+    private function enableOnTatum(string $apiKey, string $url, string $label): bool
     {
-        $lines = preg_split("/\r\n|\n|\r/", $envContent);
-        if ($lines === false) {
-            return $envContent;
-        }
+        $secret = trim((string) config('tatum.webhook_hmac_secret', ''));
 
-        $replaced = false;
-        foreach ($lines as $i => $line) {
-            if (preg_match('/^\s*' . preg_quote($key, '/') . '\s*=/', $line) === 1) {
-                $lines[$i] = $key . '=' . $value;
-                $replaced = true;
+        $this->line("→ Enabling HMAC on Tatum {$label}: PUT {$url}");
+
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(45)->put($url, [
+                'hmacSecret' => $secret,
+            ]);
+
+            if ($response->status() === 204 || $response->successful()) {
+                $this->info("  {$label}: OK (HTTP {$response->status()})");
+
+                return true;
             }
-        }
 
-        if (! $replaced) {
-            $lines[] = '';
-            $lines[] = $key . '=' . $value;
-        }
+            $this->error("  {$label}: failed (HTTP {$response->status()})");
+            $body = $response->json();
+            $this->line('  '.json_encode($body ?? $response->body()));
 
-        return implode("\n", $lines) . "\n";
+            return false;
+        } catch (\Throwable $e) {
+            $this->error("  {$label}: exception — {$e->getMessage()}");
+
+            return false;
+        }
     }
 }
-
